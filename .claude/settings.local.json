@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "mcp__chrome-devtools__new_page",
+      "mcp__chrome-devtools__take_snapshot",
+      "mcp__chrome-devtools__list_console_messages",
+      "Bash(cat:*)",
+      "mcp__chrome-devtools__navigate_page",
+      "mcp__chrome-devtools__get_console_message",
+      "mcp__chrome-devtools__list_network_requests",
+      "mcp__chrome-devtools__get_network_request",
+      "mcp__chrome-devtools__click",
+      "Bash(curl -s http://172.16.0.14:3060/entities/dave-weaver)",
+      "Bash(curl -s http://172.16.0.14:3060/docs)",
+      "Bash(curl -s http://172.16.0.14:3060/openapi.json)",
+      "Bash(python3:*)",
+      "Bash(curl:*)",
+      "mcp__chrome-devtools__take_screenshot",
+      "mcp__chrome-devtools__evaluate_script",
+      "mcp__chrome-devtools__press_key",
+      "Bash(npx tsc:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm install:*)",
+      "mcp__chrome-devtools__list_pages",
+      "Bash(tree:*)",
+      "WebFetch(domain:localhost)",
+      "Bash(find:*)",
+      "WebFetch(domain:172.16.0.14)",
+      "Bash(xargs:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:sdk.vercel.ai)",
+      "WebFetch(domain:ai-sdk.dev)",
+      "WebSearch",
+      "WebFetch(domain:v6.ai-sdk.dev)",
+      "Bash(git add:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "playwright",
+    "macos-mail",
+    "nocodb",
+    "n8n-mcp",
+    "atlassian",
+    "sentry",
+    "chrome-devtools"
+  ],
+  "disabledMcpjsonServers": [
+    "playwright",
+    "macos-mail",
+    "nocodb",
+    "n8n-mcp",
+    "atlassian",
+    "sentry",
+    "chrome-devtools"
+  ]
+}
