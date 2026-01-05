@@ -82,8 +82,7 @@ export default function AddMemory() {
       title="Add Memory"
       description="Create a new memory episode"
     >
-      <div className="max-w-2xl mx-auto p-6">
-        <Card>
+      <Card>
           <CardContent className="p-6">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {/* Content */}
@@ -198,7 +197,6 @@ export default function AddMemory() {
             entities and facts will be extracted automatically.
           </p>
         </div>
-      </div>
     </Container>
   );
 }

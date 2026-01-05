@@ -21,25 +21,29 @@ All data is scoped by `group_id` (configured via `VITE_GROUP_ID` env var) and st
 
 ### API Integration
 
-**Base URL**: `http://localhost:8000` (configured via Vite proxy in `vite.config.ts`)
+**Base URL**: Configured via `VITE_GRAPHITI_SERVER` environment variable (default: `http://localhost:8000`)
 
 The `GraphitiService` singleton provides methods for all API operations:
 
 **Search & Episodes:**
+
 - `search()` - Search for facts by query
 - `getEpisodes()` - List recent episodes
 - `addMessages()` - Add new memories (async processing)
 
 **Entity Operations:**
+
 - `getEntity(uuid)` - Get single entity by UUID
 - `listEntities(groupId, limit, cursor)` - List entities with pagination
 - `getEntitiesByUuids(uuids)` - Batch entity retrieval
 
 **Relationships:**
+
 - `getEntityEdge(uuid)` - Get entity edge details
 - `deleteEntityEdge(uuid)` - Remove relationships
 
 **Management:**
+
 - `createEntity()` - Create entity nodes
 - `deleteEpisode()` - Remove episodes
 - `healthcheck()` - Server status
@@ -75,6 +79,7 @@ src/
 ### UI Components
 
 Built with **ShadCN UI** (Radix UI + Tailwind CSS):
+
 - Complete component library in `src/components/ui/`
 - Theming via CSS variables and `next-themes`
 - Responsive design with Tailwind breakpoints
@@ -83,9 +88,10 @@ Built with **ShadCN UI** (Radix UI + Tailwind CSS):
 ## Development Commands
 
 **Prerequisites:**
-- Graphiti server must be running on `http://localhost:8000`
+
+- Graphiti server must be running (default: `http://localhost:8000`, configurable via `VITE_GRAPHITI_SERVER`)
 - See `../graphiti-server/` for server setup and Docker instructions
-- Copy `.env.example` to `.env` and configure `VITE_GROUP_ID` (required)
+- Copy `.env.example` to `.env` and configure environment variables (at minimum, set `VITE_GROUP_ID` and `VITE_GRAPHITI_SERVER`)
 
 ```bash
 # Setup environment
@@ -120,6 +126,7 @@ npx tsc -b
 ### TypeScript
 
 Uses TypeScript 5.9.3 with project references:
+
 - `tsconfig.app.json` - Application code
 - `tsconfig.node.json` - Build tooling (Vite, Tailwind)
 - `tsconfig.json` - Root references
@@ -130,15 +137,29 @@ Uses TypeScript 5.9.3 with project references:
 
 ### Environment
 
-**Graphiti Server Configuration:**
-- Development: Vite proxy forwards `/api` requests to `http://localhost:8000` (configured in `vite.config.ts`)
-- The Graphiti server must be running on port 8000 for the app to function
-- Production: Update proxy target or use environment variables
+**Server Configuration:**
 
-**Group ID Configuration:**
-- Configured via `VITE_GROUP_ID` environment variable (required)
-- Copy `.env.example` to `.env` and set your group ID
-- Restart dev server after changing `.env` for changes to take effect
+All backend services are configured via environment variables:
+
+- `VITE_GRAPHITI_SERVER` - Graphiti server base URL (default: `http://localhost:8000`)
+  - HTTP API automatically derived from this URL
+  - WebSocket URL automatically derived by replacing `http://` with `ws://` (or `https://` with `wss://`) and appending `/ws`
+- `VITE_LLAMACPP_URL` - LlamaCPP inference server (default: `http://localhost:9004`)
+- `VITE_CHAT_API_URL` - Chat backend service (default: `http://localhost:3001`)
+- `VITE_GROUP_ID` - Graphiti group ID (required, no default)
+
+**Setup:**
+
+1. Copy `.env.example` to `.env`
+2. Set your `VITE_GROUP_ID` (required)
+3. Set `VITE_GRAPHITI_SERVER` to your Graphiti server URL (e.g., `http://172.16.0.14:3060`)
+4. Optionally override other service URLs if using non-default configurations
+5. Restart dev server after changing `.env` for changes to take effect
+
+**Proxy Configuration:**
+
+- Development: Vite proxy forwards `/api` to `VITE_GRAPHITI_SERVER` and `/llamacpp` to `VITE_LLAMACPP_URL`
+- Production: Configure proxy targets via environment variables
 
 ## Key Implementation Patterns
 
@@ -169,18 +190,21 @@ Pages are lazy-loaded via `lazyImportComponent` utility to minimize initial bund
 ### Entity Management
 
 **Entity Data Model:**
+
 - Entities use a `labels` array for type classification (e.g., `["Person", "Entity"]`)
 - Legacy `entity_type` field supported for backward compatibility
 - Additional metadata stored in `attributes` object
 - All entities scoped by `group_id` for multi-tenancy
 
 **Entity Listing:**
+
 - The Entities page uses the direct `listEntities()` endpoint
 - Supports pagination via cursor-based navigation
 - Filters by entity type using the `labels` array
 - Search filters by name and summary fields
 
 **Entity Types:**
+
 - Extracted dynamically from entity `labels` array
 - Generic "Entity" label filtered out from type dropdown
 - Falls back to legacy `entity_type` if present
@@ -202,6 +226,7 @@ Pages are lazy-loaded via `lazyImportComponent` utility to minimize initial bund
 ### Modifying the Data Model
 
 When Graphiti API changes:
+
 1. Update interfaces in `src/types/graphiti.ts`
 2. Update `GraphitiService` methods if needed
 3. Update consuming components to handle new fields
@@ -209,6 +234,7 @@ When Graphiti API changes:
 ### Working with Entity Endpoints
 
 **Single Entity Retrieval:**
+
 ```tsx
 const { data: entity } = useQuery({
   queryKey: ["entity", uuid],
@@ -217,6 +243,7 @@ const { data: entity } = useQuery({
 ```
 
 **List Entities with Pagination:**
+
 ```tsx
 const { data } = useQuery({
   queryKey: ["entities-list", groupId, limit],
@@ -226,6 +253,7 @@ const { data } = useQuery({
 ```
 
 **Batch Entity Retrieval:**
+
 ```tsx
 const { data } = useQuery({
   queryKey: ["entities-batch", uuids],
@@ -242,6 +270,7 @@ const { data } = useQuery({
 
 ## Important Notes
 
+- the inspiration for this web site design, UI, UX, architecture and components comes from this project: /Users/dweaver/Projects/davideweaver/section-shaper-single-page. when implementing new features, pages, etc look at that project.
 - The Graphiti API performs **asynchronous processing** for message ingestion - facts/entities may not appear immediately after adding memories
 - **Entity data model**:
   - Entity types stored in `labels` array (e.g., `["Person", "Entity"]`)
@@ -249,6 +278,6 @@ const { data } = useQuery({
   - Additional metadata in `attributes` object
 - **Entity pagination**: Use cursor-based pagination for large entity lists (limit: 1-500 entities per request)
 - Entity edges (relationships) have `valid_at` and `invalid_at` timestamps for temporal reasoning
-- The server must be running at `localhost:8000` for the app to function
+- The Graphiti server must be running for the app to function (configure URL via `VITE_GRAPHITI_SERVER`)
 - All data operations require a `group_id` (multi-tenant design)
 - Search results are limited by `max_facts` parameter (default: 10)

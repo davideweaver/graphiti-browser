@@ -66,7 +66,7 @@ export default function EntityDetail() {
   if (isLoadingEntity) {
     return (
       <Container title="Entity Detail" description="Loading...">
-        <div className="max-w-4xl mx-auto p-6 space-y-6">
+        <div className="space-y-6">
           <Skeleton className="h-8 w-32 mb-4" />
           <Card>
             <CardContent className="p-6 space-y-4">
@@ -83,30 +83,28 @@ export default function EntityDetail() {
   if (!entity) {
     return (
       <Container title="Entity Not Found" description="The entity could not be found">
-        <div className="max-w-4xl mx-auto p-6">
-          <Card>
-            <CardContent className="p-12 text-center">
-              <h3 className="text-lg font-semibold mb-2">Entity not found</h3>
-              <p className="text-muted-foreground mb-4">
-                The entity you're looking for doesn't exist or couldn't be loaded.
-              </p>
-              <Button onClick={() => navigate(-1)}>
-                Back to Entities
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+        <Card>
+          <CardContent className="p-12 text-center">
+            <h3 className="text-lg font-semibold mb-2">Entity not found</h3>
+            <p className="text-muted-foreground mb-4">
+              The entity you're looking for doesn't exist or couldn't be loaded.
+            </p>
+            <Button onClick={() => navigate(-1)}>
+              Back to Entities
+            </Button>
+          </CardContent>
+        </Card>
       </Container>
     );
   }
 
   return (
     <Container
-      title={entity.name}
-      description={entityType}
+      title="Entities"
+      description="View entity information, relationships, and facts"
       tools={
         <Button
-          variant="outline"
+          variant="secondary"
           onClick={() => navigate(-1)}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -114,7 +112,7 @@ export default function EntityDetail() {
         </Button>
       }
     >
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
+      <div className="space-y-6">
         {/* Entity Header */}
         <Card>
           <CardHeader>
@@ -136,50 +134,15 @@ export default function EntityDetail() {
         </Card>
 
         {/* Tabs */}
-        <Tabs defaultValue="facts">
+        <Tabs defaultValue="relationships">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="facts">
-              Facts ({factsData?.facts.length || 0})
-            </TabsTrigger>
             <TabsTrigger value="relationships">
               Relationships ({relatedEntities.length})
             </TabsTrigger>
+            <TabsTrigger value="facts">
+              Facts ({factsData?.facts.length || 0})
+            </TabsTrigger>
           </TabsList>
-
-          {/* Facts Tab */}
-          <TabsContent value="facts" className="mt-6">
-            {isLoadingFacts && (
-              <div className="space-y-4">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Card key={i}>
-                    <CardContent className="p-6">
-                      <Skeleton className="h-6 w-3/4 mb-2" />
-                      <Skeleton className="h-4 w-1/4 mb-4" />
-                      <Skeleton className="h-4 w-full" />
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-
-            {!isLoadingFacts && factsData && factsData.facts.length === 0 && (
-              <Card>
-                <CardContent className="p-12 text-center">
-                  <p className="text-muted-foreground">
-                    No facts found for this entity
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-            {!isLoadingFacts && factsData && factsData.facts.length > 0 && (
-              <div className="space-y-4">
-                {factsData.facts.map((fact) => (
-                  <FactCard key={fact.uuid} fact={fact} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
 
           {/* Relationships Tab */}
           <TabsContent value="relationships" className="mt-6">
@@ -233,6 +196,41 @@ export default function EntityDetail() {
                     </Card>
                   );
                 })}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Facts Tab */}
+          <TabsContent value="facts" className="mt-6">
+            {isLoadingFacts && (
+              <div className="space-y-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Card key={i}>
+                    <CardContent className="p-6">
+                      <Skeleton className="h-6 w-3/4 mb-2" />
+                      <Skeleton className="h-4 w-1/4 mb-4" />
+                      <Skeleton className="h-4 w-full" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {!isLoadingFacts && factsData && factsData.facts.length === 0 && (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <p className="text-muted-foreground">
+                    No facts found for this entity
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {!isLoadingFacts && factsData && factsData.facts.length > 0 && (
+              <div className="space-y-2">
+                {factsData.facts.map((fact) => (
+                  <FactCard key={fact.uuid} fact={fact} />
+                ))}
               </div>
             )}
           </TabsContent>

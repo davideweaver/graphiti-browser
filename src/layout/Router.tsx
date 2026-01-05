@@ -31,6 +31,14 @@ const Router = createBrowserRouter(
         lazy={lazyImportComponent(() => import("@/pages/EntityDetail"))}
       />
       <Route
+        path="/projects"
+        lazy={lazyImportComponent(() => import("@/pages/Projects"))}
+      />
+      <Route
+        path="/project/:projectName"
+        lazy={lazyImportComponent(() => import("@/pages/ProjectDetail"))}
+      />
+      <Route
         path="/sessions"
         lazy={lazyImportComponent(() => import("@/pages/Episodes"))}
       />

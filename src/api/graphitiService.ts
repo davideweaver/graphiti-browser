@@ -10,6 +10,9 @@ import type {
   CreateEntityRequest,
   SessionListResponse,
   SessionStatsByDay,
+  SessionDetailResponse,
+  ProjectListResponse,
+  ProjectStatsByDay,
 } from "@/types/graphiti";
 
 const BASE_URL = "/api";
@@ -258,12 +261,112 @@ class GraphitiService {
     return this.fetch<SessionStatsByDay>(url);
   }
 
-  // GET /sessions/{group_id}/{session_id} - Get session episodes
+  // GET /sessions/{group_id}/{session_id} - Get session details with episodes
   async getSession(
     sessionId: string,
     groupId = DEFAULT_GROUP_ID
-  ): Promise<Episode[]> {
-    return this.fetch<Episode[]>(`/sessions/${groupId}/${sessionId}`);
+  ): Promise<SessionDetailResponse> {
+    return this.fetch<SessionDetailResponse>(`/sessions/${groupId}/${sessionId}`);
+  }
+
+  // GET /projects/{group_id} - List projects with pagination
+  async listProjects(
+    groupId = DEFAULT_GROUP_ID,
+    limit = 50,
+    cursor?: string,
+    nameFilter?: string,
+    minEpisodes?: number,
+    sortOrder: 'asc' | 'desc' = 'desc'
+  ): Promise<ProjectListResponse> {
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      sort_order: sortOrder,
+    });
+
+    if (cursor) params.append("cursor", cursor);
+    if (nameFilter) params.append("name_filter", nameFilter);
+    if (minEpisodes !== undefined) params.append("min_episodes", minEpisodes.toString());
+
+    return this.fetch<ProjectListResponse>(`/projects/${groupId}?${params.toString()}`);
+  }
+
+  // GET /projects/{group_id}/{project_name}/episodes - Get episodes for a project
+  async getProjectEpisodes(
+    groupId = DEFAULT_GROUP_ID,
+    projectName: string,
+    limit = 50,
+    cursor?: string
+  ): Promise<{ episodes: Episode[]; has_more: boolean; cursor: string | null }> {
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+    });
+
+    if (cursor) params.append("cursor", cursor);
+
+    // URL-encode the project name for the path
+    const encodedProjectName = encodeURIComponent(projectName);
+    return this.fetch<{ episodes: Episode[]; has_more: boolean; cursor: string | null }>(
+      `/projects/${groupId}/${encodedProjectName}/episodes?${params.toString()}`
+    );
+  }
+
+  // GET /projects/{group_id}/{project_name}/sessions - Get sessions for a project
+  async getProjectSessions(
+    groupId = DEFAULT_GROUP_ID,
+    projectName: string,
+    limit = 50,
+    cursor?: string
+  ): Promise<SessionListResponse> {
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+    });
+
+    if (cursor) params.append("cursor", cursor);
+
+    // URL-encode the project name for the path
+    const encodedProjectName = encodeURIComponent(projectName);
+    return this.fetch<SessionListResponse>(
+      `/projects/${groupId}/${encodedProjectName}/sessions?${params.toString()}`
+    );
+  }
+
+  // GET /projects/{group_id}/{project_name}/entities - Get entities mentioned in project
+  async getProjectEntities(
+    groupId = DEFAULT_GROUP_ID,
+    projectName: string,
+    limit = 50,
+    cursor?: string
+  ): Promise<EntityListResponse> {
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+    });
+
+    if (cursor) params.append("cursor", cursor);
+
+    // URL-encode the project name for the path
+    const encodedProjectName = encodeURIComponent(projectName);
+    return this.fetch<EntityListResponse>(
+      `/projects/${groupId}/${encodedProjectName}/entities?${params.toString()}`
+    );
+  }
+
+  // GET /projects/{group_id}/stats/by-day - Daily activity stats for a project
+  async getProjectStatsByDay(
+    groupId = DEFAULT_GROUP_ID,
+    projectName: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<ProjectStatsByDay> {
+    const params = new URLSearchParams({
+      project_name: projectName,
+    });
+
+    if (startDate) params.append("start_date", startDate);
+    if (endDate) params.append("end_date", endDate);
+
+    return this.fetch<ProjectStatsByDay>(
+      `/projects/${groupId}/stats/by-day?${params.toString()}`
+    );
   }
 }
 

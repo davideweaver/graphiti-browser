@@ -15,9 +15,12 @@ import {
   Clock,
   Database,
   MessageSquare,
+  FolderKanban,
 } from "lucide-react";
 import { format } from "date-fns";
 import type { Episode } from "@/types/graphiti";
+import PeriodSelector from "@/components/dashboard/PeriodSelector";
+import SessionActivityChart from "@/components/dashboard/SessionActivityChart";
 
 export default function Dashboard() {
   const { groupId } = useGraphiti();
@@ -51,8 +54,9 @@ export default function Dashboard() {
     <Container
       title="Dashboard"
       description="Overview of your Graphiti memories"
+      tools={<PeriodSelector />}
     >
-      <div className="max-w-6xl mx-auto p-6 space-y-8">
+      <div className="space-y-8">
         {/* Quick Search */}
         <Card>
           <CardContent className="p-6">
@@ -131,6 +135,11 @@ export default function Dashboard() {
           </Card>
         </div>
 
+        {/* Charts */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <SessionActivityChart />
+        </div>
+
         {/* Quick Actions */}
         <Card>
           <CardHeader>
@@ -153,6 +162,14 @@ export default function Dashboard() {
               >
                 <SearchIcon className="h-4 w-4 mr-2" />
                 Search Memories
+              </Button>
+              <Button
+                className="w-full justify-start"
+                variant="outline"
+                onClick={() => navigate("/projects")}
+              >
+                <FolderKanban className="h-4 w-4 mr-2" />
+                Browse Projects
               </Button>
               <Button
                 className="w-full justify-start"

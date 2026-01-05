@@ -68,9 +68,12 @@ export default function ChatMessage({ message }: Props) {
           </div>
         </Card>
 
-        {/* Timestamp */}
+        {/* Timestamp and duration */}
         <p className="text-xs text-muted-foreground px-2">
           {format(new Date(message.timestamp), "h:mm a")}
+          {!isUser && message.duration && (
+            <span className="ml-2 opacity-70">• {message.duration.toFixed(1)}s</span>
+          )}
         </p>
       </div>
     </div>

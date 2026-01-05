@@ -1,28 +1,35 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
-  server: {
-    proxy: {
-      "/api": {
-        // target: "http://localhost:8000",
-        target: "http://172.16.0.14:3060",
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ""),
-      },
-      "/llamacpp": {
-        target: "http://localhost:9004",
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/llamacpp/, ""),
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+
+  // Derive API and WebSocket URLs from single Graphiti server URL
+  const graphitiServer = env.VITE_GRAPHITI_SERVER || "http://localhost:8000";
+
+  return {
+    plugins: [react()],
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
       },
     },
-  },
+    server: {
+      host: true, // Expose to external network
+      proxy: {
+        "/api": {
+          target: graphitiServer,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, ""),
+        },
+        "/llamacpp": {
+          target: env.VITE_LLAMACPP_URL || "http://localhost:9004",
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/llamacpp/, ""),
+        },
+      },
+    },
+  };
 });

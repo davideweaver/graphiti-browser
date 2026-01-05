@@ -52,6 +52,7 @@ export interface Fact {
   invalid_at?: string;
   created_at: string;
   expired_at?: string;
+  similarity_score?: number; // Optional - similarity/reranker score (0.0-1.0)
   entities?: Entity[]; // Optional - not always returned by API
   episodes?: Episode[]; // Optional - not always returned by API
 }
@@ -105,6 +106,9 @@ export interface Session {
   first_episode_date: string;
   last_episode_date: string;
   source_descriptions: string[];
+  summary?: string; // Optional AI-generated summary of the session
+  project_name?: string; // Optional project name for the session
+  first_episode_preview?: string; // Optional preview of the first episode content
 }
 
 // Response from /sessions/{group_id}
@@ -122,4 +126,45 @@ export interface SessionStatsByDay {
     count: number;
   }>;
   total_days: number;
+}
+
+// Project - metadata about a named project
+export interface Project {
+  name: string;
+  group_id: string;
+  episode_count: number;
+  session_count: number;
+  first_episode_date: string;
+  last_episode_date: string;
+  project_path?: string; // Optional file system path for the project
+}
+
+// Response from GET /projects/{group_id}
+export interface ProjectListResponse {
+  projects: Project[];
+  total: number;
+  has_more: boolean;
+  cursor: string | null;
+}
+
+// Response from GET /projects/{group_id}/stats/by-day
+export interface ProjectStatsByDay {
+  stats: Array<{
+    date: string;
+    count: number;
+  }>;
+  total_days: number;
+}
+
+// Response from GET /sessions/{group_id}/{session_id}
+export interface SessionDetailResponse {
+  session_id: string;
+  summary?: string;
+  episode_count: number;
+  first_episode_date: string;
+  last_episode_date: string;
+  source_descriptions: string[];
+  episodes: Episode[];
+  project_name?: string; // Optional project name for the session
+  first_episode_preview?: string; // Optional preview of the first episode content
 }

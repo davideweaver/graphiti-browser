@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { addDays, startOfDay, isSameDay, format, startOfWeek } from "date-fns";
 import { graphitiService } from "@/api/graphitiService";
 import { useGraphiti } from "@/context/GraphitiContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DayNavigationProps {
   selectedDate: Date;
@@ -20,6 +21,7 @@ export function DayNavigation({
 }: DayNavigationProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { groupId } = useGraphiti();
+  const isMobile = useIsMobile();
 
   // Fetch session stats for the date range
   const { data: statsData } = useQuery({
@@ -64,50 +66,104 @@ export function DayNavigation({
   const today = startOfDay(new Date());
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Header with date range */}
       <div>
-        <h2 className="text-lg font-semibold">
-          {format(days[0], "MMM d")} - {format(days[days.length - 1], "MMM d, yyyy")}
+        <h2 className="text-base sm:text-lg font-semibold">
+          {isMobile ? (
+            <>
+              {format(days[0], "MMM d")} - {format(days[days.length - 1], "MMM d")}
+            </>
+          ) : (
+            <>
+              {format(days[0], "MMM d")} - {format(days[days.length - 1], "MMM d, yyyy")}
+            </>
+          )}
         </h2>
       </div>
 
-      {/* Day cards with navigation */}
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={scrollLeft}
-          className="shrink-0"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
+      {/* Mobile layout: Day cards on top row, navigation buttons on bottom row */}
+      {isMobile ? (
+        <div className="space-y-2">
+          {/* Day cards row */}
+          <div
+            ref={scrollContainerRef}
+            className="flex gap-1 overflow-x-auto scrollbar-hide"
+          >
+            {days.map((day) => (
+              <DayCard
+                key={day.toISOString()}
+                date={day}
+                sessionCount={getSessionCountForDay(day)}
+                isSelected={isSameDay(day, selectedDate)}
+                isToday={isSameDay(day, today)}
+                onClick={() => onDateSelect(startOfDay(day))}
+                compact={true}
+              />
+            ))}
+          </div>
 
-        <div
-          ref={scrollContainerRef}
-          className="flex gap-2 overflow-x-auto scrollbar-hide flex-1"
-        >
-          {days.map((day) => (
-            <DayCard
-              key={day.toISOString()}
-              date={day}
-              sessionCount={getSessionCountForDay(day)}
-              isSelected={isSameDay(day, selectedDate)}
-              isToday={isSameDay(day, today)}
-              onClick={() => onDateSelect(startOfDay(day))}
-            />
-          ))}
+          {/* Navigation buttons row */}
+          <div className="flex items-center justify-center gap-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={scrollLeft}
+              className="h-8"
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={scrollRight}
+              className="h-8"
+            >
+              Next
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
         </div>
+      ) : (
+        /* Desktop layout: Navigation buttons on sides */
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={scrollLeft}
+            className="shrink-0"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
 
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={scrollRight}
-          className="shrink-0"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
+          <div
+            ref={scrollContainerRef}
+            className="flex gap-2 overflow-x-auto scrollbar-hide flex-1"
+          >
+            {days.map((day) => (
+              <DayCard
+                key={day.toISOString()}
+                date={day}
+                sessionCount={getSessionCountForDay(day)}
+                isSelected={isSameDay(day, selectedDate)}
+                isToday={isSameDay(day, today)}
+                onClick={() => onDateSelect(startOfDay(day))}
+                compact={false}
+              />
+            ))}
+          </div>
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={scrollRight}
+            className="shrink-0"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

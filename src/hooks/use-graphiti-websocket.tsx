@@ -17,7 +17,11 @@ import type {
 } from "@/types/websocket";
 import type { Entity, Episode } from "@/types/graphiti";
 
-const WS_BASE_URL = "ws://172.16.0.14:3060/ws";
+// Derive WebSocket URL from Graphiti server URL
+const graphitiServer = import.meta.env.VITE_GRAPHITI_SERVER || "http://localhost:8000";
+const WS_BASE_URL = graphitiServer
+  .replace(/^http:/, "ws:")
+  .replace(/^https:/, "wss:") + "/ws";
 
 interface UseGraphitiWebSocketReturn {
   connectionState: ConnectionState;

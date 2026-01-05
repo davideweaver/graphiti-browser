@@ -10,6 +10,7 @@ export interface ChatMessage {
   memoryFacts?: Array<{ uuid: string; fact: string; valid_at: string }>;
   error?: string;
   isStreaming?: boolean;
+  duration?: number; // Response duration in seconds
 }
 
 export interface ChatHistory {

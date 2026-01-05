@@ -6,6 +6,12 @@ import { useGraphiti } from "@/context/GraphitiContext";
 import Container from "@/layout/Container";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Toggle } from "@/components/ui/toggle";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Popover,
   PopoverContent,
@@ -15,10 +21,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { DayNavigation } from "@/components/episodes/DayNavigation";
-import { CalendarIcon } from "lucide-react";
+import { SessionRow } from "@/components/episodes/SessionRow";
+import { CalendarIcon, FolderKanban, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
-import { format, startOfDay, endOfDay, isSameDay, addDays, subDays, parse } from "date-fns";
-import { parseSourceDescription } from "@/lib/utils";
+import { format, startOfDay, endOfDay, isSameDay, addDays, subDays, parse, differenceInMinutes } from "date-fns";
 import type { Session } from "@/types/graphiti";
 
 export default function Episodes() {
@@ -42,6 +48,8 @@ export default function Episodes() {
   });
 
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [groupByProject, setGroupByProject] = useState(true); // Default to grouped
+  const [openProjects, setOpenProjects] = useState<Set<string>>(new Set()); // Track open projects
   const queryClient = useQueryClient();
 
   // Update query string when date changes
@@ -101,6 +109,18 @@ export default function Episodes() {
     navigate(`/sessions/${encodeURIComponent(sessionId)}?date=${dateString}`);
   };
 
+  const toggleProject = (project: string) => {
+    setOpenProjects((prev) => {
+      const next = new Set(prev);
+      if (next.has(project)) {
+        next.delete(project);
+      } else {
+        next.add(project);
+      }
+      return next;
+    });
+  };
+
   // Filter sessions to only show the selected date
   const filteredSessions = useMemo(() => {
     if (!sessionsResponse?.sessions) return [];
@@ -110,31 +130,74 @@ export default function Episodes() {
     );
   }, [sessionsResponse, selectedDate]);
 
-  // Calendar picker button for Container tools
+  // Group sessions by project when enabled
+  const groupedSessions = useMemo(() => {
+    if (!groupByProject) return null;
+
+    const groups = new Map<string, Session[]>();
+
+    filteredSessions.forEach((session) => {
+      const projectName = session.project_name || "Unknown Project";
+
+      if (!groups.has(projectName)) {
+        groups.set(projectName, []);
+      }
+      groups.get(projectName)!.push(session);
+    });
+
+    // Sort projects alphabetically, but put "Unknown Project" at the end
+    return Array.from(groups.entries()).sort(([a], [b]) => {
+      if (a === "Unknown Project") return 1;
+      if (b === "Unknown Project") return -1;
+      return a.localeCompare(b);
+    });
+  }, [filteredSessions, groupByProject]);
+
+  // Initialize only first project as open when groupedSessions changes
+  useEffect(() => {
+    if (groupedSessions && groupedSessions.length > 0) {
+      const firstProject = groupedSessions[0][0];
+      setOpenProjects(new Set([firstProject]));
+    }
+  }, [groupedSessions]);
+
+  // Toolbar buttons for Container tools
   const calendarTools = (
-    <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="icon">
-          <CalendarIcon className="h-4 w-4" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="end" sideOffset={8}>
-        <Calendar
-          mode="single"
-          selected={selectedDate}
-          onSelect={handleCalendarSelect}
-        />
-        <div className="p-3 border-t">
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={handleTodayClick}
-          >
-            Today
+    <div className="flex items-center gap-2">
+      <Toggle
+        variant="outline"
+        size="default"
+        pressed={groupByProject}
+        onPressedChange={setGroupByProject}
+        aria-label="Group by project"
+      >
+        <FolderKanban className="h-4 w-4 mr-2" />
+        Group by Project
+      </Toggle>
+      <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="icon">
+            <CalendarIcon className="h-4 w-4" />
           </Button>
-        </div>
-      </PopoverContent>
-    </Popover>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="end" sideOffset={8}>
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={handleCalendarSelect}
+          />
+          <div className="p-3 border-t">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleTodayClick}
+            >
+              Today
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 
   return (
@@ -183,68 +246,64 @@ export default function Episodes() {
             </Card>
           )}
 
-          {!isLoading && filteredSessions.length > 0 && (
-            <div className="space-y-4">
-              {filteredSessions.map((session, sessionIndex) => {
-                // Use session metadata directly from API
-                const minDate = new Date(session.first_episode_date);
-                const maxDate = new Date(session.last_episode_date);
-                const sameDay =
-                  format(minDate, "yyyy-MM-dd") ===
-                  format(maxDate, "yyyy-MM-dd");
-
-                const dateRange = sameDay
-                  ? format(minDate, "MMM d, yyyy")
-                  : format(minDate, "MMM d") === format(maxDate, "MMM d")
-                  ? format(minDate, "MMM d, yyyy")
-                  : format(minDate, "yyyy") === format(maxDate, "yyyy")
-                  ? `${format(minDate, "MMM d")} - ${format(
-                      maxDate,
-                      "MMM d, yyyy"
-                    )}`
-                  : `${format(minDate, "MMM d, yyyy")} - ${format(
-                      maxDate,
-                      "MMM d, yyyy"
-                    )}`;
-
-                const timeRange = `${format(minDate, "h:mm a")} - ${format(maxDate, "h:mm a")}`;
-
-                // Parse source_description for app/folder metadata
-                const parsed = parseSourceDescription(session.source_descriptions[0] || "");
-                const app = parsed?.app || "Unknown";
-                const folder = parsed?.folder || "Unknown";
-
+          {!isLoading && filteredSessions.length > 0 && groupByProject && groupedSessions && (
+            <div className="space-y-6">
+              {groupedSessions.map(([project, sessions]) => {
+                const isOpen = openProjects.has(project);
                 return (
-                  <div key={session.session_id}>
-                    <div
-                      className="bg-background py-2 cursor-pointer hover:bg-muted/50 rounded-lg transition-colors"
-                      onClick={() => viewSessionDetail(session.session_id)}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1">
-                          <div className="flex items-baseline gap-2">
-                            <h3 className="text-lg font-semibold">
-                              {folder}
-                            </h3>
-                            <span className="text-sm text-muted-foreground">•</span>
-                            <span className="text-sm text-muted-foreground">
-                              {dateRange}
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {app} • {timeRange} • {session.episode_count} episode
-                            {session.episode_count !== 1 ? "s" : ""}
-                          </p>
-                        </div>
+                  <Collapsible key={project} open={isOpen} onOpenChange={() => toggleProject(project)}>
+                    <CollapsibleTrigger asChild>
+                      <div className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-2 -mx-2 rounded-lg transition-colors">
+                        <ChevronDown
+                          className={`h-5 w-5 transition-transform ${
+                            isOpen ? "rotate-0" : "-rotate-90"
+                          }`}
+                        />
+                        <FolderKanban className="h-5 w-5" />
+                        <h2 className="text-xl font-bold">
+                          {project}
+                        </h2>
+                        <span className="text-sm font-normal text-muted-foreground">
+                          ({sessions.length})
+                        </span>
                       </div>
-                    </div>
-
-                    {sessionIndex < filteredSessions.length - 1 && (
-                      <Separator className="mt-4" />
-                    )}
-                  </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="space-y-4 mt-3">
+                        {sessions.map((session, sessionIndex) => (
+                          <div key={session.session_id}>
+                            <SessionRow
+                              session={session}
+                              showProject={false}
+                              onSessionClick={viewSessionDetail}
+                            />
+                            {sessionIndex < sessions.length - 1 && (
+                              <Separator className="mt-4" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
                 );
               })}
+            </div>
+          )}
+
+          {!isLoading && filteredSessions.length > 0 && !groupByProject && (
+            <div className="space-y-4">
+              {filteredSessions.map((session, sessionIndex) => (
+                <div key={session.session_id}>
+                  <SessionRow
+                    session={session}
+                    showProject={true}
+                    onSessionClick={viewSessionDetail}
+                  />
+                  {sessionIndex < filteredSessions.length - 1 && (
+                    <Separator className="mt-4" />
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>
