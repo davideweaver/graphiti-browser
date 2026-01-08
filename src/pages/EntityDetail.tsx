@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { graphitiService } from "@/api/graphitiService";
@@ -9,14 +9,16 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Info } from "lucide-react";
 import { FactCard } from "@/components/search/FactCard";
+import { NodeDetailSheet } from "@/components/shared/NodeDetailSheet";
 import type { Entity } from "@/types/graphiti";
 
 export default function EntityDetail() {
   const { uuid } = useParams<{ uuid: string }>();
   const { groupId } = useGraphiti();
   const navigate = useNavigate();
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   // Fetch the entity directly by UUID
   const { data: entity, isLoading: isLoadingEntity } = useQuery({
@@ -126,6 +128,13 @@ export default function EntityDetail() {
                   {entityType}
                 </Badge>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSheetOpen(true)}
+              >
+                <Info className="h-5 w-5" />
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -236,6 +245,14 @@ export default function EntityDetail() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* NodeDetailSheet for graph navigation */}
+      <NodeDetailSheet
+        nodeType="entity"
+        nodeId={uuid || null}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+      />
     </Container>
   );
 }

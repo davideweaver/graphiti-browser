@@ -1,20 +1,34 @@
+import { useState } from "react";
 import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import MemoryBadge from "./MemoryBadge";
+import TraceDrawer from "./TraceDrawer";
 import type { ChatMessage } from "@/types/chat";
-import { User, Bot, Loader2 } from "lucide-react";
+import { User, Bot, Loader2, Search, ListTree } from "lucide-react";
 
 interface Props {
   message: ChatMessage;
 }
 
 export default function ChatMessage({ message }: Props) {
+  const navigate = useNavigate();
+  const [traceDrawerOpen, setTraceDrawerOpen] = useState(false);
   const isUser = message.role === "user";
   const isSystem = message.role === "system";
 
   if (isSystem) return null; // Don't render system messages
+
+  const handleSearch = () => {
+    navigate(`/search?q=${encodeURIComponent(message.content)}`);
+  };
+
+  const handleOpenTrace = () => {
+    setTraceDrawerOpen(true);
+  };
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
@@ -69,12 +83,45 @@ export default function ChatMessage({ message }: Props) {
         </Card>
 
         {/* Timestamp and duration */}
-        <p className="text-xs text-muted-foreground px-2">
-          {format(new Date(message.timestamp), "h:mm a")}
-          {!isUser && message.duration && (
-            <span className="ml-2 opacity-70">• {message.duration.toFixed(1)}s</span>
+        <div className="flex items-center gap-1 px-2">
+          <p className="text-xs text-muted-foreground">
+            {format(new Date(message.timestamp), "h:mm a")}
+            {!isUser && message.duration && (
+              <span className="ml-2 opacity-70">• {message.duration.toFixed(1)}s</span>
+            )}
+          </p>
+          {isUser && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 opacity-60 hover:opacity-100"
+              onClick={handleSearch}
+              title="Search for this message"
+            >
+              <Search className="h-3 w-3" />
+            </Button>
           )}
-        </p>
+          {!isUser && message.trace && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 opacity-60 hover:opacity-100"
+              onClick={handleOpenTrace}
+              title="View agent trace"
+            >
+              <ListTree className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+
+        {/* Trace Drawer */}
+        {!isUser && message.trace && (
+          <TraceDrawer
+            trace={message.trace}
+            open={traceDrawerOpen}
+            onOpenChange={setTraceDrawerOpen}
+          />
+        )}
       </div>
     </div>
   );

@@ -19,6 +19,10 @@ const Router = createBrowserRouter(
         lazy={lazyImportComponent(() => import("@/pages/Search"))}
       />
       <Route
+        path="/facts/:uuid"
+        lazy={lazyImportComponent(() => import("@/pages/FactDetail"))}
+      />
+      <Route
         path="/entities"
         lazy={lazyImportComponent(() => import("@/pages/Entities"))}
       />
@@ -40,7 +44,7 @@ const Router = createBrowserRouter(
       />
       <Route
         path="/sessions"
-        lazy={lazyImportComponent(() => import("@/pages/Episodes"))}
+        lazy={lazyImportComponent(() => import("@/pages/Sessions"))}
       />
       <Route
         path="/sessions/:sessionId"

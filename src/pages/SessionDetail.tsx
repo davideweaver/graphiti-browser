@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { graphitiService } from "@/api/graphitiService";
@@ -7,9 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Calendar, Clock, Hash, FolderGit2 } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, Hash, FolderGit2, Info } from "lucide-react";
 import { ChatMessage } from "@/components/episodes/ChatMessage";
 import { TimelineBar } from "@/components/episodes/TimelineBar";
+import { NodeDetailSheet } from "@/components/shared/NodeDetailSheet";
 import { format, differenceInMinutes } from "date-fns";
 
 export default function SessionDetail() {
@@ -18,6 +20,7 @@ export default function SessionDetail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const dateParam = searchParams.get('date');
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   // Fetch session details (includes episodes and metadata)
   const { data: sessionData, isLoading, error } = useQuery({
@@ -120,9 +123,20 @@ export default function SessionDetail() {
         {/* Session Summary Card */}
         <Card>
           <CardContent className="pt-6 space-y-4">
+            {/* Info Button */}
+            <div className="flex justify-end -mt-2 -mr-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSheetOpen(true)}
+              >
+                <Info className="h-5 w-5" />
+              </Button>
+            </div>
+
             {/* Summary */}
             {sessionData.summary && (
-              <div>
+              <div className="-mt-2">
                 <p className="text-sm text-muted-foreground">{sessionData.summary}</p>
               </div>
             )}
@@ -240,6 +254,14 @@ export default function SessionDetail() {
           })}
         </div>
       </div>
+
+      {/* NodeDetailSheet for graph navigation */}
+      <NodeDetailSheet
+        nodeType="session"
+        nodeId={sessionData.uuid || null}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+      />
     </Container>
   );
 }

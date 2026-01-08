@@ -13,6 +13,12 @@ import type {
   SessionDetailResponse,
   ProjectListResponse,
   ProjectStatsByDay,
+  EpisodeListResponse,
+  Fact,
+  GraphNode,
+  GraphEdge,
+  NodeConnectionsResponse,
+  EdgeConnectionsResponse,
 } from "@/types/graphiti";
 
 const BASE_URL = "/api";
@@ -147,8 +153,40 @@ class GraphitiService {
   }
 
   // GET /entity-edge/{uuid} - Get entity edge details
-  async getEntityEdge(uuid: string): Promise<EntityEdge> {
-    return this.fetch<EntityEdge>(`/entity-edge/${uuid}`);
+  async getEntityEdge(uuid: string, groupId: string = DEFAULT_GROUP_ID): Promise<EntityEdge> {
+    return this.fetch<EntityEdge>(`/entity-edge/${uuid}?group_id=${groupId}`);
+  }
+
+  // GET /entity-edge/{uuid}?include_entities=true&include_episodes=true - Get fact details with provenance
+  async getFactDetails(
+    uuid: string,
+    groupId: string = DEFAULT_GROUP_ID,
+    includeEntities = true,
+    includeEpisodes = true
+  ): Promise<Fact> {
+    const params = new URLSearchParams({
+      group_id: groupId,
+      include_entities: includeEntities.toString(),
+      include_episodes: includeEpisodes.toString(),
+    });
+    return this.fetch<Fact>(`/entity-edge/${uuid}?${params.toString()}`);
+  }
+
+  // GET /entity-edge/{uuid}/related-facts - Get fact provenance and lifecycle
+  async getRelatedFacts(
+    uuid: string,
+    groupId: string = DEFAULT_GROUP_ID
+  ): Promise<{
+    superseded_by: Fact[];
+    supersedes: Fact[];
+    related: Fact[];
+  }> {
+    const params = new URLSearchParams({ group_id: groupId });
+    return this.fetch<{
+      superseded_by: Fact[];
+      supersedes: Fact[];
+      related: Fact[];
+    }>(`/entity-edge/${uuid}/related-facts?${params.toString()}`);
   }
 
   // GET /healthcheck - Server status
@@ -218,6 +256,8 @@ class GraphitiService {
     groupId = DEFAULT_GROUP_ID,
     limit = 50,
     cursor?: string,
+    search?: string,
+    projectName?: string,
     createdAfter?: string,
     createdBefore?: string,
     validAfter?: string,
@@ -230,12 +270,41 @@ class GraphitiService {
     });
 
     if (cursor) params.append("cursor", cursor);
+    if (search) params.append("search", search);
+    if (projectName) params.append("project_name", projectName);
     if (createdAfter) params.append("created_after", createdAfter);
     if (createdBefore) params.append("created_before", createdBefore);
     if (validAfter) params.append("valid_after", validAfter);
     if (validBefore) params.append("valid_before", validBefore);
 
     return this.fetch<SessionListResponse>(`/sessions/${groupId}?${params.toString()}`);
+  }
+
+  // GET /episodes/{group_id} - List episodes with pagination (future API enhancement)
+  // NOTE: This method is prepared for when the backend API is updated to support pagination
+  // Current API only supports last_n parameter, use getEpisodes() for now
+  async listEpisodes(
+    groupId = DEFAULT_GROUP_ID,
+    limit = 50,
+    cursor?: string,
+    sortBy: 'created_at' | 'valid_at' = 'created_at',
+    sortOrder: 'asc' | 'desc' = 'desc',
+    startDate?: string,
+    endDate?: string,
+    sessionId?: string
+  ): Promise<EpisodeListResponse> {
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      sort_by: sortBy,
+      sort_order: sortOrder,
+    });
+
+    if (cursor) params.append("cursor", cursor);
+    if (startDate) params.append("start_date", startDate);
+    if (endDate) params.append("end_date", endDate);
+    if (sessionId) params.append("session_id", sessionId);
+
+    return this.fetch<EpisodeListResponse>(`/episodes/${groupId}?${params.toString()}`);
   }
 
   // GET /sessions/{group_id}/stats/by-day - Session counts per day
@@ -366,6 +435,38 @@ class GraphitiService {
 
     return this.fetch<ProjectStatsByDay>(
       `/projects/${groupId}/stats/by-day?${params.toString()}`
+    );
+  }
+
+  // Generic graph navigation endpoints (thin layer over FalkorDB)
+
+  // GET /graph/nodes/{uuid} - Get any node by UUID with auto-detected type
+  async getGraphNode(uuid: string, groupId = DEFAULT_GROUP_ID): Promise<GraphNode> {
+    return this.fetch<GraphNode>(`/graph/nodes/${uuid}?group_id=${groupId}`);
+  }
+
+  // GET /graph/nodes/{uuid}/connections - Get all connections for a node
+  async getNodeConnections(
+    uuid: string,
+    groupId = DEFAULT_GROUP_ID
+  ): Promise<NodeConnectionsResponse> {
+    return this.fetch<NodeConnectionsResponse>(
+      `/graph/nodes/${uuid}/connections?group_id=${groupId}`
+    );
+  }
+
+  // GET /graph/edges/{uuid} - Get any edge by UUID
+  async getGraphEdge(uuid: string, groupId = DEFAULT_GROUP_ID): Promise<GraphEdge> {
+    return this.fetch<GraphEdge>(`/graph/edges/${uuid}?group_id=${groupId}`);
+  }
+
+  // GET /graph/edges/{uuid}/connections - Get source and target nodes for an edge
+  async getEdgeConnections(
+    uuid: string,
+    groupId = DEFAULT_GROUP_ID
+  ): Promise<EdgeConnectionsResponse> {
+    return this.fetch<EdgeConnectionsResponse>(
+      `/graph/edges/${uuid}/connections?group_id=${groupId}`
     );
   }
 }

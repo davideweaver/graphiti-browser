@@ -27,7 +27,7 @@ import { toast } from "sonner";
 import { format, startOfDay, endOfDay, isSameDay, addDays, subDays, parse, differenceInMinutes } from "date-fns";
 import type { Session } from "@/types/graphiti";
 
-export default function Episodes() {
+export default function Sessions() {
   const { groupId } = useGraphiti();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -67,12 +67,14 @@ export default function Episodes() {
     queryFn: () => graphitiService.listSessions(
       groupId,
       500,
-      undefined,
-      undefined,
-      undefined,
-      rangeStartDate,
-      rangeEndDate,
-      'desc'
+      undefined, // cursor
+      undefined, // search
+      undefined, // projectName
+      undefined, // createdAfter
+      undefined, // createdBefore
+      rangeStartDate, // validAfter
+      rangeEndDate, // validBefore
+      'desc' // sortOrder
     ),
   });
 

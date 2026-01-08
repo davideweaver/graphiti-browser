@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { graphitiService } from "@/api/graphitiService";
@@ -9,16 +10,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Info } from "lucide-react";
 import { FactCard } from "@/components/search/FactCard";
 import { SessionRow } from "@/components/episodes/SessionRow";
 import { ProjectTimelineBar } from "@/components/episodes/ProjectTimelineBar";
+import { NodeDetailSheet } from "@/components/shared/NodeDetailSheet";
 import { format } from "date-fns";
 
 export default function ProjectDetail() {
   const { projectName: encodedProjectName } = useParams<{ projectName: string }>();
   const { groupId } = useGraphiti();
   const navigate = useNavigate();
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   // Decode the project name from URL
   const projectName = encodedProjectName ? decodeURIComponent(encodedProjectName) : "";
@@ -126,12 +129,23 @@ export default function ProjectDetail() {
         {/* Project Header */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">{projectName}</CardTitle>
-            {projectData.project_path && (
-              <p className="text-sm text-muted-foreground mt-1 font-mono">
-                {projectData.project_path}
-              </p>
-            )}
+            <div className="flex items-start justify-between">
+              <div>
+                <CardTitle className="text-2xl">{projectName}</CardTitle>
+                {projectData.project_path && (
+                  <p className="text-sm text-muted-foreground mt-1 font-mono">
+                    {projectData.project_path}
+                  </p>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSheetOpen(true)}
+              >
+                <Info className="h-5 w-5" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -313,6 +327,14 @@ export default function ProjectDetail() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* NodeDetailSheet for graph navigation */}
+      <NodeDetailSheet
+        nodeType="project"
+        nodeId={projectName || null}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+      />
     </Container>
   );
 }

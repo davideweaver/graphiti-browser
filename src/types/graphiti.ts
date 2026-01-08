@@ -53,8 +53,13 @@ export interface Fact {
   created_at: string;
   expired_at?: string;
   similarity_score?: number; // Optional - similarity/reranker score (0.0-1.0)
-  entities?: Entity[]; // Optional - not always returned by API
-  episodes?: Episode[]; // Optional - not always returned by API
+  // Provenance fields (optional, only included when requested via include_entities/include_episodes)
+  source_node_uuid?: string; // UUID of source entity in relationship
+  target_node_uuid?: string; // UUID of target entity in relationship
+  source_entity?: Entity; // Full details of source entity
+  target_entity?: Entity; // Full details of target entity
+  entities?: Entity[]; // Optional - not always returned by API (legacy field)
+  episodes?: Episode[]; // Optional - episodes that created/mentioned this fact
 }
 
 // API request/response types
@@ -102,6 +107,7 @@ export interface HealthCheckResponse {
 // Session - metadata for a group of related episodes
 export interface Session {
   session_id: string;
+  uuid: string; // Session UUID from database (for consistent graph navigation)
   episode_count: number;
   first_episode_date: string;
   last_episode_date: string;
@@ -119,6 +125,14 @@ export interface SessionListResponse {
   cursor: string | null;
 }
 
+// Response from /episodes/{group_id} (future paginated version)
+export interface EpisodeListResponse {
+  episodes: Episode[];
+  total: number;
+  has_more: boolean;
+  cursor: string | null;
+}
+
 // Response from /sessions/{group_id}/stats/by-day
 export interface SessionStatsByDay {
   stats: Array<{
@@ -130,6 +144,7 @@ export interface SessionStatsByDay {
 
 // Project - metadata about a named project
 export interface Project {
+  uuid: string; // Project node UUID in graph database
   name: string;
   group_id: string;
   episode_count: number;
@@ -159,6 +174,7 @@ export interface ProjectStatsByDay {
 // Response from GET /sessions/{group_id}/{session_id}
 export interface SessionDetailResponse {
   session_id: string;
+  uuid: string; // Session UUID from database (for consistent graph navigation)
   summary?: string;
   episode_count: number;
   first_episode_date: string;
@@ -167,4 +183,49 @@ export interface SessionDetailResponse {
   episodes: Episode[];
   project_name?: string; // Optional project name for the session
   first_episode_preview?: string; // Optional preview of the first episode content
+}
+
+// Generic graph navigation types (thin layer over FalkorDB)
+
+// Generic graph node (any node type: Entity, Episodic, Session, Project, Community)
+// Note: "Fact" is a virtual node type used for edge visualization in GraphNavigator
+export interface GraphNode {
+  uuid: string;
+  node_type: "Entity" | "Episodic" | "Session" | "Project" | "Community" | "Fact";
+  label: string; // Display name
+  labels: string[]; // All node labels (e.g., ["Person", "Entity"])
+  metadata: Record<string, any>; // All node properties
+  created_at: string | null;
+}
+
+// Generic graph edge (any relationship type: RELATES_TO, MENTIONS, etc.)
+export interface GraphEdge {
+  uuid: string;
+  edge_type: "RELATES_TO" | "MENTIONS" | "HAS_MEMBER" | "IN_PROJECT" | "PART_OF_PROJECT";
+  label: string; // Display name/fact
+  source_uuid: string;
+  target_uuid: string;
+  metadata: Record<string, any>; // All edge properties
+  created_at: string | null;
+}
+
+// Connection between nodes (node + relationship + direction)
+export interface GraphConnection {
+  node: GraphNode;
+  relationship: GraphEdge;
+  direction: "incoming" | "outgoing";
+}
+
+// Response from GET /graph/nodes/{uuid}/connections
+export interface NodeConnectionsResponse {
+  center_node: GraphNode;
+  connections: GraphConnection[];
+  total_connections: number;
+}
+
+// Response from GET /graph/edges/{uuid}/connections
+export interface EdgeConnectionsResponse {
+  edge: GraphEdge;
+  source: GraphNode;
+  target: GraphNode;
 }

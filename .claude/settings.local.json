@@ -50,7 +50,14 @@
       "Bash(done)",
       "Bash(node test-queries.js:*)",
       "Bash(npm run lint:*)",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Bash(node -c:*)",
+      "Bash(node test-trace-format.js:*)",
+      "Bash(git -C /Users/dweaver/Projects/ai/claude-assist/projects/graphiti-browser checkout src/pages/Search.tsx)",
+      "Bash(jq:*)",
+      "Bash(docker logs:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)"
     ]
   },
   "enableAllProjectMcpServers": true,

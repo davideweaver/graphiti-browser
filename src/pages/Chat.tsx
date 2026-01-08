@@ -41,6 +41,7 @@ export default function Chat() {
   const { sendMessage, isStreaming } = useBackendChat({
     onAddMessage: addMessage,
     onUpdateMessage: updateMessage,
+    groupId,
   });
 
   const handleSend = async () => {

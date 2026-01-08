@@ -3,9 +3,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { AlertTriangle } from "lucide-react";
 
 interface FactCardProps {
   fact: Fact;
+  onOpenDetails?: () => void;
 }
 
 function getScoreConfig(score: number) {
@@ -40,30 +42,49 @@ function getScoreConfig(score: number) {
   }
 }
 
-export function FactCard({ fact }: FactCardProps) {
+export function FactCard({ fact, onOpenDetails }: FactCardProps) {
   const scoreConfig = fact.similarity_score !== undefined
     ? getScoreConfig(fact.similarity_score)
     : null;
 
+  const isInvalid = fact.invalid_at && fact.valid_at === fact.invalid_at;
+
   return (
-    <Card className={cn(scoreConfig?.bgClass)}>
+    <Card
+      className={cn(
+        scoreConfig?.bgClass,
+        "hover:shadow-md transition-shadow cursor-pointer"
+      )}
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpenDetails?.();
+      }}
+    >
       <CardContent className="p-3">
-        <div className="flex items-start justify-between gap-2 mb-2">
+        {/* Main fact content */}
+        <div className="flex items-start gap-2 mb-2">
           <p className="text-sm flex-1">
             {fact.fact}
           </p>
-          {fact.similarity_score !== undefined && scoreConfig && (
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <Badge variant={scoreConfig.variant} className={cn("text-xs py-0", scoreConfig.textClass)}>
-                {scoreConfig.label}
-              </Badge>
-              <span className={cn("text-xs font-mono", scoreConfig.textClass)}>
-                {fact.similarity_score.toFixed(2)}
-              </span>
-            </div>
-          )}
+
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {isInvalid && (
+              <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" title="Fact was immediately invalidated" />
+            )}
+            {fact.similarity_score !== undefined && scoreConfig && (
+              <>
+                <Badge variant={scoreConfig.variant} className={cn("text-xs py-0", scoreConfig.textClass)}>
+                  {scoreConfig.label}
+                </Badge>
+                <span className={cn("text-xs font-mono", scoreConfig.textClass)}>
+                  {fact.similarity_score.toFixed(2)}
+                </span>
+              </>
+            )}
+          </div>
         </div>
 
+        {/* Metadata row */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Badge variant="secondary" className="text-xs py-0">
             {fact.name}
