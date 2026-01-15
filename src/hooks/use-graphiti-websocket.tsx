@@ -86,7 +86,8 @@ export function useGraphitiWebSocket(): UseGraphitiWebSocketReturn {
       // Queue status events
       websocketService.addEventListener("queue.status", (event) => {
         const typedEvent = event as QueueStatusEvent;
-        setQueueSize(typedEvent.data.queue_size);
+        // Use total_pending instead of queue_size for accurate count
+        setQueueSize(typedEvent.data.total_pending);
         setIsProcessing(typedEvent.data.is_processing);
       }),
     ];

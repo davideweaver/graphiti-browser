@@ -86,8 +86,10 @@ export interface GroupDeletedEvent extends BaseEvent {
 export interface QueueStatusEvent extends BaseEvent {
   event_type: "queue.status";
   data: {
-    queue_size: number;
-    is_processing: boolean;
+    queue_size: number;          // Items waiting in queue
+    processing_count: number;    // Items being processed
+    total_pending: number;       // Total work remaining (queue_size + processing_count)
+    is_processing: boolean;      // true if total_pending > 0
   };
 }
 
