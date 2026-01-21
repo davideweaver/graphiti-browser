@@ -18,22 +18,24 @@ export function useBackendChat({ onAddMessage, onUpdateMessage, groupId }: UseBa
   const [isStreaming, setIsStreaming] = useState(false);
 
   const sendMessage = useCallback(
-    async (userMessage: string, conversationHistory: ChatMessage[]) => {
+    async (userMessage: string, conversationHistory: ChatMessage[], model?: string, agentType?: string, contextWindow: number = 1) => {
       setIsStreaming(true);
 
       try {
-        // Build message history - only include last message as context
+        // Build message history - include last N messages as context based on contextWindow setting
         const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 
-        // Get last message from history (if exists)
-        const lastMessage = conversationHistory
-          .filter((m) => m.role !== 'system')
-          .slice(-1)[0];
+        // Get last N messages from history (if contextWindow > 0)
+        if (contextWindow > 0) {
+          const recentMessages = conversationHistory
+            .filter((m) => m.role !== 'system')
+            .slice(-contextWindow);
 
-        if (lastMessage) {
-          messages.push({
-            role: lastMessage.role as 'user' | 'assistant',
-            content: lastMessage.content,
+          recentMessages.forEach((msg) => {
+            messages.push({
+              role: msg.role as 'user' | 'assistant',
+              content: msg.content,
+            });
           });
         }
 
@@ -49,13 +51,17 @@ export function useBackendChat({ onAddMessage, onUpdateMessage, groupId }: UseBa
 
         console.log('🚀 Sending request to chat backend');
         console.log(`   Group ID: ${groupId}`);
+        console.log(`   Model: ${model || 'default'}`);
+        console.log(`   Agent Type: ${agentType || 'default'}`);
+        console.log(`   Context Window: ${contextWindow} messages`);
+        console.log(`   Total messages sent: ${messages.length}`);
         const startTime = Date.now();
 
-        // Call backend API with groupId
+        // Call backend API with groupId, optional model, and optional agentType
         const response = await fetch(`${CHAT_API_URL}/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages, groupId }),
+          body: JSON.stringify({ messages, groupId, model, agentType }),
         });
 
         if (!response.ok) {
@@ -67,6 +73,8 @@ export function useBackendChat({ onAddMessage, onUpdateMessage, groupId }: UseBa
 
         console.log(`✅ Response received in ${elapsed}s`);
         console.log(`   Success: ${data.success}`);
+        console.log(`   Model: ${data.model || 'unknown'}`);
+        console.log(`   Agent: ${data.agentType || 'unknown'}`);
         console.log(`   Steps: ${data.steps}`);
         console.log(`   Memory facts: ${data.memoryFacts?.length || 0}`);
         console.log(`   Full trace:`, data);

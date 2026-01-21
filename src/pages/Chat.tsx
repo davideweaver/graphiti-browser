@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useGraphiti } from '@/context/GraphitiContext';
 import { useChatHistory } from '@/hooks/use-chat-history';
@@ -14,12 +14,45 @@ import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const CHAT_API_URL = import.meta.env.VITE_CHAT_API_URL || 'http://localhost:3001';
+const MODEL_STORAGE_KEY = 'graphiti-chat-selected-model';
+const AGENT_STORAGE_KEY = 'graphiti-chat-selected-agent';
+const CONTEXT_WINDOW_STORAGE_KEY = 'graphiti-chat-context-window';
 
 export default function Chat() {
   const { groupId } = useGraphiti();
   const { messages, addMessage, updateMessage, clearHistory } = useChatHistory(groupId);
   const [input, setInput] = useState('');
+  const [selectedModel, setSelectedModel] = useState(() => {
+    const stored = localStorage.getItem(MODEL_STORAGE_KEY);
+    // Migrate old "gpt-oss" key to "gpt-oss-q4"
+    if (stored === 'gpt-oss') {
+      return 'gpt-oss-q4';
+    }
+    return stored || 'qwen';
+  });
+  const [selectedAgent, setSelectedAgent] = useState(() => {
+    return localStorage.getItem(AGENT_STORAGE_KEY) || 'react';
+  });
+  const [contextWindow, setContextWindow] = useState(() => {
+    const stored = localStorage.getItem(CONTEXT_WINDOW_STORAGE_KEY);
+    return stored ? Number(stored) : 1;
+  });
   const { scrollRef, handleScroll, scrollToBottom } = useAutoScroll(messages.length);
+
+  // Persist model selection to localStorage
+  useEffect(() => {
+    localStorage.setItem(MODEL_STORAGE_KEY, selectedModel);
+  }, [selectedModel]);
+
+  // Persist agent selection to localStorage
+  useEffect(() => {
+    localStorage.setItem(AGENT_STORAGE_KEY, selectedAgent);
+  }, [selectedAgent]);
+
+  // Persist context window to localStorage
+  useEffect(() => {
+    localStorage.setItem(CONTEXT_WINDOW_STORAGE_KEY, contextWindow.toString());
+  }, [contextWindow]);
 
   // Health check for backend service
   const { data: isOnline } = useQuery({
@@ -57,7 +90,7 @@ export default function Chat() {
     scrollToBottom();
 
     addMessage({ role: 'user', content: userMessage });
-    await sendMessage(userMessage, messages);
+    await sendMessage(userMessage, messages, selectedModel, selectedAgent, contextWindow);
   };
 
   const handleClearHistory = () => {
@@ -65,6 +98,11 @@ export default function Chat() {
       clearHistory();
       toast.success('Chat history cleared');
     }
+  };
+
+  const handleRepeatMessage = (content: string) => {
+    setInput(content);
+    scrollToBottom();
   };
 
   return (
@@ -94,9 +132,27 @@ export default function Chat() {
           )}
 
           <div className="space-y-4">
-            {messages.map((msg) => (
-              <ChatMessage key={msg.id} message={msg} />
-            ))}
+            {messages.map((msg, idx) => {
+              // Find the previous user message for assistant messages with traces
+              let previousUserMessage: string | undefined;
+              if (msg.role === 'assistant' && msg.trace) {
+                for (let i = idx - 1; i >= 0; i--) {
+                  if (messages[i].role === 'user') {
+                    previousUserMessage = messages[i].content;
+                    break;
+                  }
+                }
+              }
+
+              return (
+                <ChatMessage
+                  key={msg.id}
+                  message={msg}
+                  userMessage={previousUserMessage}
+                  onRepeat={handleRepeatMessage}
+                />
+              );
+            })}
           </div>
         </ScrollArea>
 
@@ -106,6 +162,12 @@ export default function Chat() {
           onSend={handleSend}
           disabled={!isOnline}
           isStreaming={isStreaming}
+          selectedModel={selectedModel}
+          onModelChange={setSelectedModel}
+          selectedAgent={selectedAgent}
+          onAgentChange={setSelectedAgent}
+          contextWindow={contextWindow}
+          onContextWindowChange={setContextWindow}
         />
       </div>
     </Container>

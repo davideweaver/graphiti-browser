@@ -26,11 +26,35 @@ export interface ToolCall {
   error?: string;
 }
 
+export interface ToolDecision {
+  toolName: string;
+  toolCallId: string;
+  input: any;
+}
+
+export interface ToolExecutionResult {
+  toolCallId: string;
+  toolName: string;
+  output: any;
+  error?: string;
+  success: boolean;
+}
+
+export interface LLMTurn {
+  turnNumber: number;
+  reasoning: string;
+  toolDecisions: ToolDecision[];
+  toolResults: ToolExecutionResult[];
+  timestamp?: string;
+}
+
 export interface AgentTrace {
   success: boolean;
   response: string;
   steps: number;
   duration: number;
+  model?: string; // LLM model used (qwen, gpt-oss, mistral, etc.)
+  agentType?: string; // Agent architecture used (react, codemode, etc.)
   finishReason?: string; // 'stop', 'tool-calls', etc.
   usedTools?: boolean;
   memoryFacts?: Array<{ uuid: string; fact: string; valid_at: string }>;
@@ -39,6 +63,8 @@ export interface AgentTrace {
   preSearch?: PreSearchResult;
   // Tool usage details
   toolCalls?: ToolCall[];
+  // LLM turn-by-turn reasoning trace
+  llmTurns?: LLMTurn[];
   // Additional data
   reasoning?: string[];
   metadata?: Record<string, any>;

@@ -3,18 +3,20 @@ import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import MemoryBadge from "./MemoryBadge";
 import TraceDrawer from "./TraceDrawer";
 import type { ChatMessage } from "@/types/chat";
-import { User, Bot, Loader2, Search, ListTree } from "lucide-react";
+import { User, Bot, Loader2, Search, ListTree, RotateCcw } from "lucide-react";
 
 interface Props {
   message: ChatMessage;
+  userMessage?: string;
+  onRepeat?: (content: string) => void;
 }
 
-export default function ChatMessage({ message }: Props) {
+export default function ChatMessage({ message, userMessage, onRepeat }: Props) {
   const navigate = useNavigate();
   const [traceDrawerOpen, setTraceDrawerOpen] = useState(false);
   const isUser = message.role === "user";
@@ -30,21 +32,17 @@ export default function ChatMessage({ message }: Props) {
     setTraceDrawerOpen(true);
   };
 
+  const handleRepeat = () => {
+    if (onRepeat) {
+      onRepeat(message.content);
+    }
+  };
+
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
         className={`max-w-[80%] space-y-1 ${isUser ? "items-end" : "items-start"}`}
       >
-        {/* Memory badge (only for assistant messages with memories) */}
-        {!isUser &&
-          message.memoryFactIds &&
-          message.memoryFactIds.length > 0 && (
-            <MemoryBadge
-              factIds={message.memoryFactIds}
-              facts={message.memoryFacts}
-            />
-          )}
-
         {/* Message card */}
         <Card
           className={`p-3 ${isUser ? "bg-primary text-primary-foreground" : ""}`}
@@ -89,27 +87,48 @@ export default function ChatMessage({ message }: Props) {
             {!isUser && message.duration && (
               <span className="ml-2 opacity-70">• {message.duration.toFixed(1)}s</span>
             )}
+            {!isUser && message.trace?.model && (
+              <span className="ml-2 opacity-70">• {message.trace.model}</span>
+            )}
+            {!isUser && message.trace?.agentType && (
+              <span className="ml-2 opacity-70">• {message.trace.agentType}</span>
+            )}
           </p>
           {isUser && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5 opacity-60 hover:opacity-100"
-              onClick={handleSearch}
-              title="Search for this message"
-            >
-              <Search className="h-3 w-3" />
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 opacity-60 hover:opacity-100"
+                onClick={handleRepeat}
+                title="Repeat this message"
+              >
+                <RotateCcw className="h-2.5 w-2.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 opacity-60 hover:opacity-100"
+                onClick={handleSearch}
+                title="Search for this message"
+              >
+                <Search className="h-3 w-3" />
+              </Button>
+            </>
           )}
           {!isUser && message.trace && (
             <Button
               variant="ghost"
-              size="icon"
-              className="h-5 w-5 opacity-60 hover:opacity-100"
+              size="sm"
+              className="h-5 px-1 gap-0.5 opacity-60 hover:opacity-100"
               onClick={handleOpenTrace}
               title="View agent trace"
             >
               <ListTree className="h-3 w-3" />
+              <span className="text-[10px]">
+                {message.trace.steps !== undefined ? message.trace.steps : 0}/
+                {message.trace.toolCalls ? message.trace.toolCalls.length : 0}
+              </span>
             </Button>
           )}
         </div>
@@ -118,6 +137,7 @@ export default function ChatMessage({ message }: Props) {
         {!isUser && message.trace && (
           <TraceDrawer
             trace={message.trace}
+            userMessage={userMessage || "No user message found"}
             open={traceDrawerOpen}
             onOpenChange={setTraceDrawerOpen}
           />

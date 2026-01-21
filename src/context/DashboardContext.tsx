@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { graphitiService } from "@/api/graphitiService";
 import { useGraphiti } from "./GraphitiContext";
 import { Period } from "@/types/dashboard";
-import { subDays, startOfDay, endOfDay } from "date-fns";
+import { subDays, startOfDay, endOfDay, format } from "date-fns";
 import type { SessionStatsByDay } from "@/types/graphiti";
 
 interface DashboardContextType {
@@ -31,31 +31,58 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({
   const { groupId } = useGraphiti();
   const [period, setPeriod] = useState<Period>("7d");
 
-  // Calculate date range based on period
-  const dateRange = useMemo(() => {
+  // Fetch all sessions (not filtered by date - we compute local stats ourselves)
+  const { data: sessionsResponse, isLoading, refetch } = useQuery({
+    queryKey: ["sessions", groupId],
+    queryFn: () => graphitiService.listSessions(
+      groupId,
+      500,
+      undefined, // cursor
+      undefined, // search
+      undefined, // projectName
+      undefined, // createdAfter
+      undefined, // createdBefore
+      undefined, // validAfter (don't filter - we need true session dates!)
+      undefined, // validBefore (don't filter - we need true session dates!)
+      'desc' // sortOrder
+    ),
+  });
+
+  // Compute session stats in local timezone
+  const sessionStats = useMemo<SessionStatsByDay | null>(() => {
+    if (!sessionsResponse?.sessions) return null;
+
+    // Calculate date range for filtering based on period
     const now = new Date();
     const days = period === "7d" ? 7 : period === "30d" ? 30 : 90;
     const startDate = startOfDay(subDays(now, days));
     const endDate = endOfDay(now);
 
-    return {
-      validAfter: startDate.toISOString(),
-      validBefore: endDate.toISOString(),
-    };
-  }, [period]);
+    // Count sessions by local date
+    const statsByDate = new Map<string, number>();
 
-  // Fetch session stats
-  const { data: sessionStats, isLoading, refetch } = useQuery({
-    queryKey: ["session-stats-by-day", groupId, dateRange.validAfter, dateRange.validBefore],
-    queryFn: () =>
-      graphitiService.getSessionStatsByDay(
-        groupId,
-        undefined,
-        undefined,
-        dateRange.validAfter,
-        dateRange.validBefore
-      ),
-  });
+    sessionsResponse.sessions.forEach((session) => {
+      // Convert UTC timestamp to local date
+      const lastEpisodeDate = new Date(session.last_episode_date);
+
+      // Only count sessions within the selected period
+      if (lastEpisodeDate >= startDate && lastEpisodeDate <= endDate) {
+        const localDateString = format(lastEpisodeDate, 'yyyy-MM-dd');
+        statsByDate.set(localDateString, (statsByDate.get(localDateString) || 0) + 1);
+      }
+    });
+
+    // Convert to array format expected by SessionStatsByDay
+    const stats = Array.from(statsByDate.entries()).map(([date, count]) => ({
+      date,
+      count,
+    })).sort((a, b) => a.date.localeCompare(b.date));
+
+    return {
+      stats,
+      total_days: stats.length,
+    };
+  }, [sessionsResponse, period]);
 
   // Wrap refetch in useCallback to maintain stable reference
   const stableRefetch = useCallback(() => {

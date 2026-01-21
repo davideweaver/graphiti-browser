@@ -12,18 +12,20 @@ interface DayNavigationProps {
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
   dateRange: { start: string; end: string };
+  localStats?: Map<string, number>; // Optional: pre-computed stats in local timezone
 }
 
 export function DayNavigation({
   selectedDate,
   onDateSelect,
   dateRange,
+  localStats,
 }: DayNavigationProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { groupId } = useGraphiti();
   const isMobile = useIsMobile();
 
-  // Fetch session stats for the date range
+  // Fetch session stats for the date range (only if localStats not provided)
   const { data: statsData } = useQuery({
     queryKey: ["session-stats-by-day", groupId, dateRange.start, dateRange.end],
     queryFn: () => graphitiService.getSessionStatsByDay(
@@ -33,6 +35,7 @@ export function DayNavigation({
       dateRange.start,
       dateRange.end
     ),
+    enabled: !localStats, // Skip API call if localStats provided
   });
 
   // Calculate the range of days to show (7 days starting with Monday)
@@ -45,11 +48,16 @@ export function DayNavigation({
     addDays(weekStartDate, i)
   );
 
-  // Get session count for a specific day from API stats
+  // Get session count for a specific day
   const getSessionCountForDay = (date: Date) => {
-    if (!statsData?.stats) return 0;
-
     const dateString = format(date, "yyyy-MM-dd");
+
+    // Use localStats if provided, otherwise fall back to API stats
+    if (localStats) {
+      return localStats.get(dateString) || 0;
+    }
+
+    if (!statsData?.stats) return 0;
     const stat = statsData.stats.find(s => s.date === dateString);
     return stat?.count || 0;
   };

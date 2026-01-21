@@ -17,7 +17,7 @@ export const GraphitiProvider = ({ children }: { children: ReactNode }) => {
   return (
     <GraphitiContext.Provider
       value={{
-        baseUrl: "http://localhost:8000",
+        baseUrl: import.meta.env.VITE_GRAPHITI_SERVER || "http://localhost:8000",
         groupId,
         setGroupId,
       }}

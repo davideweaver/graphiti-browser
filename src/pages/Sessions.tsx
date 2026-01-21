@@ -58,12 +58,14 @@ export default function Sessions() {
     setSearchParams({ date: dateString }, { replace: true });
   }, [selectedDate, setSearchParams]);
 
-  // Calculate date range for API query (fetch 30 days before and after selected date for DayNavigation)
+  // Calculate date range for stats API query (DayNavigation calendar)
   const rangeStartDate = startOfDay(subDays(selectedDate, 30)).toISOString();
   const rangeEndDate = endOfDay(addDays(selectedDate, 30)).toISOString();
 
+  // Fetch all sessions WITHOUT date filters to get true first/last episode dates
+  // Date filtering happens on the frontend to avoid backend returning filtered dates
   const { data: sessionsResponse, isLoading } = useQuery({
-    queryKey: ["sessions", groupId, rangeStartDate, rangeEndDate],
+    queryKey: ["sessions", groupId],
     queryFn: () => graphitiService.listSessions(
       groupId,
       500,
@@ -72,8 +74,8 @@ export default function Sessions() {
       undefined, // projectName
       undefined, // createdAfter
       undefined, // createdBefore
-      rangeStartDate, // validAfter
-      rangeEndDate, // validBefore
+      undefined, // validAfter (don't filter - we need true session dates!)
+      undefined, // validBefore (don't filter - we need true session dates!)
       'desc' // sortOrder
     ),
   });
@@ -123,13 +125,36 @@ export default function Sessions() {
     });
   };
 
+  // Compute session counts by local date (for calendar)
+  const localSessionStats = useMemo(() => {
+    if (!sessionsResponse?.sessions) return new Map<string, number>();
+
+    const stats = new Map<string, number>();
+
+    sessionsResponse.sessions.forEach((session) => {
+      // Convert UTC timestamp to local date
+      const lastEpisodeDate = new Date(session.last_episode_date);
+      const localDateString = format(lastEpisodeDate, 'yyyy-MM-dd');
+
+      stats.set(localDateString, (stats.get(localDateString) || 0) + 1);
+    });
+
+    return stats;
+  }, [sessionsResponse]);
+
   // Filter sessions to only show the selected date
   const filteredSessions = useMemo(() => {
     if (!sessionsResponse?.sessions) return [];
 
-    return sessionsResponse.sessions.filter((session) =>
-      isSameDay(new Date(session.last_episode_date), selectedDate)
-    );
+    const selectedDateString = format(selectedDate, 'yyyy-MM-dd');
+
+    return sessionsResponse.sessions.filter((session) => {
+      // Convert UTC timestamp to local date for comparison
+      // This ensures sessions are grouped by when they occurred in the user's timezone
+      const lastEpisodeDate = new Date(session.last_episode_date);
+      const localDateString = format(lastEpisodeDate, 'yyyy-MM-dd');
+      return localDateString === selectedDateString;
+    });
   }, [sessionsResponse, selectedDate]);
 
   // Group sessions by project when enabled
@@ -216,6 +241,7 @@ export default function Sessions() {
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}
             dateRange={{ start: rangeStartDate, end: rangeEndDate }}
+            localStats={localSessionStats}
           />
         )}
 
