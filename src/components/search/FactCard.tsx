@@ -1,13 +1,16 @@
 import type { Fact } from "@/types/graphiti";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Edit, Trash2 } from "lucide-react";
 
 interface FactCardProps {
   fact: Fact;
   onOpenDetails?: () => void;
+  onEdit?: (fact: Fact) => void;
+  onDelete?: (fact: Fact) => void;
 }
 
 function getScoreConfig(score: number) {
@@ -42,18 +45,28 @@ function getScoreConfig(score: number) {
   }
 }
 
-export function FactCard({ fact, onOpenDetails }: FactCardProps) {
-  const scoreConfig = fact.similarity_score !== undefined
+export function FactCard({ fact, onOpenDetails, onEdit, onDelete }: FactCardProps) {
+  const scoreConfig = fact.similarity_score != null
     ? getScoreConfig(fact.similarity_score)
     : null;
 
   const isInvalid = fact.invalid_at && fact.valid_at === fact.invalid_at;
 
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEdit?.(fact);
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete?.(fact);
+  };
+
   return (
     <Card
       className={cn(
         scoreConfig?.bgClass,
-        "hover:shadow-md transition-shadow cursor-pointer"
+        "hover:shadow-md transition-shadow cursor-pointer group"
       )}
       onClick={(e) => {
         e.stopPropagation();
@@ -68,10 +81,37 @@ export function FactCard({ fact, onOpenDetails }: FactCardProps) {
           </p>
 
           <div className="flex items-center gap-1 flex-shrink-0">
+            {/* Edit/Delete buttons (hidden unless hovering) */}
+            {(onEdit || onDelete) && (
+              <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                {onEdit && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={handleEdit}
+                    title="Edit fact"
+                  >
+                    <Edit className="h-3 w-3" />
+                  </Button>
+                )}
+                {onDelete && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-red-600 hover:text-red-700"
+                    onClick={handleDelete}
+                    title="Delete fact"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            )}
             {isInvalid && (
               <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" title="Fact was immediately invalidated" />
             )}
-            {fact.similarity_score !== undefined && scoreConfig && (
+            {fact.similarity_score != null && scoreConfig && (
               <>
                 <Badge variant={scoreConfig.variant} className={cn("text-xs py-0", scoreConfig.textClass)}>
                   {scoreConfig.label}

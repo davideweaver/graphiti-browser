@@ -13,7 +13,7 @@ import { GraphVisualization } from "./GraphVisualization";
 import type { ForceGraphNode, ForceGraphLink } from "./GraphVisualization";
 
 interface GraphNavigatorProps {
-  nodeType: "fact" | "session" | "entity" | "episode" | "project";
+  nodeType: "fact" | "session" | "entity" | "episode" | "project" | "source";
   nodeId: string;
   groupId: string;
 }
@@ -29,7 +29,7 @@ export function GraphNavigator({ nodeType, nodeId, groupId }: GraphNavigatorProp
   } | null>(null);
   const [navigationHistory, setNavigationHistory] = useState<Array<{ id: string; type: string }>>([]);
   const [visibleNodeTypes, setVisibleNodeTypes] = useState<Set<string>>(
-    new Set(['Entity', 'Episodic', 'Session', 'Project', 'Community'])
+    new Set(['Entity', 'Episodic', 'Session', 'Project', 'Community', 'Source'])
   );
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
   const [depth, setDepth] = useState<number>(1);
@@ -77,7 +77,7 @@ export function GraphNavigator({ nodeType, nodeId, groupId }: GraphNavigatorProp
       // Map for converting GraphNode types to query parameter types
       const nodeTypeMap: Record<string, string> = {
         Entity: "entity", Episodic: "episode", Session: "session",
-        Project: "project", Community: "community",
+        Project: "project", Community: "community", Source: "source",
       };
 
       // Start with centered node
@@ -337,7 +337,7 @@ export function GraphNavigator({ nodeType, nodeId, groupId }: GraphNavigatorProp
                       </Button>
                     </div>
                     <div className="space-y-1">
-                      {['Entity', 'Episodic', 'Session', 'Project', 'Community'].map((nodeType) => {
+                      {['Entity', 'Episodic', 'Session', 'Project', 'Community', 'Source'].map((nodeType) => {
                         const color = getNodeColor(nodeType);
                         const isVisible = visibleNodeTypes.has(nodeType);
                         return (
@@ -570,6 +570,7 @@ function getNodeColor(nodeType: string): string {
     Project: '#8b5cf6',     // Purple
     Community: '#ec4899',   // Pink
     Fact: '#f97316',        // Orange
+    Source: '#06b6d4',      // Cyan
   };
   return colors[nodeType] || '#6366f1';
 }

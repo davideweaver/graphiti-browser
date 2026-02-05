@@ -103,6 +103,20 @@ export default function Search() {
     setCursors([undefined]);
   }, [sortOrder, sessionLimit]);
 
+  // Reset everything when graph changes
+  useEffect(() => {
+    setCursors([undefined]);
+    setPage(1);
+    setSearchQuery("");
+    setSearchInput("");
+    setSessionSearchQuery("");
+    setSessionSearchInput("");
+    setSessionSearchPerformed(false);
+    // Clear URL params when switching graphs
+    setSearchParams(new URLSearchParams());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId]);
+
   // Handle mode change
   const handleModeChange = (newMode: string) => {
     setMode(newMode as SearchMode);

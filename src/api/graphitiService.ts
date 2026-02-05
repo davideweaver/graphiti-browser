@@ -19,6 +19,11 @@ import type {
   GraphEdge,
   NodeConnectionsResponse,
   EdgeConnectionsResponse,
+  AddContentResponse,
+  SourceExtractionResultsResponse,
+  GroupsListResponse,
+  DeleteGroupResponse,
+  BackupGroupResponse,
 } from "@/types/graphiti";
 
 const BASE_URL = "/api";
@@ -47,7 +52,16 @@ class GraphitiService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
+        const error = new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
+
+        // Don't show toast for 404 errors (entity not found)
+        // These are expected when navigating to deleted entities or during race conditions
+        if (response.status !== 404) {
+          toast.error(`API Error: ${error.message}`);
+        }
+
+        console.error(`API Error [${endpoint}]:`, error);
+        throw error;
       }
 
       // Handle empty responses (like DELETE)
@@ -58,8 +72,11 @@ class GraphitiService {
 
       return {} as T;
     } catch (error) {
-      console.error(`API Error [${endpoint}]:`, error);
-      toast.error(`API Error: ${error instanceof Error ? error.message : "Unknown error"}`);
+      // If it's a network error (not HTTP error), show toast
+      if (error instanceof TypeError) {
+        console.error(`Network Error [${endpoint}]:`, error);
+        toast.error(`Network Error: ${error.message}`);
+      }
       throw error;
     }
   }
@@ -68,7 +85,10 @@ class GraphitiService {
   async search(
     query: string,
     groupId: string = DEFAULT_GROUP_ID,
-    maxFacts = 10
+    maxFacts = 10,
+    startDate?: string,
+    endDate?: string,
+    centerNodeUuid?: string
   ): Promise<SearchResponse> {
     return this.fetch<SearchResponse>("/search", {
       method: "POST",
@@ -76,6 +96,9 @@ class GraphitiService {
         query,
         group_id: groupId,
         max_facts: maxFacts,
+        start_date: startDate,
+        end_date: endDate,
+        center_node_uuid: centerNodeUuid,
       }),
     });
   }
@@ -123,6 +146,41 @@ class GraphitiService {
     return response;
   }
 
+  // POST /content - Add content with source tracking
+  async addContent(params: {
+    content: string;
+    projectName: string | null;
+    sourceName: string;
+    sourceType: string;
+    sourceMetadata: Record<string, any>;
+    groupId: string;
+  }): Promise<AddContentResponse> {
+    const response = await this.fetch<AddContentResponse>("/content", {
+      method: "POST",
+      body: JSON.stringify({
+        group_id: params.groupId,
+        content: params.content,
+        project_name: params.projectName || "_general",
+        source_name: params.sourceName,
+        source_type: params.sourceType,
+        source_metadata: params.sourceMetadata,
+      }),
+    });
+
+    toast.success("Content submitted! Extracting facts and entities...");
+    return response;
+  }
+
+  // GET /sources/{group_id}/{source_uuid}/extraction-results - Get extraction results for a source
+  async getSourceExtractionResults(
+    sourceUuid: string,
+    groupId = DEFAULT_GROUP_ID
+  ): Promise<SourceExtractionResultsResponse> {
+    return this.fetch<SourceExtractionResultsResponse>(
+      `/sources/${groupId}/${sourceUuid}/extraction-results`
+    );
+  }
+
   // POST /entity-node - Create entity
   async createEntity(entity: CreateEntityRequest): Promise<Entity> {
     const response = await this.fetch<Entity>("/entity-node", {
@@ -134,6 +192,15 @@ class GraphitiService {
     return response;
   }
 
+  // DELETE /entities/{group_id}/{uuid} - Delete entity and all connected edges
+  async deleteEntity(uuid: string, groupId = DEFAULT_GROUP_ID): Promise<void> {
+    await this.fetch(`/entities/${groupId}/${uuid}`, {
+      method: "DELETE",
+    });
+
+    toast.success("Entity deleted");
+  }
+
   // DELETE /episode/{uuid} - Delete episode
   async deleteEpisode(uuid: string): Promise<void> {
     await this.fetch(`/episode/${uuid}`, {
@@ -143,13 +210,50 @@ class GraphitiService {
     toast.success("Episode deleted");
   }
 
-  // DELETE /entity-edge/{uuid} - Delete relationship
-  async deleteEntityEdge(uuid: string): Promise<void> {
-    await this.fetch(`/entity-edge/${uuid}`, {
+  // DELETE /entity-edge/{uuid} - Delete relationship/fact
+  async deleteEntityEdge(uuid: string, groupId = DEFAULT_GROUP_ID): Promise<void> {
+    await this.fetch(`/entity-edge/${uuid}?group_id=${groupId}`, {
       method: "DELETE",
     });
 
-    toast.success("Relationship deleted");
+    toast.success("Fact deleted");
+  }
+
+  // PATCH /entity-edge/{uuid} - Update fact text
+  // Note: This endpoint needs to be added to the graphiti-server
+  async updateFact(uuid: string, fact: string, groupId = DEFAULT_GROUP_ID): Promise<void> {
+    await this.fetch(`/entity-edge/${uuid}`, {
+      method: "PATCH",
+      body: JSON.stringify({ fact, group_id: groupId }),
+    });
+
+    toast.success("Fact updated");
+  }
+
+  // POST /entity-node - Update entity name or summary (uses same endpoint as create)
+  async updateEntity(
+    uuid: string,
+    updates: { name?: string; summary?: string },
+    groupId = DEFAULT_GROUP_ID
+  ): Promise<Entity> {
+    // First fetch the current entity to get all properties
+    const currentEntity = await this.getEntity(uuid, groupId);
+
+    // Send POST to /entity-node with updated values (idempotent save)
+    await this.fetch("/entity-node", {
+      method: "POST",
+      body: JSON.stringify({
+        uuid,
+        group_id: groupId,
+        name: updates.name ?? currentEntity.name,
+        summary: updates.summary ?? currentEntity.summary,
+      }),
+    });
+
+    toast.success("Entity updated");
+
+    // Fetch and return the updated entity
+    return this.getEntity(uuid, groupId);
   }
 
   // GET /entity-edge/{uuid} - Get entity edge details
@@ -249,6 +353,15 @@ class GraphitiService {
   // GET /entities/{group_id}/{uuid}/relationships - Get related entities
   async getEntityRelationships(uuid: string, groupId = DEFAULT_GROUP_ID): Promise<EntityListResponse> {
     return this.fetch<EntityListResponse>(`/entities/${groupId}/${uuid}/relationships`);
+  }
+
+  // GET /entities/{group_id}/{uuid}/facts - Get facts structurally connected to entity
+  async getEntityFacts(
+    uuid: string,
+    groupId = DEFAULT_GROUP_ID,
+    limit = 50
+  ): Promise<SearchResponse> {
+    return this.fetch<SearchResponse>(`/entities/${groupId}/${uuid}/facts?limit=${limit}`);
   }
 
   // GET /sessions/{group_id} - List sessions with pagination
@@ -468,6 +581,33 @@ class GraphitiService {
     return this.fetch<EdgeConnectionsResponse>(
       `/graph/edges/${uuid}/connections?group_id=${groupId}`
     );
+  }
+
+  // Graph (group) management endpoints
+
+  // GET /groups - List all available graphs
+  async listGroups(): Promise<GroupsListResponse> {
+    return this.fetch<GroupsListResponse>("/groups");
+  }
+
+  // DELETE /group/{group_id} - Delete a graph and all its data
+  async deleteGroup(groupId: string): Promise<DeleteGroupResponse> {
+    return this.fetch<DeleteGroupResponse>(`/group/${groupId}`, {
+      method: "DELETE",
+    });
+  }
+
+  // POST /group/{group_id}/backup - Create a backup of a graph
+  async backupGroup(sourceGroupId: string, targetGroupId: string): Promise<BackupGroupResponse> {
+    const response = await this.fetch<BackupGroupResponse>(
+      `/group/${sourceGroupId}/backup?target_group_id=${encodeURIComponent(targetGroupId)}`,
+      {
+        method: "POST",
+      }
+    );
+
+    toast.success(`Backup created: ${targetGroupId}`);
+    return response;
   }
 }
 

@@ -58,6 +58,12 @@ export default function Sessions() {
     setSearchParams({ date: dateString }, { replace: true });
   }, [selectedDate, setSearchParams]);
 
+  // Reset to today when graph changes
+  useEffect(() => {
+    setSelectedDate(startOfDay(new Date()));
+    setOpenProjects(new Set());
+  }, [groupId]);
+
   // Calculate date range for stats API query (DayNavigation calendar)
   const rangeStartDate = startOfDay(subDays(selectedDate, 30)).toISOString();
   const rangeEndDate = endOfDay(addDays(selectedDate, 30)).toISOString();

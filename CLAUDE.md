@@ -17,7 +17,7 @@ The application works with four main data types from the Graphiti API:
 - **Facts** - Searchable knowledge units connecting entities and episodes
 - **Entity Edges** - Relationships between entities with temporal validity
 
-All data is scoped by `group_id` (configured via `VITE_GROUP_ID` env var) and stored in an external Graphiti server.
+All data is scoped by `group_id` (managed via UI graph selector, stored in localStorage) and stored in an external Graphiti server.
 
 ### API Integration
 
@@ -48,6 +48,11 @@ The `GraphitiService` singleton provides methods for all API operations:
 - `deleteEpisode()` - Remove episodes
 - `healthcheck()` - Server status
 
+**Graph Management:**
+
+- `listGroups()` - List all available graphs with stats
+- `deleteGroup(groupId)` - Delete a graph and all its data
+
 API errors are automatically shown to users via toast notifications.
 
 ### Application Structure
@@ -57,13 +62,14 @@ src/
 ├── api/              # GraphitiService - centralized API client
 ├── components/       # Reusable UI components
 │   ├── ui/          # ShadCN UI component library (complete)
+│   ├── sidebar/     # UserProfileMenu, GraphManagementDialog
 │   ├── search/      # FactCard for search results
 │   ├── entities/    # EntityCard for entity browsing
 │   └── episodes/    # EpisodeCard for episode lists
 ├── context/         # GraphitiContext - global state (baseUrl, groupId)
 ├── hooks/           # Custom React hooks (debounce, scroll, toast, breakpoints)
 ├── layout/          # Router, Layout, Container components
-├── lib/             # Utilities (cn, lazyImportComponent)
+├── lib/             # Utilities (cn, lazyImportComponent, graphStorage)
 ├── pages/           # Route pages (Dashboard, Search, Entities, etc.)
 └── types/           # TypeScript interfaces for Graphiti data model
 ```
@@ -74,7 +80,10 @@ src/
   - Configured with 5-minute stale time and 1 retry
   - Query keys follow pattern: `[resource, groupId, ...params]`
 - **GraphitiContext** - Global configuration (baseUrl, groupId)
+  - groupId stored in localStorage (`graphiti-selected-graph` key)
+  - Automatically syncs across browser tabs via storage events
 - **React Router** - Client-side routing with lazy-loaded pages
+- **localStorage** - Persistent graph selection and chat history
 
 ### UI Components
 
@@ -146,15 +155,17 @@ All backend services are configured via environment variables:
   - WebSocket URL automatically derived by replacing `http://` with `ws://` (or `https://` with `wss://`) and appending `/ws`
 - `VITE_LLAMACPP_URL` - LlamaCPP inference server (default: `http://localhost:9004`)
 - `VITE_CHAT_API_URL` - Chat backend service (default: `http://localhost:3001`)
-- `VITE_GROUP_ID` - Graphiti group ID (required, no default)
+- `VITE_GROUP_ID` - **DEPRECATED**: Initial graph ID (optional, for backward compatibility)
+  - Graph selection is now managed via UI and stored in localStorage
+  - Falls back to 'default' if not specified and no saved graph exists
 
 **Setup:**
 
 1. Copy `.env.example` to `.env`
-2. Set your `VITE_GROUP_ID` (required)
-3. Set `VITE_GRAPHITI_SERVER` to your Graphiti server URL (e.g., `http://172.16.0.14:3060`)
-4. Optionally override other service URLs if using non-default configurations
-5. Restart dev server after changing `.env` for changes to take effect
+2. Set `VITE_GRAPHITI_SERVER` to your Graphiti server URL (e.g., `http://172.16.0.14:3060`)
+3. Optionally override other service URLs if using non-default configurations
+4. Restart dev server after changing `.env` for changes to take effect
+5. On first launch, select or create a graph via the user menu in the sidebar footer
 
 **Proxy Configuration:**
 
@@ -268,6 +279,44 @@ const { data } = useQuery({
 - Use `cn()` helper for conditional classes
 - Icons from `lucide-react`
 
+### Graph Management
+
+The application supports managing multiple memory graphs (formerly group_ids) through the UI:
+
+**User Interface:**
+
+- **Graph Selector** - Click the user menu in the sidebar footer to switch between graphs
+- **Graph Management Dialog** - Create new graphs or delete existing ones
+- **Automatic Persistence** - Selected graph is stored in localStorage and persists across sessions
+- **Multi-Tab Sync** - Graph selection automatically syncs across browser tabs
+
+**Creating Graphs:**
+
+1. Click the user menu in the sidebar footer
+2. Click "Manage Graphs"
+3. Enter a new graph ID (alphanumeric, dashes, underscores only)
+4. Click "Create" - the graph is created automatically on first use
+
+**Switching Graphs:**
+
+1. Click the user menu in the sidebar footer
+2. Click the graph selector dropdown
+3. Select a graph from the list - the UI updates immediately
+
+**Deleting Graphs:**
+
+1. Switch to a different graph first (cannot delete active graph)
+2. Click "Manage Graphs" in the user menu
+3. Click the trash icon next to the graph to delete
+4. Confirm deletion - all data in that graph is permanently removed
+
+**Technical Details:**
+
+- Graph IDs are stored in localStorage under the `graphiti-selected-graph` key
+- The Graphiti server auto-creates graphs on first use (no separate creation API needed)
+- Backend endpoint: `GET /groups` lists all graphs with entity/episode/fact counts
+- Backend endpoint: `DELETE /group/{group_id}` removes a graph and all its data
+
 ## Important Notes
 
 - the inspiration for this web site design, UI, UX, architecture and components comes from this project: /Users/dweaver/Projects/davideweaver/section-shaper-single-page. when implementing new features, pages, etc look at that project.
@@ -279,5 +328,7 @@ const { data } = useQuery({
 - **Entity pagination**: Use cursor-based pagination for large entity lists (limit: 1-500 entities per request)
 - Entity edges (relationships) have `valid_at` and `invalid_at` timestamps for temporal reasoning
 - The Graphiti server must be running for the app to function (configure URL via `VITE_GRAPHITI_SERVER`)
-- All data operations require a `group_id` (multi-tenant design)
+- **Graph Management**: All data operations are scoped to the currently selected graph (multi-tenant design)
+  - Graphs are managed via the user menu in the sidebar footer
+  - The current graph selection persists in localStorage across sessions
 - Search results are limited by `max_facts` parameter (default: 10)

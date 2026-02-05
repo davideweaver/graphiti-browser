@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { graphitiService } from "@/api/graphitiService";
 import { useGraphiti } from "@/context/GraphitiContext";
 import Container from "@/layout/Container";
@@ -9,40 +9,175 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Info } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { ArrowLeft, Info, Edit, Trash2 } from "lucide-react";
 import { FactCard } from "@/components/search/FactCard";
 import { NodeDetailSheet } from "@/components/shared/NodeDetailSheet";
-import type { Entity } from "@/types/graphiti";
+import type { Entity, Fact } from "@/types/graphiti";
 
 export default function EntityDetail() {
   const { uuid } = useParams<{ uuid: string }>();
   const { groupId } = useGraphiti();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editedName, setEditedName] = useState("");
+  const [editedSummary, setEditedSummary] = useState("");
 
-  // Fetch the entity directly by UUID
+  // Fact edit/delete state
+  const [editFactDialogOpen, setEditFactDialogOpen] = useState(false);
+  const [deleteFactDialogOpen, setDeleteFactDialogOpen] = useState(false);
+  const [selectedFact, setSelectedFact] = useState<Fact | null>(null);
+  const [editedFactText, setEditedFactText] = useState("");
+
+  // Mutation for deleting entity (defined early so we can use isPending in queries)
+  const deleteEntityMutation = useMutation({
+    mutationFn: () => graphitiService.deleteEntity(uuid!, groupId),
+    onSuccess: () => {
+      // Remove all queries for this entity from cache before navigation
+      // This prevents 404 errors when WebSocket event tries to invalidate/refetch
+      queryClient.removeQueries({ queryKey: ["entity", uuid, groupId] });
+      queryClient.removeQueries({ queryKey: ["entity-facts", uuid, groupId] });
+      queryClient.removeQueries({ queryKey: ["entity-relationships", uuid, groupId] });
+
+      // Navigate back to entities list
+      navigate("/entities");
+    },
+  });
+
+  // Fetch the entity directly by UUID (disabled during deletion to prevent 404 errors)
   const { data: entity, isLoading: isLoadingEntity } = useQuery({
     queryKey: ["entity", uuid, groupId],
     queryFn: () => graphitiService.getEntity(uuid!, groupId),
-    enabled: !!uuid,
+    enabled: !!uuid && !deleteEntityMutation.isPending,
   });
 
-  // Search for facts mentioning this entity
+  // Get facts structurally connected to this entity (disabled during deletion)
   const { data: factsData, isLoading: isLoadingFacts } = useQuery({
-    queryKey: ["entity-facts", entity?.name, groupId],
-    queryFn: () =>
-      graphitiService.search(entity!.name, groupId, 50),
-    enabled: !!entity,
+    queryKey: ["entity-facts", uuid, groupId],
+    queryFn: () => graphitiService.getEntityFacts(uuid!, groupId, 50),
+    enabled: !!uuid && !deleteEntityMutation.isPending,
   });
 
-  // Fetch related entities via relationships
+  // Fetch related entities via relationships (disabled during deletion)
   const { data: relationshipsData, isLoading: isLoadingRelationships } = useQuery({
     queryKey: ["entity-relationships", uuid, groupId],
     queryFn: () => graphitiService.getEntityRelationships(uuid!, groupId),
-    enabled: !!uuid,
+    enabled: !!uuid && !deleteEntityMutation.isPending,
   });
 
   const relatedEntities = relationshipsData?.entities || [];
+
+  // Mutation for updating entity
+  const updateEntityMutation = useMutation({
+    mutationFn: (updates: { name: string; summary: string }) =>
+      graphitiService.updateEntity(uuid!, updates, groupId),
+    onSuccess: () => {
+      // Invalidate queries to refetch updated data
+      queryClient.invalidateQueries({ queryKey: ["entity", uuid, groupId] });
+      setEditDialogOpen(false);
+    },
+  });
+
+  const handleOpenEditDialog = () => {
+    if (entity) {
+      setEditedName(entity.name);
+      setEditedSummary(entity.summary);
+      setEditDialogOpen(true);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditDialogOpen(false);
+    setEditedName("");
+    setEditedSummary("");
+  };
+
+  const handleSaveEdit = () => {
+    if (editedName.trim()) {
+      updateEntityMutation.mutate({
+        name: editedName.trim(),
+        summary: editedSummary.trim(),
+      });
+    }
+  };
+
+  const handleOpenDeleteDialog = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    deleteEntityMutation.mutate();
+  };
+
+  // Fact edit handlers
+  const updateFactMutation = useMutation({
+    mutationFn: ({ uuid, fact }: { uuid: string; fact: string }) =>
+      graphitiService.updateFact(uuid, fact, groupId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["entity-facts", uuid, groupId] });
+      setEditFactDialogOpen(false);
+      setSelectedFact(null);
+    },
+  });
+
+  const deleteFactMutation = useMutation({
+    mutationFn: (factUuid: string) => graphitiService.deleteEntityEdge(factUuid, groupId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["entity-facts", uuid, groupId] });
+      queryClient.invalidateQueries({ queryKey: ["entity-relationships", uuid, groupId] });
+      setDeleteFactDialogOpen(false);
+      setSelectedFact(null);
+    },
+  });
+
+  const handleEditFact = (fact: Fact) => {
+    setSelectedFact(fact);
+    setEditedFactText(fact.fact);
+    setEditFactDialogOpen(true);
+  };
+
+  const handleDeleteFact = (fact: Fact) => {
+    setSelectedFact(fact);
+    setDeleteFactDialogOpen(true);
+  };
+
+  const handleSaveFactEdit = () => {
+    if (selectedFact && editedFactText.trim()) {
+      updateFactMutation.mutate({
+        uuid: selectedFact.uuid,
+        fact: editedFactText.trim(),
+      });
+    }
+  };
+
+  const handleConfirmFactDelete = () => {
+    if (selectedFact) {
+      deleteFactMutation.mutate(selectedFact.uuid);
+    }
+  };
 
   const getEntityTypeColor = (type: string) => {
     switch (type.toLowerCase()) {
@@ -119,8 +254,18 @@ export default function EntityDetail() {
         <Card>
           <CardHeader>
             <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="text-2xl mb-2">{entity.name}</CardTitle>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2 group">
+                  <CardTitle className="text-2xl">{entity.name}</CardTitle>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={handleOpenEditDialog}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </div>
                 <Badge
                   variant="secondary"
                   className={getEntityTypeColor(entityType)}
@@ -128,13 +273,23 @@ export default function EntityDetail() {
                   {entityType}
                 </Badge>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSheetOpen(true)}
-              >
-                <Info className="h-5 w-5" />
-              </Button>
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleOpenDeleteDialog}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSheetOpen(true)}
+                >
+                  <Info className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -238,13 +393,179 @@ export default function EntityDetail() {
             {!isLoadingFacts && factsData && factsData.facts.length > 0 && (
               <div className="space-y-2">
                 {factsData.facts.map((fact) => (
-                  <FactCard key={fact.uuid} fact={fact} />
+                  <FactCard
+                    key={fact.uuid}
+                    fact={fact}
+                    onEdit={handleEditFact}
+                    onDelete={handleDeleteFact}
+                  />
                 ))}
               </div>
             )}
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Edit Entity Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Entity</DialogTitle>
+            <DialogDescription>
+              Update the entity name and summary. Changes will be saved to the knowledge graph.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                placeholder="Entity name"
+                disabled={updateEntityMutation.isPending}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="summary">Summary</Label>
+              <Textarea
+                id="summary"
+                value={editedSummary}
+                onChange={(e) => setEditedSummary(e.target.value)}
+                placeholder="Entity summary"
+                rows={6}
+                disabled={updateEntityMutation.isPending}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleCancelEdit}
+              disabled={updateEntityMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveEdit}
+              disabled={updateEntityMutation.isPending || !editedName.trim()}
+            >
+              {updateEntityMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Fact Dialog */}
+      <Dialog open={editFactDialogOpen} onOpenChange={setEditFactDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Fact</DialogTitle>
+            <DialogDescription>
+              Update the fact text. This will modify the relationship in the knowledge graph.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="fact-text">Fact</Label>
+              <Textarea
+                id="fact-text"
+                value={editedFactText}
+                onChange={(e) => setEditedFactText(e.target.value)}
+                placeholder="Fact text"
+                rows={4}
+                disabled={updateFactMutation.isPending}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditFactDialogOpen(false)}
+              disabled={updateFactMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveFactEdit}
+              disabled={updateFactMutation.isPending || !editedFactText.trim()}
+            >
+              {updateFactMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Fact Confirmation Dialog */}
+      <AlertDialog open={deleteFactDialogOpen} onOpenChange={setDeleteFactDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Fact</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this fact?
+              <br /><br />
+              <strong>{selectedFact?.fact}</strong>
+              <br /><br />
+              <span className="text-destructive font-semibold">This action cannot be undone.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteFactMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmFactDelete}
+              disabled={deleteFactMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteFactMutation.isPending ? "Deleting..." : "Delete Fact"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Entity Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Entity</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{entity?.name}</strong>?
+              This will permanently remove the entity and all of its relationships from the knowledge graph.
+              {factsData && factsData.facts.length > 0 && (
+                <>
+                  <br /><br />
+                  <strong>The following {factsData.facts.length} fact{factsData.facts.length !== 1 ? 's' : ''} will also be deleted:</strong>
+                  <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
+                    {factsData.facts.slice(0, 5).map((fact) => (
+                      <li key={fact.uuid}>{fact.fact}</li>
+                    ))}
+                    {factsData.facts.length > 5 && (
+                      <li className="text-muted-foreground">
+                        ...and {factsData.facts.length - 5} more
+                      </li>
+                    )}
+                  </ul>
+                </>
+              )}
+              <br />
+              <span className="text-destructive font-semibold">This action cannot be undone.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteEntityMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={deleteEntityMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteEntityMutation.isPending ? "Deleting..." : "Delete Entity"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* NodeDetailSheet for graph navigation */}
       <NodeDetailSheet

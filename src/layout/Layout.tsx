@@ -23,11 +23,9 @@ import {
 } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import { useGraphitiWebSocket } from "@/hooks/use-graphiti-websocket";
-import WebSocketStatus from "@/components/layout/WebSocketStatus";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCallback, useState } from "react";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { useGraphiti } from "@/context/GraphitiContext";
+import { UserProfileMenu } from "@/components/sidebar/UserProfileMenu";
 
 interface MenuItem {
   title: string;
@@ -77,9 +75,10 @@ const Layout = () => {
   const isMobile = useIsMobile();
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { baseUrl, groupId } = useGraphiti();
   const { connectionState, queueSize } = useGraphitiWebSocket();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const isConnected = connectionState === "connected";
 
   // Mobile navigation items - just the most important ones for bottom bar
   const mobileNavItems = [
@@ -137,27 +136,16 @@ const Layout = () => {
 
         <SidebarFooter>
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <ThemeToggle />
-                <WebSocketStatus connectionState={connectionState} queueSize={queueSize} />
-              </div>
-            </div>
-            <div className="text-xs text-muted-foreground space-y-1">
-              <div className="flex items-start gap-1">
-                <span className="font-medium">Server:</span>
-                <span className="break-all">{baseUrl}</span>
-              </div>
-              <div className="flex items-start gap-1">
-                <span className="font-medium">Group:</span>
-                <span className="break-all">{groupId}</span>
-              </div>
-            </div>
+            <UserProfileMenu
+              onAfterClick={() => setMobileMenuOpen(false)}
+              queueSize={queueSize}
+              isConnected={isConnected}
+            />
           </div>
         </SidebarFooter>
       </div>
     ),
-    [pathname, connectionState, queueSize, navigate, baseUrl, groupId]
+    [pathname, queueSize, connectionState, navigate]
   );
 
   return (

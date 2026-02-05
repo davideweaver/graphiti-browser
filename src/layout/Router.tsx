@@ -55,6 +55,10 @@ const Router = createBrowserRouter(
         lazy={lazyImportComponent(() => import("@/pages/AddMemory"))}
       />
       <Route
+        path="/processing/:sourceUuid"
+        lazy={lazyImportComponent(() => import("@/pages/ProcessingResults"))}
+      />
+      <Route
         path="/chat"
         lazy={lazyImportComponent(() => import("@/pages/Chat"))}
       />

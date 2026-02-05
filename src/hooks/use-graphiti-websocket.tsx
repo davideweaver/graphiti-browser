@@ -62,6 +62,10 @@ export function useGraphitiWebSocket(): UseGraphitiWebSocketReturn {
         const typedEvent = event as EdgeCreatedEvent;
         handleEdgeCreated(typedEvent, groupId, queryClient);
       }),
+      websocketService.addEventListener("edge.updated", (event) => {
+        const typedEvent = event as any; // edge.updated event
+        handleEdgeUpdated(typedEvent, groupId, queryClient);
+      }),
       websocketService.addEventListener("edge.deleted", (event) => {
         const typedEvent = event as EdgeDeletedEvent;
         handleEdgeDeleted(typedEvent, groupId, queryClient);
@@ -121,7 +125,7 @@ export function useGraphitiWebSocket(): UseGraphitiWebSocketReturn {
 
 /**
  * Handle entity.created event
- * Strategy: Add to cache directly (has summary), invalidate list
+ * Strategy: Invalidate all entity list queries to trigger refetch
  */
 function handleEntityCreated(
   event: EntityCreatedEvent,
@@ -143,31 +147,20 @@ function handleEntityCreated(
   console.log("📬 Entity created:", entity?.uuid || "UUID IS NULL", entity?.name || "NAME IS NULL");
   console.log("📬 Entity data:", entity);
 
-  // If UUID is missing, we can't add to cache - just invalidate to refetch
-  if (!entity?.uuid) {
-    console.log("⚠️ Entity UUID is null, invalidating query to refetch");
-    queryClient.invalidateQueries({
-      queryKey: ["entities-list", groupId],
-    });
-    return;
-  }
-
-  // Add to cache directly (has summary)
-  queryClient.setQueryData<Entity[]>(["entities-list", groupId], (old) => {
-    if (!old) return [entity as Entity];
-    return [entity as Entity, ...old];
-  });
-
-  // Invalidate to refresh counts/pagination (don't refetch immediately)
+  // Invalidate all entities-list queries (includes pagination/filter params)
   queryClient.invalidateQueries({
     queryKey: ["entities-list", groupId],
-    refetchType: "none",
+  });
+
+  // Invalidate entities-all-types query (used for filter dropdown)
+  queryClient.invalidateQueries({
+    queryKey: ["entities-all-types", groupId],
   });
 }
 
 /**
  * Handle entity.deleted event
- * Strategy: Remove from cache immediately
+ * Strategy: Remove from cache immediately and invalidate all entity list queries
  */
 function handleEntityDeleted(
   event: EntityDeletedEvent,
@@ -185,20 +178,24 @@ function handleEntityDeleted(
   // Remove from single entity cache
   queryClient.removeQueries({ queryKey: ["entity", uuid] });
 
-  // Remove from list cache
-  queryClient.setQueryData<Entity[]>(["entities-list", groupId], (old) => {
-    if (!old) return old;
-    const exists = old.some((e) => e.uuid === uuid);
-    if (!exists) {
-      console.debug("Entity already removed from cache");
-      return old;
-    }
-    return old.filter((e) => e.uuid !== uuid);
+  // Invalidate all entities-list queries (includes pagination/filter params)
+  queryClient.invalidateQueries({
+    queryKey: ["entities-list", groupId],
+  });
+
+  // Invalidate entities-all-types query (used for filter dropdown)
+  queryClient.invalidateQueries({
+    queryKey: ["entities-all-types", groupId],
   });
 
   // Invalidate related queries
   queryClient.invalidateQueries({
     queryKey: ["entity-relationships", uuid],
+  });
+
+  // Invalidate entity facts
+  queryClient.invalidateQueries({
+    queryKey: ["entity-facts", uuid],
   });
 }
 
@@ -244,6 +241,42 @@ function handleEdgeCreated(
 }
 
 /**
+ * Handle edge.updated event
+ * Strategy: Invalidate all queries that might display this fact
+ */
+function handleEdgeUpdated(
+  event: any,
+  groupId: string,
+  queryClient: ReturnType<typeof useQueryClient>
+): void {
+  if (event.group_id !== groupId) {
+    console.debug(`Ignoring edge.updated for different group: ${event.group_id}`);
+    return;
+  }
+
+  const { uuid, fact } = event.data;
+  console.log("📬 Edge updated:", uuid, "New fact:", fact);
+
+  // Invalidate search queries (fact text/embedding changed)
+  // Use refetchType: "active" to force immediate refetch if search page is viewing
+  queryClient.invalidateQueries({
+    queryKey: ["search"],
+    refetchType: "active",
+  });
+
+  // Invalidate entity facts (fact appears in entity detail pages)
+  queryClient.invalidateQueries({
+    queryKey: ["entity-facts"],
+  });
+
+  // Invalidate relationships (facts are relationships)
+  queryClient.invalidateQueries({
+    queryKey: ["entity-relationships"],
+    refetchType: "active",
+  });
+}
+
+/**
  * Handle edge.deleted event
  * Strategy: Invalidate all relationship queries
  */
@@ -269,7 +302,7 @@ function handleEdgeDeleted(
 
 /**
  * Handle episode.created event
- * Strategy: Add to cache directly (has all data)
+ * Strategy: Invalidate episodes, sessions, AND entities (entities are extracted with episodes)
  */
 function handleEpisodeCreated(
   event: EpisodeCreatedEvent,
@@ -295,6 +328,7 @@ function handleEpisodeCreated(
   // We need to invalidate queries to refetch complete data instead of caching partial data
   console.log("🔄 Invalidating queries to refetch complete episode data");
 
+  // Invalidate episodes and sessions
   queryClient.invalidateQueries({
     queryKey: ["episodes", groupId],
   });
@@ -303,6 +337,25 @@ function handleEpisodeCreated(
   });
   queryClient.invalidateQueries({
     queryKey: ["session-stats-by-day", groupId],
+  });
+
+  // Invalidate entities - they are extracted during episode processing
+  // Note: Server emits entity.created only for explicit creation via /entity-node
+  // During content processing (/messages, /content), entities are created in bulk without events
+  queryClient.invalidateQueries({
+    queryKey: ["entities-list", groupId],
+  });
+  queryClient.invalidateQueries({
+    queryKey: ["entities-all-types", groupId],
+  });
+
+  // Invalidate all entity-specific queries (facts and relationships for all entities)
+  // New facts/relationships may have been created during episode processing
+  queryClient.invalidateQueries({
+    queryKey: ["entity-facts"],
+  });
+  queryClient.invalidateQueries({
+    queryKey: ["entity-relationships"],
   });
 
   // If the episode belongs to a session being viewed, invalidate that session

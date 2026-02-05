@@ -1,5 +1,6 @@
-import { createContext, useState, useContext } from "react";
+import { createContext, useState, useContext, useEffect } from "react";
 import type { ReactNode } from "react";
+import { initializeGraphSelection, setSelectedGraph as saveSelectedGraph } from "@/lib/graphStorage";
 
 interface GraphitiContextType {
   baseUrl: string;
@@ -12,7 +13,26 @@ const GraphitiContext = createContext<GraphitiContextType | undefined>(
 );
 
 export const GraphitiProvider = ({ children }: { children: ReactNode }) => {
-  const [groupId, setGroupId] = useState(import.meta.env.VITE_GROUP_ID);
+  // Initialize from localStorage (falls back to env var if needed)
+  const [groupId, setGroupIdState] = useState(() => initializeGraphSelection());
+
+  // Wrapper to also save to localStorage when changing graph
+  const setGroupId = (newGroupId: string) => {
+    saveSelectedGraph(newGroupId);
+    setGroupIdState(newGroupId);
+  };
+
+  // Sync with localStorage changes from other tabs
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'graphiti-selected-graph' && e.newValue) {
+        setGroupIdState(e.newValue);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   return (
     <GraphitiContext.Provider

@@ -71,6 +71,16 @@ export default function Projects() {
     setCursors([undefined]);
   }, [searchTerm, sortBy, sortOrder, pageSize]);
 
+  // Reset everything when graph changes
+  useEffect(() => {
+    setCursors([undefined]);
+    // Reset to page 1 without using updateParams to avoid dependency issues
+    if (page !== 1) {
+      setSearchParams(new URLSearchParams({ page: "1" }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId]);
+
   // Get current cursor for pagination
   const currentCursor = cursors[page - 1];
 
@@ -87,6 +97,15 @@ export default function Projects() {
         sortOrder
       );
     },
+    select: (data) => ({
+      ...data,
+      // Filter out '_general' project from list
+      projects: data.projects.filter((p) => p.name !== "_general"),
+      // Adjust total count if _general was in the results
+      total: data.projects.some((p) => p.name === "_general")
+        ? data.total - 1
+        : data.total,
+    }),
   });
 
   // Store cursor for next page navigation

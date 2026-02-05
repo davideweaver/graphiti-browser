@@ -65,6 +65,11 @@ export function EpisodeCard({
   const preview = getContentPreview(episode.content);
   const messages = parseEpisodeMessages(episode.content);
 
+  // Show "No project" instead of "_general" in UI
+  const displayProjectName = episode.project_name === "_general"
+    ? "No project"
+    : episode.project_name;
+
   return (
     <Card className="mb-3 cursor-pointer hover:bg-muted/50 transition-colors">
       <CardHeader
@@ -80,6 +85,12 @@ export function EpisodeCard({
               <span>
                 {format(new Date(episode.created_at), "h:mm a")}
               </span>
+              {displayProjectName && (
+                <>
+                  <span>•</span>
+                  <span>{displayProjectName}</span>
+                </>
+              )}
               <span>•</span>
               <span>
                 {isExpanded ? <ChevronUp className="h-3 w-3 inline" /> : <ChevronDown className="h-3 w-3 inline" />}

@@ -5,6 +5,7 @@ export interface Episode {
   content: string;
   source_description: string;
   session_id: string;
+  project_name?: string; // Optional project name (null maps to "_general")
   timestamp: string;
   created_at: string;
   valid_at: string;
@@ -67,6 +68,7 @@ export interface SearchRequest {
   query: string;
   group_id: string;
   max_facts?: number;
+  center_node_uuid?: string;
 }
 
 export interface SearchResponse {
@@ -228,4 +230,71 @@ export interface EdgeConnectionsResponse {
   edge: GraphEdge;
   source: GraphNode;
   target: GraphNode;
+}
+
+// Source - metadata about content origin
+export interface SourceInfo {
+  name: string; // e.g., "meeting-notes.md", "Manual Entry"
+  type: "file" | "text" | "session" | "meeting"; // Extensible source types
+  metadata: Record<string, any>; // Additional metadata (filename, file_size, etc.)
+}
+
+// Request for adding content with source tracking
+export interface AddContentRequest {
+  group_id: string;
+  content: string; // Raw content to be processed
+  project_name: string | null; // Optional project (null → "_general")
+  source_name: string;
+  source_type: string;
+  source_metadata: Record<string, any>;
+}
+
+// Response from POST /content
+export interface AddContentResponse {
+  source_uuid: string;
+  message: string;
+  success: boolean;
+}
+
+// Response from GET /sources/{group_id}/{source_uuid}/extraction-results
+export interface SourceExtractionResultsResponse {
+  source: Entity; // Source entity with metadata
+  episodes: Episode[];
+  facts: Fact[];
+  entities: Entity[];
+  processing_complete: boolean;
+}
+
+// Group (Graph) management types
+
+// Group info with stats
+export interface GroupInfo {
+  group_id: string;
+  entity_count: number;
+  episode_count: number;
+  fact_count: number;
+}
+
+// Response from GET /groups
+export interface GroupsListResponse {
+  groups: GroupInfo[];
+  total: number;
+}
+
+// Response from DELETE /group/{group_id}
+export interface DeleteGroupResponse {
+  message: string;
+  success: boolean;
+}
+
+// Response from POST /group/{source_group_id}/backup
+export interface BackupGroupResponse {
+  message: string;
+  success: boolean;
+  stats: {
+    entities: number;
+    episodes: number;
+    facts: number;
+    total: number;
+  };
 }

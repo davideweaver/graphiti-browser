@@ -71,6 +71,16 @@ export default function Entities() {
     setCursors([undefined]);
   }, [searchTerm, filterLabel, sortBy, sortOrder, pageSize]);
 
+  // Reset everything when graph changes
+  useEffect(() => {
+    setCursors([undefined]);
+    // Reset to page 1 without using updateParams to avoid dependency issues
+    if (page !== 1) {
+      setSearchParams(new URLSearchParams({ page: "1" }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId]);
+
   // Get current cursor for pagination
   const currentCursor = cursors[page - 1];
 

@@ -14,20 +14,22 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { GraphNavigator } from "./GraphNavigator";
-import type { Fact, Session, SessionDetailResponse, Entity, Project } from "@/types/graphiti";
+import type { Fact, Session, SessionDetailResponse, Entity, Project, GraphNode } from "@/types/graphiti";
 import { formatDistanceToNow, format } from "date-fns";
 
-type NodeType = "fact" | "session" | "entity" | "project";
+type NodeType = "fact" | "session" | "entity" | "project" | "source";
 
 interface NodeDetailSheetProps {
   nodeType: NodeType;
   nodeId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  groupId?: string; // Optional override for group ID
 }
 
-export function NodeDetailSheet({ nodeType, nodeId, open, onOpenChange }: NodeDetailSheetProps) {
-  const { groupId } = useGraphiti();
+export function NodeDetailSheet({ nodeType, nodeId, open, onOpenChange, groupId: groupIdProp }: NodeDetailSheetProps) {
+  const { groupId: contextGroupId } = useGraphiti();
+  const groupId = groupIdProp || contextGroupId; // Use prop if provided, otherwise context
   const [activeTab, setActiveTab] = useState("metadata");
 
   // Reset to metadata tab when opening a new node
@@ -54,6 +56,9 @@ export function NodeDetailSheet({ nodeType, nodeId, open, onOpenChange }: NodeDe
           // Fetch project by name
           const result = await graphitiService.listProjects(groupId, 1, undefined, nodeId);
           return result.projects[0] || null;
+        case "source":
+          // Fetch source via generic graph endpoint
+          return await graphitiService.getGraphNode(nodeId, groupId);
         default:
           return null;
       }
@@ -74,6 +79,8 @@ export function NodeDetailSheet({ nodeType, nodeId, open, onOpenChange }: NodeDe
         return (nodeData as Entity).name || "Entity";
       case "project":
         return (nodeData as Project).name || "Project";
+      case "source":
+        return (nodeData as GraphNode).label || "Source";
       default:
         return "Node";
     }
@@ -95,6 +102,10 @@ export function NodeDetailSheet({ nodeType, nodeId, open, onOpenChange }: NodeDe
       case "project":
         const project = nodeData as Project;
         return `${project.episode_count} episodes • ${project.session_count} sessions`;
+      case "source":
+        const source = nodeData as GraphNode;
+        const sourceType = source.metadata?.source_type || "Unknown type";
+        return `${sourceType} • ${formatDistanceToNow(new Date(source.created_at!))} ago`;
       default:
         return "";
     }
@@ -148,7 +159,7 @@ export function NodeDetailSheet({ nodeType, nodeId, open, onOpenChange }: NodeDe
 
 interface MetadataViewProps {
   nodeType: NodeType;
-  nodeData: Fact | Session | Entity | Project;
+  nodeData: Fact | Session | Entity | Project | GraphNode;
 }
 
 function MetadataView({ nodeType, nodeData }: MetadataViewProps) {
@@ -161,6 +172,8 @@ function MetadataView({ nodeType, nodeData }: MetadataViewProps) {
       return <EntityMetadata entity={nodeData as Entity} />;
     case "project":
       return <ProjectMetadata project={nodeData as Project} />;
+    case "source":
+      return <SourceMetadata source={nodeData as GraphNode} />;
     default:
       return null;
   }
@@ -373,6 +386,61 @@ function ProjectMetadata({ project }: { project: Project }) {
           <div>
             <div className="text-sm font-medium text-muted-foreground mb-1">Group ID</div>
             <div className="text-xs font-mono">{project.group_id}</div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function SourceMetadata({ source }: { source: GraphNode }) {
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardContent className="pt-6">
+          <div className="space-y-4">
+            <div>
+              <div className="text-sm font-medium text-muted-foreground mb-1">Name</div>
+              <div className="text-sm">{source.label}</div>
+            </div>
+
+            <div>
+              <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
+              <Badge variant="secondary">{source.metadata?.source_type || "unknown"}</Badge>
+            </div>
+
+            {source.metadata?.summary && (
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-1">Summary</div>
+                <div className="text-sm">{source.metadata.summary}</div>
+              </div>
+            )}
+
+            {source.created_at && (
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-1">Created</div>
+                <div className="text-sm">
+                  {format(new Date(source.created_at), "PPpp")}
+                  <span className="text-muted-foreground ml-2">
+                    ({formatDistanceToNow(new Date(source.created_at))} ago)
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <div className="text-sm font-medium text-muted-foreground mb-1">UUID</div>
+              <div className="text-xs font-mono">{source.uuid}</div>
+            </div>
+
+            <div>
+              <div className="text-sm font-medium text-muted-foreground mb-1">Group ID</div>
+              <div className="text-xs font-mono">{source.metadata?.group_id}</div>
+            </div>
+
+            <div className="text-sm text-muted-foreground pt-2 border-t">
+              View the Navigator tab to see Episodes created from this source
+            </div>
           </div>
         </CardContent>
       </Card>
