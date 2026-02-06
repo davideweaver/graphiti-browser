@@ -103,7 +103,13 @@ const Container: React.FC<Props> = ({
       {/* Header */}
       <div className={headerClasses} style={headerStyle}>
         <div className={titleClasses}>
-          <h1 className="font-bold flex items-center" style={{ fontSize: 28 }}>
+          <h1
+            className="font-bold flex items-center"
+            style={{
+              fontSize: 28,
+              paddingLeft: isMobile ? 40 : 0 // Add 40px on mobile for hamburger space
+            }}
+          >
             {title}{" "}
             {loading && (
               <Loader2 className="h-6 w-6 ml-2 animate-spin text-muted-foreground" />

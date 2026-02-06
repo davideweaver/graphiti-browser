@@ -6,11 +6,11 @@ import { useGraphiti } from "@/context/GraphitiContext";
 import Container from "@/layout/Container";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Info } from "lucide-react";
+import { Info } from "lucide-react";
 import { FactCard } from "@/components/search/FactCard";
 import { SessionRow } from "@/components/episodes/SessionRow";
 import { ProjectTimelineBar } from "@/components/episodes/ProjectTimelineBar";
@@ -109,45 +109,24 @@ export default function ProjectDetail() {
     );
   }
 
-  const projectDescription = `${projectData.episode_count} episodes • ${projectData.session_count} sessions`;
-
   return (
     <Container
-      title="Projects"
-      description="View project sessions, relationships, and facts"
+      title={projectName}
+      description={projectData.project_path || undefined}
       tools={
         <Button
           variant="secondary"
-          onClick={() => navigate("/projects")}
+          onClick={() => setSheetOpen(true)}
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
+          <Info className="h-4 w-4 mr-2" />
+          Metadata
         </Button>
       }
     >
       <div className="space-y-6">
-        {/* Project Header */}
+        {/* Project Stats */}
         <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="text-2xl">{projectName}</CardTitle>
-                {projectData.project_path && (
-                  <p className="text-sm text-muted-foreground mt-1 font-mono">
-                    {projectData.project_path}
-                  </p>
-                )}
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSheetOpen(true)}
-              >
-                <Info className="h-5 w-5" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
                 <div className="text-muted-foreground">Episodes</div>

@@ -9,7 +9,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Sun, Moon, ChevronUp, Database, Settings } from "lucide-react";
+import { Sun, Moon, Database, Settings } from "lucide-react";
 import { useTheme } from "next-themes";
 import { getPinnedGraphs } from "@/lib/graphStorage";
 
@@ -20,7 +20,12 @@ type Props = {
   isConnected?: boolean;
 };
 
-export const UserProfileMenu: React.FC<Props> = ({ onAfterClick, onOpenManageDialog, queueSize = 0, isConnected = false }) => {
+export const PrimaryNavFooter: React.FC<Props> = ({
+  onAfterClick,
+  onOpenManageDialog,
+  queueSize = 0,
+  isConnected = false
+}) => {
   const { groupId, setGroupId, baseUrl } = useGraphiti();
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
@@ -55,37 +60,40 @@ export const UserProfileMenu: React.FC<Props> = ({ onAfterClick, onOpenManageDia
     <>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <div className="flex items-center justify-between cursor-pointer pt-2 -ml-2">
-            <div className="flex flex-row items-start space-x-3 cursor-pointer w-full">
-              <div className="relative">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback>
-                    <Database className="h-4 w-4" />
-                  </AvatarFallback>
-                </Avatar>
-                <div
-                  className={`absolute -top-0.5 -left-1.5 flex items-center justify-center min-w-[18px] h-[18px] px-1.5 ${
-                    isConnected ? "bg-blue-500" : "bg-orange-500"
-                  } text-white text-xs font-semibold rounded-full border-2 border-background`}
-                  title={isConnected ? `Connected${queueSize > 0 ? ` - ${queueSize} in queue` : ""}` : "Disconnected"}
-                >
-                  {queueSize > 0 ? queueSize : ""}
-                </div>
-              </div>
-              <div className="flex flex-col text-left flex-grow">
-                <span className="text-foreground truncate font-semibold max-w-[200px] text-sm">
-                  {currentGraph?.group_id || groupId}
-                </span>
-                <span className="text-muted-foreground text-xs truncate max-w-[200px]">
-                  {baseUrl}
-                </span>
-              </div>
-              <ChevronUp className="h-5 w-5 text-muted-foreground ml-1 mt-1" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-12 w-12 rounded-lg relative"
+          >
+            <Avatar className="h-8 w-8">
+              <AvatarFallback>
+                <Database className="h-4 w-4" />
+              </AvatarFallback>
+            </Avatar>
+            <div
+              className={`absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1.5 ${
+                isConnected ? "bg-green-500" : "bg-orange-500"
+              } text-white text-xs font-semibold rounded-full border-2 border-background`}
+              title={isConnected ? `Connected${queueSize > 0 ? ` - ${queueSize} in queue` : ""}` : "Disconnected"}
+            >
+              {queueSize > 0 ? queueSize : ""}
             </div>
-          </div>
+          </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-72 overflow-hidden" align="center" sideOffset={5}>
+        <PopoverContent className="w-72 overflow-hidden" align="end" side="right" sideOffset={10}>
           <div className="grid gap-4 overflow-hidden">
+            <div className="space-y-1">
+              <div className="text-sm font-medium">Current Graph</div>
+              <div className="text-xs text-muted-foreground truncate">
+                {currentGraph?.group_id || groupId}
+              </div>
+              <div className="text-xs text-muted-foreground truncate">
+                {baseUrl}
+              </div>
+            </div>
+
+            <hr />
+
             <div className="grid gap-1 overflow-hidden">
               {/* Graph selection list */}
               {graphs.length > 0 ? (
@@ -126,9 +134,9 @@ export const UserProfileMenu: React.FC<Props> = ({ onAfterClick, onOpenManageDia
                 className="justify-start font-normal"
                 onClick={(e) => {
                   e.preventDefault();
-                  setOpen(false); // Close the popover
+                  setOpen(false); // Close popover
                   onOpenManageDialog?.();
-                  // Don't call handleAfterClick() - keep sidebar open on mobile
+                  // Don't call handleAfterClick() to keep sidebar open on mobile
                 }}
               >
                 <Settings className="h-4 w-4 text-muted-foreground mr-2" />
