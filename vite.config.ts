@@ -20,6 +20,10 @@ export default defineConfig(({ mode }) => {
       port: 8004,
       host: true, // Expose to external network
       proxy: {
+        "/api/v1/obsidian": {
+          target: env.VITE_XERRO_SERVICE_URL || "http://localhost:9205",
+          changeOrigin: true,
+        },
         "/api": {
           target: graphitiServer,
           changeOrigin: true,

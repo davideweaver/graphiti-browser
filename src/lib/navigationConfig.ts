@@ -6,7 +6,8 @@ import {
   MessageSquare,
   Users,
   Clock,
-  Plus
+  Plus,
+  FileText
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -40,6 +41,13 @@ export const navigationConfig: PrimaryNavItem[] = [
     secondaryItems: []
   },
   {
+    key: 'documents',
+    icon: FileText,
+    label: 'Documents',
+    defaultPath: '/documents',
+    secondaryItems: []
+  },
+  {
     key: 'memory',
     icon: Brain,
     label: 'Memory',
@@ -57,6 +65,7 @@ export const navigationConfig: PrimaryNavItem[] = [
 export function getActivePrimary(pathname: string): string | null {
   if (pathname === '/') return 'dashboard';
   if (pathname.startsWith('/projects') || pathname.startsWith('/project/')) return 'projects';
+  if (pathname.startsWith('/documents')) return 'documents';
   if (
     pathname.startsWith('/search') ||
     pathname.startsWith('/chat') ||

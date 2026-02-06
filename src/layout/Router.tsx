@@ -62,6 +62,18 @@ const Router = createBrowserRouter(
         path="/chat"
         lazy={lazyImportComponent(() => import("@/pages/Chat"))}
       />
+      <Route
+        path="/documents"
+        lazy={lazyImportComponent(() => import("@/pages/Documents"))}
+      />
+      <Route
+        path="/documents/search"
+        lazy={lazyImportComponent(() => import("@/pages/DocumentSearch"))}
+      />
+      <Route
+        path="/documents/*"
+        lazy={lazyImportComponent(() => import("@/pages/DocumentDetail"))}
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Route>
   ),
