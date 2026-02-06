@@ -51,32 +51,24 @@ export const navigationConfig: PrimaryNavItem[] = [
     key: 'memory',
     icon: Brain,
     label: 'Memory',
-    defaultPath: '/search',
+    defaultPath: '/memory/search',
     secondaryItems: [
-      { path: '/search', icon: Search, label: 'Search' },
-      { path: '/chat', icon: MessageSquare, label: 'Chat' },
-      { path: '/entities', icon: Users, label: 'Entities' },
-      { path: '/sessions', icon: Clock, label: 'Sessions' },
-      { path: '/add', icon: Plus, label: 'Add Memory' }
+      { path: '/memory/search', icon: Search, label: 'Search' },
+      { path: '/memory/chat', icon: MessageSquare, label: 'Chat' },
+      { path: '/memory/entities', icon: Users, label: 'Entities' },
+      { path: '/memory/sessions', icon: Clock, label: 'Sessions' },
+      { path: '/memory/add', icon: Plus, label: 'Add Memory' }
     ]
   }
 ];
 
 export function getActivePrimary(pathname: string): string | null {
   if (pathname === '/') return 'dashboard';
+  // Project routes - including project-specific sessions
   if (pathname.startsWith('/projects') || pathname.startsWith('/project/')) return 'projects';
   if (pathname.startsWith('/documents')) return 'documents';
-  if (
-    pathname.startsWith('/search') ||
-    pathname.startsWith('/chat') ||
-    pathname.startsWith('/entities') ||
-    pathname.startsWith('/entity/') ||
-    pathname.startsWith('/sessions') ||
-    pathname.startsWith('/add') ||
-    pathname.startsWith('/facts/')
-  ) {
-    return 'memory';
-  }
+  // Memory routes
+  if (pathname.startsWith('/memory')) return 'memory';
   return null;
 }
 

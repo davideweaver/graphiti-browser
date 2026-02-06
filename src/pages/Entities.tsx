@@ -277,7 +277,7 @@ export default function Entities() {
         page={page}
         setPage={(newPage) => updateParams({ page: newPage })}
         itemsPerPage={pageSize}
-        onRowClick={(row) => navigate(`/entity/${row.uuid}`)}
+        onRowClick={(row) => navigate(`/memory/entity/${row.uuid}`)}
       />
     </Container>
   );

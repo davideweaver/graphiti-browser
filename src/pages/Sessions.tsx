@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { graphitiService } from "@/api/graphitiService";
 import { useGraphiti } from "@/context/GraphitiContext";
 import Container from "@/layout/Container";
@@ -31,6 +31,8 @@ export default function Sessions() {
   const { groupId } = useGraphiti();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { projectName } = useParams<{ projectName?: string }>();
+  const decodedProjectName = projectName ? decodeURIComponent(projectName) : undefined;
 
   // Initialize selected date from query string or default to today
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -70,14 +72,15 @@ export default function Sessions() {
 
   // Fetch all sessions WITHOUT date filters to get true first/last episode dates
   // Date filtering happens on the frontend to avoid backend returning filtered dates
+  // Filter by project if projectName is provided from route params
   const { data: sessionsResponse, isLoading } = useQuery({
-    queryKey: ["sessions", groupId],
+    queryKey: ["sessions", groupId, decodedProjectName],
     queryFn: () => graphitiService.listSessions(
       groupId,
       500,
       undefined, // cursor
       undefined, // search
-      undefined, // projectName
+      decodedProjectName, // projectName - filter when viewing project-specific sessions
       undefined, // createdAfter
       undefined, // createdBefore
       undefined, // validAfter (don't filter - we need true session dates!)
@@ -116,7 +119,12 @@ export default function Sessions() {
 
   const viewSessionDetail = (sessionId: string) => {
     const dateString = format(selectedDate, 'yyyy-MM-dd');
-    navigate(`/sessions/${encodeURIComponent(sessionId)}?date=${dateString}`);
+    // Navigate to project-specific or memory-specific session detail based on context
+    if (decodedProjectName) {
+      navigate(`/project/${encodeURIComponent(decodedProjectName)}/sessions/${encodeURIComponent(sessionId)}?date=${dateString}`);
+    } else {
+      navigate(`/memory/sessions/${encodeURIComponent(sessionId)}?date=${dateString}`);
+    }
   };
 
   const toggleProject = (project: string) => {
@@ -235,8 +243,8 @@ export default function Sessions() {
 
   return (
     <Container
-      title="Sessions"
-      description="Browse your conversation sessions"
+      title={decodedProjectName ? `${decodedProjectName} Sessions` : "Sessions"}
+      description={decodedProjectName ? `Sessions for ${decodedProjectName} project` : "Browse your conversation sessions"}
       loading={isLoading}
       tools={calendarTools}
     >

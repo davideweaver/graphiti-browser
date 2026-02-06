@@ -15,26 +15,6 @@ const Router = createBrowserRouter(
         lazy={lazyImportComponent(() => import("@/pages/Dashboard"))}
       />
       <Route
-        path="/search"
-        lazy={lazyImportComponent(() => import("@/pages/Search"))}
-      />
-      <Route
-        path="/facts/:uuid"
-        lazy={lazyImportComponent(() => import("@/pages/FactDetail"))}
-      />
-      <Route
-        path="/entities"
-        lazy={lazyImportComponent(() => import("@/pages/Entities"))}
-      />
-      <Route
-        path="/entities/:type"
-        lazy={lazyImportComponent(() => import("@/pages/Entities"))}
-      />
-      <Route
-        path="/entity/:uuid"
-        lazy={lazyImportComponent(() => import("@/pages/EntityDetail"))}
-      />
-      <Route
         path="/projects"
         lazy={lazyImportComponent(() => import("@/pages/Projects"))}
       />
@@ -43,24 +23,12 @@ const Router = createBrowserRouter(
         lazy={lazyImportComponent(() => import("@/pages/ProjectDetail"))}
       />
       <Route
-        path="/sessions"
+        path="/project/:projectName/sessions"
         lazy={lazyImportComponent(() => import("@/pages/Sessions"))}
       />
       <Route
-        path="/sessions/:sessionId"
+        path="/project/:projectName/sessions/:sessionId"
         lazy={lazyImportComponent(() => import("@/pages/SessionDetail"))}
-      />
-      <Route
-        path="/add"
-        lazy={lazyImportComponent(() => import("@/pages/AddMemory"))}
-      />
-      <Route
-        path="/processing/:sourceUuid"
-        lazy={lazyImportComponent(() => import("@/pages/ProcessingResults"))}
-      />
-      <Route
-        path="/chat"
-        lazy={lazyImportComponent(() => import("@/pages/Chat"))}
       />
       <Route
         path="/documents"
@@ -74,6 +42,49 @@ const Router = createBrowserRouter(
         path="/documents/*"
         lazy={lazyImportComponent(() => import("@/pages/DocumentDetail"))}
       />
+
+      {/* Memory sub-routes */}
+      <Route
+        path="/memory/search"
+        lazy={lazyImportComponent(() => import("@/pages/Search"))}
+      />
+      <Route
+        path="/memory/chat"
+        lazy={lazyImportComponent(() => import("@/pages/Chat"))}
+      />
+      <Route
+        path="/memory/entities"
+        lazy={lazyImportComponent(() => import("@/pages/Entities"))}
+      />
+      <Route
+        path="/memory/entities/:type"
+        lazy={lazyImportComponent(() => import("@/pages/Entities"))}
+      />
+      <Route
+        path="/memory/entity/:uuid"
+        lazy={lazyImportComponent(() => import("@/pages/EntityDetail"))}
+      />
+      <Route
+        path="/memory/sessions"
+        lazy={lazyImportComponent(() => import("@/pages/Sessions"))}
+      />
+      <Route
+        path="/memory/sessions/:sessionId"
+        lazy={lazyImportComponent(() => import("@/pages/SessionDetail"))}
+      />
+      <Route
+        path="/memory/add"
+        lazy={lazyImportComponent(() => import("@/pages/AddMemory"))}
+      />
+      <Route
+        path="/memory/facts/:uuid"
+        lazy={lazyImportComponent(() => import("@/pages/FactDetail"))}
+      />
+      <Route
+        path="/memory/processing/:sourceUuid"
+        lazy={lazyImportComponent(() => import("@/pages/ProcessingResults"))}
+      />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Route>
   ),

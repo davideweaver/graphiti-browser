@@ -25,7 +25,7 @@ export default function ChatMessage({ message, userMessage, onRepeat }: Props) {
   if (isSystem) return null; // Don't render system messages
 
   const handleSearch = () => {
-    navigate(`/search?q=${encodeURIComponent(message.content)}`);
+    navigate(`/memory/search?q=${encodeURIComponent(message.content)}`);
   };
 
   const handleOpenTrace = () => {

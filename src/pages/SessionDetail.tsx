@@ -15,12 +15,21 @@ import { NodeDetailSheet } from "@/components/shared/NodeDetailSheet";
 import { format, differenceInMinutes } from "date-fns";
 
 export default function SessionDetail() {
-  const { sessionId } = useParams<{ sessionId: string }>();
+  const { sessionId, projectName } = useParams<{ sessionId: string; projectName?: string }>();
   const { groupId } = useGraphiti();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const dateParam = searchParams.get('date');
   const [sheetOpen, setSheetOpen] = useState(false);
+  const decodedProjectName = projectName ? decodeURIComponent(projectName) : undefined;
+
+  // Compute back path based on context (project or memory)
+  const getBackPath = () => {
+    const basePath = decodedProjectName
+      ? `/project/${encodeURIComponent(decodedProjectName)}/sessions`
+      : '/memory/sessions';
+    return dateParam ? `${basePath}?date=${dateParam}` : basePath;
+  };
 
   // Fetch session details (includes episodes and metadata)
   const { data: sessionData, isLoading, error } = useQuery({
@@ -65,7 +74,7 @@ export default function SessionDetail() {
               Session ID: {sessionId}<br />
               Group ID: {groupId}
             </p>
-            <Button onClick={() => navigate(dateParam ? `/sessions?date=${dateParam}` : "/sessions")}>
+            <Button onClick={() => navigate(getBackPath())}>
               Back to Sessions
             </Button>
           </CardContent>
@@ -87,7 +96,7 @@ export default function SessionDetail() {
               Session ID: {sessionData.session_id}<br />
               Episode Count: {sessionData.episode_count}
             </p>
-            <Button onClick={() => navigate(dateParam ? `/sessions?date=${dateParam}` : "/sessions")}>
+            <Button onClick={() => navigate(getBackPath())}>
               Back to Sessions
             </Button>
           </CardContent>
@@ -112,7 +121,7 @@ export default function SessionDetail() {
       tools={
         <Button
           variant="secondary"
-          onClick={() => navigate(dateParam ? `/sessions?date=${dateParam}` : "/sessions")}
+          onClick={() => navigate(getBackPath())}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back

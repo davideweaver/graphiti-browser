@@ -201,16 +201,34 @@ export default function ProjectDetail() {
             )}
 
             {!isLoadingSessions && sessions.length > 0 && (
-              <div className="space-y-4">
-                {sessions.map((session, sessionIndex) => (
-                  <div key={session.session_id}>
-                    <SessionRow session={session} showProject={false} />
-                    {sessionIndex < sessions.length - 1 && (
-                      <Separator className="mt-4" />
-                    )}
+              <>
+                <div className="space-y-4">
+                  {sessions.map((session, sessionIndex) => (
+                    <div key={session.session_id}>
+                      <SessionRow
+                        session={session}
+                        showProject={false}
+                        onSessionClick={(sessionId) =>
+                          navigate(`/project/${encodeURIComponent(projectName)}/sessions/${encodeURIComponent(sessionId)}`)
+                        }
+                      />
+                      {sessionIndex < sessions.length - 1 && (
+                        <Separator className="mt-4" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {sessions.length >= 10 && (
+                  <div className="mt-6 text-center">
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate(`/project/${encodeURIComponent(projectName)}/sessions`)}
+                    >
+                      View All Sessions
+                    </Button>
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </TabsContent>
 
@@ -247,7 +265,7 @@ export default function ProjectDetail() {
                     <Card
                       key={entity.uuid}
                       className="cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => navigate(`/entity/${entity.uuid}`)}
+                      onClick={() => navigate(`/memory/entity/${entity.uuid}`)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-2">

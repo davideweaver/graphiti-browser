@@ -36,7 +36,7 @@ export default function AddMemory() {
     },
     onSuccess: (response) => {
       // Navigate to processing results page with source UUID
-      navigate(`/processing/${response.source_uuid}`);
+      navigate(`/memory/processing/${response.source_uuid}`);
     },
   });
 

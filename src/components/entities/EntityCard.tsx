@@ -41,7 +41,7 @@ export function EntityCard({ entity }: EntityCardProps) {
   return (
     <Card
       className="cursor-pointer hover:shadow-md transition-shadow"
-      onClick={() => navigate(`/entity/${entity.uuid}`)}
+      onClick={() => navigate(`/memory/entity/${entity.uuid}`)}
     >
       <CardContent className="p-5">
         <div className="flex items-start gap-4">

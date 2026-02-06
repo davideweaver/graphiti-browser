@@ -46,7 +46,7 @@ export default function Dashboard() {
   const handleQuickSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (quickSearch.trim()) {
-      navigate(`/search?q=${encodeURIComponent(quickSearch)}`);
+      navigate(`/memory/search?q=${encodeURIComponent(quickSearch)}`);
     }
   };
 
@@ -150,7 +150,7 @@ export default function Dashboard() {
               <Button
                 className="w-full justify-start"
                 variant="outline"
-                onClick={() => navigate("/add")}
+                onClick={() => navigate("/memory/add")}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add New Memory
@@ -158,7 +158,7 @@ export default function Dashboard() {
               <Button
                 className="w-full justify-start"
                 variant="outline"
-                onClick={() => navigate("/search")}
+                onClick={() => navigate("/memory/search")}
               >
                 <SearchIcon className="h-4 w-4 mr-2" />
                 Search Memories
@@ -174,7 +174,7 @@ export default function Dashboard() {
               <Button
                 className="w-full justify-start"
                 variant="outline"
-                onClick={() => navigate("/entities")}
+                onClick={() => navigate("/memory/entities")}
               >
                 <Users className="h-4 w-4 mr-2" />
                 Browse Entities
@@ -182,7 +182,7 @@ export default function Dashboard() {
               <Button
                 className="w-full justify-start"
                 variant="outline"
-                onClick={() => navigate("/sessions")}
+                onClick={() => navigate("/memory/sessions")}
               >
                 <Clock className="h-4 w-4 mr-2" />
                 View Sessions
@@ -190,7 +190,7 @@ export default function Dashboard() {
               <Button
                 className="w-full justify-start"
                 variant="outline"
-                onClick={() => navigate("/chat")}
+                onClick={() => navigate("/memory/chat")}
               >
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Chat with AI
@@ -207,7 +207,7 @@ export default function Dashboard() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate("/sessions")}
+                onClick={() => navigate("/memory/sessions")}
               >
                 View All
               </Button>
@@ -230,7 +230,7 @@ export default function Dashboard() {
                 <p>No activity yet. Add your first memory to get started!</p>
                 <Button
                   className="mt-4"
-                  onClick={() => navigate("/add")}
+                  onClick={() => navigate("/memory/add")}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Memory

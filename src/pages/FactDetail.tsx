@@ -64,7 +64,7 @@ export default function FactDetail() {
             <p className="text-muted-foreground mb-4">
               {error || "The requested fact could not be found."}
             </p>
-            <Button onClick={() => navigate("/search")}>
+            <Button onClick={() => navigate("/memory/search")}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Search
             </Button>
@@ -82,7 +82,7 @@ export default function FactDetail() {
       <div className="space-y-6">
         {/* Header Actions */}
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate("/search")}>
+          <Button variant="outline" size="sm" onClick={() => navigate("/memory/search")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Search
           </Button>

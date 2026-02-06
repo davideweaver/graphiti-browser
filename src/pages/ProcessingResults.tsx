@@ -8,7 +8,7 @@ export default function ProcessingResults() {
   const { groupId } = useGraphiti();
 
   if (!sourceUuid) {
-    return <Navigate to="/add" replace />;
+    return <Navigate to="/memory/add" replace />;
   }
 
   return (

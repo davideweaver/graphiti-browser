@@ -63,7 +63,7 @@ export default function EntityDetail() {
       queryClient.removeQueries({ queryKey: ["entity-relationships", uuid, groupId] });
 
       // Navigate back to entities list
-      navigate("/entities");
+      navigate("/memory/entities");
     },
   });
 
@@ -341,7 +341,7 @@ export default function EntityDetail() {
                     <Card
                       key={related.uuid}
                       className="cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => navigate(`/entity/${related.uuid}`)}
+                      onClick={() => navigate(`/memory/entity/${related.uuid}`)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-2">

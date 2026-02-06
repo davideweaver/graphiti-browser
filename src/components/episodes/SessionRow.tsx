@@ -53,7 +53,7 @@ export function SessionRow({
     if (onSessionClick) {
       onSessionClick(session.session_id);
     } else {
-      navigate(`/sessions/${encodeURIComponent(session.session_id)}`);
+      navigate(`/memory/sessions/${encodeURIComponent(session.session_id)}`);
     }
   };
 

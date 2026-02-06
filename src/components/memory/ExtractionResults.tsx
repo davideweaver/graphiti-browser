@@ -87,7 +87,7 @@ export default function ExtractionResults({ sourceUuid, groupId }: Props) {
           <p className="text-sm text-muted-foreground mb-4">
             {(error as Error).message}
           </p>
-          <Button onClick={() => navigate("/add")} variant="outline">
+          <Button onClick={() => navigate("/memory/add")} variant="outline">
             <Plus className="w-4 h-4 mr-2" />
             Add More Content
           </Button>
@@ -255,7 +255,7 @@ export default function ExtractionResults({ sourceUuid, groupId }: Props) {
 
       {/* Actions */}
       <div className="flex gap-3">
-        <Button onClick={() => navigate("/add")}>
+        <Button onClick={() => navigate("/memory/add")}>
           <Plus className="w-4 h-4 mr-2" />
           Add More Content
         </Button>
