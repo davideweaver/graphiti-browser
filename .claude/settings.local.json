@@ -73,7 +73,8 @@
       "Bash(docker run --rm graphiti-server-graphiti-unified sh -c \"grep -c ''''async def backup_group'''' /app/rest/graph_service/routers/ingest.py 2>/dev/null || echo 0\")",
       "Bash(docker rmi:*)",
       "Bash(docker run:*)",
-      "Bash(docker builder prune:*)"
+      "Bash(docker builder prune:*)",
+      "Bash(node -e:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

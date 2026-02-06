@@ -6,6 +6,7 @@ import { PrimaryNav } from "@/components/navigation/PrimaryNav";
 import { SecondaryNav } from "@/components/navigation/SecondaryNav";
 import { ProjectsSecondaryNav } from "@/components/navigation/ProjectsSecondaryNav";
 import { DocumentsSecondaryNav } from "@/components/navigation/DocumentsSecondaryNav";
+import { AgentTasksSecondaryNav } from "@/components/navigation/AgentTasksSecondaryNav";
 import { MobileNavTrigger } from "@/components/navigation/MobileNavTrigger";
 import { MobileNavOverlay } from "@/components/navigation/MobileNavOverlay";
 import { PrimaryNavFooter } from "@/components/navigation/PrimaryNavFooter";
@@ -39,6 +40,10 @@ const Layout = () => {
   // Get current document path from URL params for Documents section
   const currentDocumentPath = params["*"] || null;
   const isDocumentsSection = activePrimary === "documents";
+
+  // Get selected task ID from URL params for Agent Tasks section
+  const selectedTaskId = params.id || null;
+  const isAgentTasksSection = activePrimary === "agent-tasks";
 
   // Save folder path to localStorage whenever it changes
   useEffect(() => {
@@ -120,6 +125,11 @@ const Layout = () => {
             selectedProject={selectedProject}
             onNavigate={handleNavigate}
           />
+        ) : isAgentTasksSection ? (
+          <AgentTasksSecondaryNav
+            selectedTaskId={selectedTaskId}
+            onNavigate={handleNavigate}
+          />
         ) : (
           <SecondaryNav
             activePrimary={activePrimary}
@@ -160,6 +170,12 @@ const Layout = () => {
                 selectedProject={selectedProject}
                 onNavigate={handleNavigate}
                 onProjectSelect={handleMobileNavigate}
+              />
+            ) : isAgentTasksSection ? (
+              <AgentTasksSecondaryNav
+                selectedTaskId={selectedTaskId}
+                onNavigate={handleNavigate}
+                onTaskSelect={handleMobileNavigate}
               />
             ) : undefined
           }

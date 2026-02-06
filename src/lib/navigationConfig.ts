@@ -7,7 +7,8 @@ import {
   Users,
   Clock,
   Plus,
-  FileText
+  FileText,
+  ListChecks
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -59,6 +60,13 @@ export const navigationConfig: PrimaryNavItem[] = [
       { path: '/memory/sessions', icon: Clock, label: 'Sessions' },
       { path: '/memory/add', icon: Plus, label: 'Add Memory' }
     ]
+  },
+  {
+    key: 'agent-tasks',
+    icon: ListChecks,
+    label: 'Agent Tasks',
+    defaultPath: '/agent-tasks',
+    secondaryItems: []
   }
 ];
 
@@ -69,6 +77,8 @@ export function getActivePrimary(pathname: string): string | null {
   if (pathname.startsWith('/documents')) return 'documents';
   // Memory routes
   if (pathname.startsWith('/memory')) return 'memory';
+  // Agent Tasks routes
+  if (pathname.startsWith('/agent-tasks')) return 'agent-tasks';
   return null;
 }
 

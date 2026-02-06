@@ -55,11 +55,23 @@ The `GraphitiService` singleton provides methods for all API operations:
 
 API errors are automatically shown to users via toast notifications.
 
+**Agent Tasks (xerro-service):**
+
+The application also integrates with xerro-service for agent task management:
+
+- `agentTasksService.listTasks(enabled?, task?)` - List scheduled tasks
+- `agentTasksService.getTask(id)` - Get task details
+- `agentTasksService.getTaskHistory(id, limit?)` - Get execution history
+
+These are **global** (not scoped by groupId) and configured via `VITE_XERRO_SERVICE_URL`.
+
 ### Application Structure
 
 ```
 src/
-├── api/              # GraphitiService - centralized API client
+├── api/              # API service singletons
+│   ├── graphitiService.ts    # Graphiti memory graph API
+│   └── agentTasksService.ts  # xerro-service agent tasks API
 ├── components/       # Reusable UI components
 │   ├── ui/          # ShadCN UI component library (complete)
 │   ├── sidebar/     # UserProfileMenu, GraphManagementDialog
@@ -69,9 +81,9 @@ src/
 ├── context/         # GraphitiContext - global state (baseUrl, groupId)
 ├── hooks/           # Custom React hooks (debounce, scroll, toast, breakpoints)
 ├── layout/          # Router, Layout, Container components
-├── lib/             # Utilities (cn, lazyImportComponent, graphStorage)
-├── pages/           # Route pages (Dashboard, Search, Entities, etc.)
-└── types/           # TypeScript interfaces for Graphiti data model
+├── lib/             # Utilities (cn, lazyImportComponent, graphStorage, cronFormatter)
+├── pages/           # Route pages (Dashboard, Search, Entities, AgentTasks, etc.)
+└── types/           # TypeScript interfaces (graphiti, agentTasks, etc.)
 ```
 
 ### State Management
@@ -316,6 +328,61 @@ The application supports managing multiple memory graphs (formerly group_ids) th
 - The Graphiti server auto-creates graphs on first use (no separate creation API needed)
 - Backend endpoint: `GET /groups` lists all graphs with entity/episode/fact counts
 - Backend endpoint: `DELETE /group/{group_id}` removes a graph and all its data
+
+### Agent Tasks
+
+The application includes a read-only "Agent Tasks" section for browsing scheduled tasks from xerro-service:
+
+**Features:**
+
+- **List Page** (`/agent-tasks`):
+  - Search tasks by name (debounced)
+  - Filter by enabled/disabled status
+  - View task schedule (formatted cron expressions)
+  - Click to view details
+
+- **Detail Page** (`/agent-tasks/:id`):
+  - Task configuration (schedule, properties, enabled status)
+  - Execution history (last 20 runs with success/failure, duration, errors)
+  - Visual indicators for task status
+
+**API Integration:**
+
+```tsx
+// List all tasks
+const { data } = useQuery({
+  queryKey: ["agent-tasks", enabledFilter],
+  queryFn: () => agentTasksService.listTasks(enabledFilter),
+});
+
+// Get task details
+const { data: task } = useQuery({
+  queryKey: ["agent-task", id],
+  queryFn: () => agentTasksService.getTask(id),
+});
+
+// Get execution history
+const { data: history } = useQuery({
+  queryKey: ["agent-task-history", id],
+  queryFn: () => agentTasksService.getTaskHistory(id, 20),
+});
+```
+
+**Cron Formatting:**
+
+The `formatCronExpression()` utility converts cron expressions to human-readable strings:
+- `0 9 * * 1-5` → "Every weekday at 9:00 AM"
+- `*/15 * * * *` → "Every 15 minutes"
+- `0 9 * * *` → "Daily at 9:00 AM"
+
+**Key Points:**
+
+- Agent Tasks are **global** (not tied to graph selection)
+- Read-only interface (no create/update/delete)
+- Configured via `VITE_XERRO_SERVICE_URL` environment variable
+- Automatic error handling with toast notifications
+
+See `AGENT_TASKS_IMPLEMENTATION.md` for detailed implementation notes.
 
 ## Important Notes
 
