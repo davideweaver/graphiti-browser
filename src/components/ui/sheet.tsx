@@ -73,7 +73,7 @@ const SheetContent = React.forwardRef<
           side === "left" ? "left-4" : "right-4"
         )}
         style={{
-          top: 'calc(1rem + env(safe-area-inset-top))'
+          top: 'calc(1rem + 5px + env(safe-area-inset-top))'
         }}
       >
         <X className="h-8 w-8" />

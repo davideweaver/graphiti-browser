@@ -98,7 +98,8 @@
     @apply border-border;
   }
 
-  html, body {
+  html,
+  body {
     min-height: 100%;
     min-height: -webkit-fill-available;
   }
@@ -144,7 +145,9 @@
   overflow: auto !important;
   white-space: pre-wrap !important;
   word-break: break-word !important;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace !important;
   font-size: 0.75rem !important;
   line-height: 1rem !important;
   margin-top: 1rem !important;
@@ -152,7 +155,9 @@
 }
 
 .prose code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace !important;
   font-size: 0.75rem !important;
   line-height: 1rem !important;
 }
@@ -182,4 +187,3 @@
   min-height: 100dvh !important;
   min-height: -webkit-fill-available !important;
 }
-
