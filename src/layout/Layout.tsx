@@ -1,15 +1,14 @@
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { useGraphitiWebSocket } from "@/hooks/use-graphiti-websocket";
-import { useSwipeable } from "react-swipeable";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PrimaryNav } from "@/components/navigation/PrimaryNav";
 import { SecondaryNav } from "@/components/navigation/SecondaryNav";
 import { ProjectsSecondaryNav } from "@/components/navigation/ProjectsSecondaryNav";
 import { DocumentsSecondaryNav } from "@/components/navigation/DocumentsSecondaryNav";
 import { AgentTasksSecondaryNav } from "@/components/navigation/AgentTasksSecondaryNav";
 import { MobileNavTrigger } from "@/components/navigation/MobileNavTrigger";
-import { MobileNavOverlay } from "@/components/navigation/MobileNavOverlay";
+import { DraggableMobileNav } from "@/components/navigation/DraggableMobileNav";
 import { PrimaryNavFooter } from "@/components/navigation/PrimaryNavFooter";
 import { GraphManagementDialog } from "@/components/sidebar/GraphManagementDialog";
 import { navigationConfig, getActivePrimary } from "@/lib/navigationConfig";
@@ -34,25 +33,85 @@ const Layout = () => {
   const isConnected = connectionState === "connected";
   const activePrimary = getActivePrimary(pathname);
 
-  // Swipe gestures for mobile nav using react-swipeable
-  const swipeHandlers = useSwipeable({
-    onSwipedRight: (eventData) => {
-      // Only open if nav is closed and swipe starts from left edge
-      if (!mobileNavOpen && eventData.initial[0] <= 50) {
+  // Track drag state for opening nav from edge
+  const [dragOpenProgress, setDragOpenProgress] = useState(0);
+  const touchStartXRef = useRef(0);
+  const touchStartYRef = useRef(0);
+  const isDraggingOpenRef = useRef(false);
+  const hasCheckedDirectionRef = useRef(false);
+
+  // Handle edge drag to open
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      if (window.innerWidth >= 768) return; // Desktop only
+      if (mobileNavOpen) return; // Already open
+
+      const touch = e.touches[0];
+      if (touch.pageX <= 50) { // Within edge threshold
+        touchStartXRef.current = touch.pageX;
+        touchStartYRef.current = touch.pageY;
+        isDraggingOpenRef.current = true;
+        hasCheckedDirectionRef.current = false;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDraggingOpenRef.current) return;
+
+      const touch = e.touches[0];
+      const deltaX = touch.pageX - touchStartXRef.current;
+      const deltaY = touch.pageY - touchStartYRef.current;
+      const absDeltaX = Math.abs(deltaX);
+      const absDeltaY = Math.abs(deltaY);
+
+      // Check direction on first significant movement
+      if (!hasCheckedDirectionRef.current && (absDeltaX > 5 || absDeltaY > 5)) {
+        hasCheckedDirectionRef.current = true;
+        // If more vertical than horizontal, cancel the drag
+        if (absDeltaY > absDeltaX) {
+          isDraggingOpenRef.current = false;
+          setDragOpenProgress(0);
+          return;
+        }
+      }
+
+      if (deltaX > 0) { // Only track rightward movement
+        const progress = Math.min(deltaX / window.innerWidth, 1);
+        setDragOpenProgress(progress);
+
+        // Prevent scrolling during horizontal drag
+        if (absDeltaX > absDeltaY && deltaX > 10) {
+          e.preventDefault();
+        }
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (!isDraggingOpenRef.current) return;
+
+      // If dragged more than 30% of screen width, open the nav
+      if (dragOpenProgress > 0.3) {
         setMobileNavOpen(true);
       }
-    },
-    onSwipedLeft: () => {
-      // Only close if nav is open
-      if (mobileNavOpen) {
-        setMobileNavOpen(false);
-      }
-    },
-    preventScrollOnSwipe: true,
-    trackMouse: false,
-    trackTouch: true,
-    delta: 50, // Minimum swipe distance
-  });
+
+      // Reset
+      isDraggingOpenRef.current = false;
+      hasCheckedDirectionRef.current = false;
+      setDragOpenProgress(0);
+      touchStartXRef.current = 0;
+      touchStartYRef.current = 0;
+    };
+
+    document.addEventListener("touchstart", handleTouchStart, { passive: false });
+    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+    document.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+    return () => {
+      document.removeEventListener("touchstart", handleTouchStart);
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [mobileNavOpen, dragOpenProgress]);
 
   // iOS Safari: prevent back/forward navigation gesture near screen edges
   // Must be on document level to intercept before browser claims the gesture
@@ -183,10 +242,54 @@ const Layout = () => {
       </div>
 
       {/* Mobile Layout */}
-      <div className="md:hidden h-screen flex flex-col" {...swipeHandlers}>
+      <div className="md:hidden h-screen flex flex-col">
         <MobileNavTrigger onClick={() => setMobileNavOpen(true)} />
 
-        <MobileNavOverlay
+        {/* Drag-to-open preview */}
+        {dragOpenProgress > 0 && !mobileNavOpen && (
+          <div
+            className="fixed inset-y-0 left-0 z-40 w-full bg-background shadow-lg pointer-events-none overflow-hidden"
+            style={{
+              transform: `translateX(${-100 + dragOpenProgress * 100}%)`,
+              transition: "none",
+            }}
+          >
+            <div className="flex h-full opacity-50">
+              <PrimaryNav
+                navigationConfig={navigationConfig}
+                activePrimary={activePrimary}
+                onNavigate={() => {}}
+                footer={footer}
+              />
+              {isDocumentsSection ? (
+                <DocumentsSecondaryNav
+                  currentDocumentPath={currentDocumentPath}
+                  currentFolderPath={currentFolderPath}
+                  onFolderChange={setCurrentFolderPath}
+                  onNavigate={() => {}}
+                />
+              ) : isProjectsSection ? (
+                <ProjectsSecondaryNav
+                  selectedProject={selectedProject}
+                  onNavigate={() => {}}
+                />
+              ) : isAgentTasksSection ? (
+                <AgentTasksSecondaryNav
+                  selectedTaskId={selectedTaskId}
+                  onNavigate={() => {}}
+                />
+              ) : (
+                <SecondaryNav
+                  activePrimary={activePrimary}
+                  pathname={pathname}
+                  onNavigate={() => {}}
+                />
+              )}
+            </div>
+          </div>
+        )}
+
+        <DraggableMobileNav
           isOpen={mobileNavOpen}
           onClose={() => setMobileNavOpen(false)}
           activePrimary={activePrimary}
