@@ -39,10 +39,16 @@ export function MobileNavOverlay({
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent
         side="left"
-        className="w-full p-0"
+        className="w-full !p-0 mobile-nav-sheet"
       >
         {/* Both columns side-by-side */}
-        <div className="flex h-full">
+        <div
+          className="flex h-full"
+          style={{
+            paddingTop: 'env(safe-area-inset-top)',
+            paddingBottom: 'env(safe-area-inset-bottom)'
+          }}
+        >
           <PrimaryNav
             navigationConfig={navigationConfig}
             activePrimary={activePrimary}

@@ -98,6 +98,11 @@
     @apply border-border;
   }
 
+  html, body {
+    min-height: 100%;
+    min-height: -webkit-fill-available;
+  }
+
   body {
     @apply bg-background text-foreground font-inter;
   }
@@ -159,5 +164,22 @@
   padding: 0.125rem 0.375rem !important;
   border-radius: 0.25rem !important;
   font-weight: 400 !important;
+}
+
+/* Mobile navigation sheet - force full height on iOS */
+.mobile-nav-sheet {
+  top: 0 !important;
+  bottom: 0 !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  min-height: -webkit-fill-available !important;
+  padding: 0 !important;
+}
+
+/* Ensure sheet overlay also extends to full viewport on iOS */
+[data-radix-dialog-overlay] {
+  min-height: 100vh !important;
+  min-height: 100dvh !important;
+  min-height: -webkit-fill-available !important;
 }
 
