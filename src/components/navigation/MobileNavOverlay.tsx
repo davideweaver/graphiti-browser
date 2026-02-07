@@ -1,4 +1,5 @@
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useSwipeable } from "react-swipeable";
 import { PrimaryNav } from "./PrimaryNav";
 import { SecondaryNav } from "./SecondaryNav";
 import type { PrimaryNavItem } from "@/lib/navigationConfig";
@@ -35,6 +36,15 @@ export function MobileNavOverlay({
     onClose();
   };
 
+  // Swipe left to close the nav overlay
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: () => onClose(),
+    preventScrollOnSwipe: true,
+    trackTouch: true,
+    trackMouse: false,
+    delta: 50,
+  });
+
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent
@@ -44,6 +54,7 @@ export function MobileNavOverlay({
         {/* Both columns side-by-side */}
         <div
           className="flex h-full"
+          {...swipeHandlers}
           style={{
             paddingTop: 'env(safe-area-inset-top)',
             paddingBottom: 'env(safe-area-inset-bottom)'

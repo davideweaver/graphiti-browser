@@ -1,6 +1,7 @@
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { useGraphitiWebSocket } from "@/hooks/use-graphiti-websocket";
+import { useSwipeable } from "react-swipeable";
 import { useState, useEffect } from "react";
 import { PrimaryNav } from "@/components/navigation/PrimaryNav";
 import { SecondaryNav } from "@/components/navigation/SecondaryNav";
@@ -32,6 +33,43 @@ const Layout = () => {
 
   const isConnected = connectionState === "connected";
   const activePrimary = getActivePrimary(pathname);
+
+  // Swipe gestures for mobile nav using react-swipeable
+  const swipeHandlers = useSwipeable({
+    onSwipedRight: (eventData) => {
+      // Only open if nav is closed and swipe starts from left edge
+      if (!mobileNavOpen && eventData.initial[0] <= 50) {
+        setMobileNavOpen(true);
+      }
+    },
+    onSwipedLeft: () => {
+      // Only close if nav is open
+      if (mobileNavOpen) {
+        setMobileNavOpen(false);
+      }
+    },
+    preventScrollOnSwipe: true,
+    trackMouse: false,
+    trackTouch: true,
+    delta: 50, // Minimum swipe distance
+  });
+
+  // iOS Safari: prevent back/forward navigation gesture near screen edges
+  // Must be on document level to intercept before browser claims the gesture
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      // Only on mobile
+      if (window.innerWidth >= 768) return;
+      const touch = e.touches[0];
+      // Block browser gesture when touch starts within 20px of either edge
+      if (touch.pageX <= 20 || touch.pageX >= window.innerWidth - 20) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener("touchstart", handleTouchStart, { passive: false });
+    return () => document.removeEventListener("touchstart", handleTouchStart);
+  }, []);
 
   // Get selected project from URL params
   const selectedProject = params.projectName ? decodeURIComponent(params.projectName) : null;
@@ -145,7 +183,7 @@ const Layout = () => {
       </div>
 
       {/* Mobile Layout */}
-      <div className="md:hidden h-screen flex flex-col">
+      <div className="md:hidden h-screen flex flex-col" {...swipeHandlers}>
         <MobileNavTrigger onClick={() => setMobileNavOpen(true)} />
 
         <MobileNavOverlay

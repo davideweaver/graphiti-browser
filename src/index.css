@@ -106,6 +106,8 @@
 
   body {
     @apply bg-background text-foreground font-inter;
+    overscroll-behavior-x: none; /* Prevent browser back/forward navigation on swipe */
+    touch-action: pan-y pinch-zoom; /* Only allow vertical panning and zoom, prevents horizontal browser gestures */
   }
 
   /* Custom scrollbar styles for light and dark mode */

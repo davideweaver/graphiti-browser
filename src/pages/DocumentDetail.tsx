@@ -112,8 +112,8 @@ export default function DocumentDetail() {
           <div className="grid gap-2 text-sm">
             {Object.entries(document.frontmatter).map(([key, value]) => (
               <div key={key} className="flex gap-2">
-                <span className="font-medium text-muted-foreground">{key}:</span>
-                <span>{String(value)}</span>
+                <span className="font-medium text-muted-foreground shrink-0">{key}:</span>
+                <span className="break-all overflow-hidden">{String(value)}</span>
               </div>
             ))}
           </div>
