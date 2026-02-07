@@ -5,7 +5,6 @@ import Container from "@/components/container/Container";
 import { ContainerToolButton } from "@/components/container/ContainerToolButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import DeleteConfirmationDialog from "@/components/dialogs/DeleteConfirmationDialog";
 import { agentTasksService } from "@/api/agentTasksService";
@@ -22,7 +21,8 @@ export default function AgentTaskDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [selectedExecution, setSelectedExecution] = useState<TaskExecution | null>(null);
+  const [selectedExecution, setSelectedExecution] =
+    useState<TaskExecution | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -50,7 +50,9 @@ export default function AgentTaskDetail() {
     onSuccess: (execution) => {
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["agent-task-history", id] });
-      queryClient.invalidateQueries({ queryKey: ["agent-task-scratchpad", id] });
+      queryClient.invalidateQueries({
+        queryKey: ["agent-task-scratchpad", id],
+      });
 
       // Show the execution result in the sheet
       setSelectedExecution(execution);
@@ -297,9 +299,7 @@ export default function AgentTaskDetail() {
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Clock className="h-4 w-4" />
-                      <span className="text-xs">
-                        {execution.durationMs}ms
-                      </span>
+                      <span className="text-xs">{execution.durationMs}ms</span>
                     </div>
                   </div>
                 ))}

@@ -67,6 +67,9 @@ Browse the documentation to understand the established patterns and conventions:
 
 ## Documentation Structure
 
+### [UI Terminology](./ui-terminology.md)
+Naming conventions for UI areas, components, state patterns, and file organization. Essential reference for consistent terminology.
+
 ### [Foundations](./foundations.md)
 Typography, colors, spacing, border radius, shadows, and scrollbar styling. These are the building blocks of the design system.
 
@@ -121,11 +124,12 @@ ARIA patterns, focus management, semantic HTML, keyboard navigation, and screen 
 
 ### When Building Features
 
-1. **Check the patterns first** - See if there's an established pattern for what you're building
-2. **Use existing components** - Don't recreate what's already available
-3. **Follow the conventions** - Match the spacing, sizing, and color usage
-4. **Consider accessibility** - Use semantic HTML and ARIA labels
-5. **Test responsively** - Verify mobile, tablet, and desktop layouts
+1. **Review UI terminology** - Use consistent naming for components and UI areas ([ui-terminology.md](./ui-terminology.md))
+2. **Check the patterns first** - See if there's an established pattern for what you're building
+3. **Use existing components** - Don't recreate what's already available
+4. **Follow the conventions** - Match the spacing, sizing, and color usage
+5. **Consider accessibility** - Use semantic HTML and ARIA labels
+6. **Test responsively** - Verify mobile, tablet, and desktop layouts
 
 ## Color System Quick Reference
 

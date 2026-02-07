@@ -8,6 +8,22 @@ A React-based web interface for browsing and managing Graphiti memory graphs. Gr
 
 ## Architecture
 
+### UI Terminology
+
+This application uses consistent naming for UI areas:
+
+- **Primary Nav** - 75px fixed-width left sidebar with icon-only navigation (Dashboard, Projects, Documents, Memory, Agent Tasks)
+- **Secondary Nav** - 380px collapsible sidebar for contextual navigation (changes based on active section)
+- **Page** - Primary content region using the Container component pattern
+- **Mobile Nav** - Hamburger trigger + Sheet overlay combining both navigation columns
+
+**Component Naming Patterns:**
+- Container variants: `Container`, `ContainerTable`, `ContainerToolButton`
+- Navigation: `PrimaryNav`, `SecondaryNav`, `MobileNavTrigger`, `MobileNavOverlay`
+- Cards: `FactCard`, `EntityCard`, `EpisodeCard`
+
+For complete UI terminology, component naming patterns, and state conventions, see [UI Terminology Guide](docs/design-system/ui-terminology.md).
+
 ### Core Data Model
 
 The application works with four main data types from the Graphiti API:
