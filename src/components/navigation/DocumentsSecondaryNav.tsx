@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { documentsService } from "@/api/documentsService";
 import { Button } from "@/components/ui/button";
 import { SecondaryNavItem } from "@/components/navigation/SecondaryNavItem";
+import { SecondaryNavItemTitle, SecondaryNavItemSubtitle } from "@/components/navigation/SecondaryNavItemContent";
 import { Search, ChevronLeft, Folder, FileText } from "lucide-react";
 
 interface DocumentsSecondaryNavProps {
@@ -42,10 +43,6 @@ export function DocumentsSecondaryNav({
     }
   };
 
-  const handleFolderClick = (folderPath: string) => {
-    onFolderChange(folderPath);
-  };
-
   const handleDocumentClick = (documentPath: string) => {
     const path = `/documents/${documentPath}`;
     if (onDocumentSelect) {
@@ -62,7 +59,7 @@ export function DocumentsSecondaryNav({
   };
 
   return (
-    <nav className="w-[380px] bg-card flex flex-col">
+    <nav className="w-full md:w-[380px] bg-card flex flex-col min-w-0">
       {/* Header */}
       <div className="pt-4 md:pt-8 px-6 flex items-center justify-between mb-4">
         <h2 className="font-bold" style={{ fontSize: 28 }}>
@@ -145,17 +142,15 @@ export function DocumentsSecondaryNav({
                   <SecondaryNavItem
                     key={item.path}
                     isActive={false}
-                    onClick={() => handleFolderClick(item.path)}
+                    onClick={() => onFolderChange(item.path)}
                   >
                     <Folder className="h-4 w-4 mr-3 flex-shrink-0 text-muted-foreground" />
                     <div className="flex flex-col items-start min-w-0 flex-1">
-                      <span className="font-medium truncate w-full text-left">
-                        {item.name}
-                      </span>
+                      <SecondaryNavItemTitle>{item.name}</SecondaryNavItemTitle>
                       {item.documentCount !== undefined && (
-                        <span className="text-xs text-muted-foreground">
+                        <SecondaryNavItemSubtitle>
                           {item.documentCount} {item.documentCount === 1 ? "document" : "documents"}
-                        </span>
+                        </SecondaryNavItemSubtitle>
                       )}
                     </div>
                   </SecondaryNavItem>
@@ -170,12 +165,12 @@ export function DocumentsSecondaryNav({
                 >
                   <FileText className="h-4 w-4 mr-3 flex-shrink-0 text-muted-foreground" />
                   <div className="flex flex-col items-start min-w-0 flex-1">
-                    <span className="font-medium truncate w-full text-left">
+                    <SecondaryNavItemTitle>
                       {item.name.replace(/\.md$/, "")}
-                    </span>
-                    <span className="text-xs text-muted-foreground truncate w-full text-left">
+                    </SecondaryNavItemTitle>
+                    <SecondaryNavItemSubtitle>
                       {new Date(item.modified).toLocaleDateString()}
-                    </span>
+                    </SecondaryNavItemSubtitle>
                   </div>
                 </SecondaryNavItem>
               );

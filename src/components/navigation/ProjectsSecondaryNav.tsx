@@ -4,6 +4,7 @@ import { graphitiService } from "@/api/graphitiService";
 import { useGraphiti } from "@/context/GraphitiContext";
 import { Input } from "@/components/ui/input";
 import { SecondaryNavItem } from "@/components/navigation/SecondaryNavItem";
+import { SecondaryNavItemTitle, SecondaryNavItemSubtitle } from "@/components/navigation/SecondaryNavItemContent";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Search } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -29,16 +30,15 @@ export function ProjectsSecondaryNav({
   // Fetch projects with search filter
   const { data, isLoading } = useQuery({
     queryKey: ["projects-nav-list", groupId, debouncedSearch],
-    queryFn: async () => {
-      return await graphitiService.listProjects(
+    queryFn: () =>
+      graphitiService.listProjects(
         groupId,
-        100, // Get more projects for the nav
+        100,
         undefined,
         debouncedSearch || undefined,
         undefined,
-        "desc", // Sort by last episode date
-      );
-    },
+        "desc",
+      ),
     select: (data) => ({
       ...data,
       // Filter out '_general' project from list
@@ -72,7 +72,7 @@ export function ProjectsSecondaryNav({
   }, [selectedProject, projects, isLoading, onNavigate]);
 
   return (
-    <nav className="w-[380px] bg-card flex flex-col">
+    <nav className="w-full md:w-[380px] bg-card flex flex-col min-w-0">
       {/* Header */}
       <div className="pt-4 md:pt-8 px-6 flex items-center justify-between mb-4">
         <h2 className="font-bold" style={{ fontSize: 28 }}>
@@ -146,13 +146,11 @@ export function ProjectsSecondaryNav({
                   }}
                 >
                   <div className="flex flex-col items-start w-full">
-                    <span className="font-medium truncate w-full text-left">
-                      {project.name}
-                    </span>
-                    <span className="text-xs text-muted-foreground truncate w-full text-left">
+                    <SecondaryNavItemTitle>{project.name}</SecondaryNavItemTitle>
+                    <SecondaryNavItemSubtitle>
                       {project.session_count} sessions • {project.episode_count}{" "}
                       episodes
-                    </span>
+                    </SecondaryNavItemSubtitle>
                   </div>
                 </SecondaryNavItem>
               );

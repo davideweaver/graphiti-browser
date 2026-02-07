@@ -3,10 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { agentTasksService } from "@/api/agentTasksService";
 import { Input } from "@/components/ui/input";
 import { SecondaryNavItem } from "@/components/navigation/SecondaryNavItem";
+import {
+  SecondaryNavItemTitle,
+  SecondaryNavItemSubtitle,
+} from "@/components/navigation/SecondaryNavItemContent";
 import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
-import type { ScheduledTask } from "@/types/agentTasks";
 
 interface AgentTasksSecondaryNavProps {
   selectedTaskId: string | null;
@@ -14,23 +17,25 @@ interface AgentTasksSecondaryNavProps {
   onTaskSelect?: (path: string) => void; // Optional: for user clicks that should close sidebar
 }
 
-export function AgentTasksSecondaryNav({ selectedTaskId, onNavigate, onTaskSelect }: AgentTasksSecondaryNavProps) {
+export function AgentTasksSecondaryNav({
+  selectedTaskId,
+  onNavigate,
+  onTaskSelect,
+}: AgentTasksSecondaryNavProps) {
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 300);
 
   // Fetch all tasks
   const { data, isLoading } = useQuery({
     queryKey: ["agent-tasks-nav", debouncedSearch],
-    queryFn: async () => {
-      return await agentTasksService.listTasks();
-    },
+    queryFn: () => agentTasksService.listTasks(),
   });
 
   const tasks = data?.tasks || [];
 
   // Filter by search
   const filteredTasks = tasks.filter((task) =>
-    task.name.toLowerCase().includes(debouncedSearch.toLowerCase())
+    task.name.toLowerCase().includes(debouncedSearch.toLowerCase()),
   );
 
   // Auto-select first task if none selected
@@ -41,10 +46,12 @@ export function AgentTasksSecondaryNav({ selectedTaskId, onNavigate, onTaskSelec
   }, [selectedTaskId, filteredTasks, isLoading, onNavigate]);
 
   return (
-    <nav className="w-[380px] bg-card flex flex-col">
+    <nav className="w-full md:w-[380px] bg-card flex flex-col min-w-0">
       {/* Header */}
       <div className="pt-4 md:pt-8 px-6 flex items-center mb-4">
-        <h2 className="font-bold" style={{ fontSize: 28 }}>Agent Tasks</h2>
+        <h2 className="font-bold" style={{ fontSize: 28 }}>
+          Agent Tasks
+        </h2>
       </div>
 
       {/* Search */}
@@ -65,7 +72,10 @@ export function AgentTasksSecondaryNav({ selectedTaskId, onNavigate, onTaskSelec
         {isLoading ? (
           <div className="space-y-1">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-16 bg-accent/50 rounded-lg animate-pulse" />
+              <div
+                key={i}
+                className="h-16 bg-accent/50 rounded-lg animate-pulse"
+              />
             ))}
           </div>
         ) : filteredTasks.length === 0 ? (
@@ -91,18 +101,21 @@ export function AgentTasksSecondaryNav({ selectedTaskId, onNavigate, onTaskSelec
                   }}
                 >
                   <div className="flex flex-col items-start w-full gap-1">
-                    <div className="flex items-center gap-2 w-full">
-                      <span className="font-medium truncate flex-1 text-left">
+                    <div className="flex items-start gap-2 w-full">
+                      <SecondaryNavItemTitle className="flex-1">
                         {task.name}
-                      </span>
-                      <Badge variant={task.enabled ? "default" : "secondary"} className="text-xs">
+                      </SecondaryNavItemTitle>
+                      <Badge
+                        variant={task.enabled ? "default" : "secondary"}
+                        className="text-xs flex-shrink-0"
+                      >
                         {task.enabled ? "On" : "Off"}
                       </Badge>
                     </div>
                     {task.description && (
-                      <span className="text-xs text-muted-foreground truncate w-full text-left">
+                      <SecondaryNavItemSubtitle className="break-words line-clamp-2">
                         {task.description}
-                      </span>
+                      </SecondaryNavItemSubtitle>
                     )}
                   </div>
                 </SecondaryNavItem>

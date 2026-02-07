@@ -1,11 +1,11 @@
-import * as React from "react";
+import type { ReactNode, ButtonHTMLAttributes } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export interface SecondaryNavItemProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  extends ButtonHTMLAttributes<HTMLButtonElement> {
   isActive: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 /**
@@ -21,12 +21,12 @@ export function SecondaryNavItem({
   children,
   className,
   ...props
-}: SecondaryNavItemProps) {
+}: SecondaryNavItemProps): ReactNode {
   return (
     <Button
       variant="ghost"
       className={cn(
-        "w-full justify-start h-auto py-3 px-3 rounded-lg",
+        "w-full justify-start h-auto py-3 px-3 rounded-lg whitespace-normal",
         isActive
           ? "bg-accent dark:bg-accent/60 text-accent-foreground"
           : "hover:bg-accent/50",
