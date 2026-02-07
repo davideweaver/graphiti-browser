@@ -6,6 +6,7 @@ import { ContainerToolButton } from "@/components/container/ContainerToolButton"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DeleteConfirmationDialog from "@/components/dialogs/DeleteConfirmationDialog";
 import { agentTasksService } from "@/api/agentTasksService";
 import {
@@ -205,63 +206,22 @@ export default function AgentTaskDetail() {
           </CardContent>
         </Card>
 
-        {/* Configuration Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Configuration</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                Properties
-              </h3>
-              {Object.keys(task.properties).length > 0 ? (
-                <pre className="bg-muted p-4 rounded-lg text-xs overflow-auto whitespace-pre-wrap break-words">
-                  {JSON.stringify(task.properties, null, 2)}
-                </pre>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No properties configured
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Tabs */}
+        <Tabs defaultValue="history">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="history">
+              History {history ? `(${history.length})` : ''}
+            </TabsTrigger>
+            <TabsTrigger value="config">
+              Config
+            </TabsTrigger>
+            <TabsTrigger value="scratchpad">
+              Scratchpad
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Scratchpad Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Scratchpad</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoadingScratchpad ? (
-              <div className="space-y-2">
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-16 w-full" />
-              </div>
-            ) : scratchpad && !scratchpad.isEmpty && scratchpad.content ? (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground font-mono mb-2">
-                  {scratchpad.path}
-                </p>
-                <pre className="bg-muted p-4 rounded-lg text-xs overflow-auto whitespace-pre-wrap break-words">
-                  {JSON.stringify(scratchpad.content, null, 2)}
-                </pre>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No scratchpad data
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Execution History Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Execution History</CardTitle>
-          </CardHeader>
-          <CardContent>
+          {/* Execution History Tab */}
+          <TabsContent value="history" className="mt-6">
             {isLoadingHistory ? (
               <div className="space-y-2">
                 <Skeleton className="h-16 w-full" />
@@ -305,12 +265,65 @@ export default function AgentTaskDetail() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                No execution history available
-              </p>
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    No execution history available
+                  </p>
+                </CardContent>
+              </Card>
             )}
-          </CardContent>
-        </Card>
+          </TabsContent>
+
+          {/* Configuration Tab */}
+          <TabsContent value="config" className="mt-6">
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                Properties
+              </h3>
+              {Object.keys(task.properties).length > 0 ? (
+                <pre className="bg-muted p-4 rounded-lg text-xs overflow-auto whitespace-pre-wrap break-words">
+                  {JSON.stringify(task.properties, null, 2)}
+                </pre>
+              ) : (
+                <Card>
+                  <CardContent className="p-12 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      No properties configured
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Scratchpad Tab */}
+          <TabsContent value="scratchpad" className="mt-6">
+            {isLoadingScratchpad ? (
+              <div className="space-y-2">
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+              </div>
+            ) : scratchpad && !scratchpad.isEmpty && scratchpad.content ? (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground font-mono mb-2">
+                  {scratchpad.path}
+                </p>
+                <pre className="bg-muted p-4 rounded-lg text-xs overflow-auto whitespace-pre-wrap break-words">
+                  {JSON.stringify(scratchpad.content, null, 2)}
+                </pre>
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    No scratchpad data
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Execution Detail Sheet */}
