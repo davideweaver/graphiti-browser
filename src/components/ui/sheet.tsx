@@ -20,7 +20,7 @@ const SheetOverlay = React.forwardRef<
   <SheetPrimitive.Overlay
     className={cn(
       "fixed inset-0 z-50 bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-      className
+      className,
     )}
     {...props}
     ref={ref}
@@ -44,11 +44,12 @@ const sheetVariants = cva(
     defaultVariants: {
       side: "right",
     },
-  }
+  },
 );
 
 interface SheetContentProps
-  extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
+  extends
+    React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
     VariantProps<typeof sheetVariants> {
   transparentOverlay?: boolean;
 }
@@ -56,32 +57,35 @@ interface SheetContentProps
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, transparentOverlay, ...props }, ref) => (
-  <SheetPortal>
-    <SheetOverlay
-      className={transparentOverlay ? "bg-transparent" : ""}
-    />
-    <SheetPrimitive.Content
-      ref={ref}
-      className={cn(sheetVariants({ side }), className)}
-      {...props}
-    >
-      {children}
-      <SheetPrimitive.Close
-        className={cn(
-          "absolute rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 disabled:pointer-events-none data-[state=open]:bg-secondary",
-          side === "left" ? "left-4" : "right-4"
-        )}
-        style={{
-          top: 'calc(1rem + 5px + env(safe-area-inset-top))'
-        }}
+>(
+  (
+    { side = "right", className, children, transparentOverlay, ...props },
+    ref,
+  ) => (
+    <SheetPortal>
+      <SheetOverlay className={transparentOverlay ? "bg-transparent" : ""} />
+      <SheetPrimitive.Content
+        ref={ref}
+        className={cn(sheetVariants({ side }), className)}
+        {...props}
       >
-        <X className="h-8 w-8" />
-        <span className="sr-only">Close</span>
-      </SheetPrimitive.Close>
-    </SheetPrimitive.Content>
-  </SheetPortal>
-));
+        {children}
+        <SheetPrimitive.Close
+          className={cn(
+            "absolute rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 disabled:pointer-events-none data-[state=open]:bg-secondary",
+            side === "left" ? "left-4" : "right-4",
+          )}
+          style={{
+            top: "calc(1rem + 6px + env(safe-area-inset-top))",
+          }}
+        >
+          <X className="h-8 w-8" />
+          <span className="sr-only">Close</span>
+        </SheetPrimitive.Close>
+      </SheetPrimitive.Content>
+    </SheetPortal>
+  ),
+);
 SheetContent.displayName = SheetPrimitive.Content.displayName;
 
 const SheetHeader = ({
@@ -91,7 +95,7 @@ const SheetHeader = ({
   <div
     className={cn(
       "flex flex-col space-y-2 text-right sm:text-right mr-8 -mt-2",
-      className
+      className,
     )}
     {...props}
   />
@@ -105,7 +109,7 @@ const SheetFooter = ({
   <div
     className={cn(
       "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
-      className
+      className,
     )}
     {...props}
   />
