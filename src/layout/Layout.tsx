@@ -89,15 +89,41 @@ const Layout = () => {
     const handleTouchEnd = () => {
       if (!isDraggingOpenRef.current) return;
 
-      // If dragged more than 30% of screen width, open the nav
-      if (dragOpenProgress > 0.3) {
+      console.log('Drag-to-open ended - progress:', dragOpenProgress);
+
+      // If dragged more than 40% of screen width, open the nav
+      if (dragOpenProgress > 0.4) {
+        console.log('Opening nav');
         setMobileNavOpen(true);
+        setDragOpenProgress(0); // Clear immediately so it doesn't show during open animation
+      } else {
+        console.log('Not opening - animating closed');
+        // Animate closed over 300ms
+        const startProgress = dragOpenProgress;
+        const startTime = Date.now();
+        const duration = 300;
+
+        const animateClose = () => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          const easedProgress = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+          const currentProgress = startProgress * (1 - easedProgress);
+
+          setDragOpenProgress(currentProgress);
+
+          if (progress < 1) {
+            requestAnimationFrame(animateClose);
+          } else {
+            setDragOpenProgress(0);
+          }
+        };
+
+        requestAnimationFrame(animateClose);
       }
 
       // Reset
       isDraggingOpenRef.current = false;
       hasCheckedDirectionRef.current = false;
-      setDragOpenProgress(0);
       touchStartXRef.current = 0;
       touchStartYRef.current = 0;
     };

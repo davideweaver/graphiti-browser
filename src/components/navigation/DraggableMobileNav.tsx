@@ -31,6 +31,7 @@ export function DraggableMobileNav({
   const touchStartY = useRef(0);
   const currentTranslateX = useRef(-100);
   const hasCheckedDirection = useRef(false);
+  const lastTranslateX = useRef(-100); // Track last position during drag
 
   // Animate open/close when isOpen changes
   useEffect(() => {
@@ -53,6 +54,7 @@ export function DraggableMobileNav({
   }, [isOpen]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    console.log('handleTouchStart called');
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     hasCheckedDirection.current = false;
@@ -79,6 +81,8 @@ export function DraggableMobileNav({
 
       // If more horizontal, this is a drag
       setIsDragging(true);
+      // Stop event propagation and prevent default on capture phase
+      e.stopPropagation();
     }
 
     // Only process drag if we've determined it's horizontal
@@ -86,47 +90,51 @@ export function DraggableMobileNav({
 
     const width = window.innerWidth;
 
-    // Convert pixels to percentage
-    const deltaPercent = (deltaX / width) * 100;
+    // Calculate new position directly from the start position + delta
+    // This ensures we always track relative to where the drag started
+    let newTranslateX = currentTranslateX.current + (deltaX / width) * 100;
 
-    // Calculate new position (clamp between -100 and 0)
-    let newTranslateX = currentTranslateX.current + deltaPercent;
-
-    // When opening from closed: allow drag from -100 to 0
-    // When closing from open: allow drag from 0 to -100
+    // Clamp between -100 and 0
     newTranslateX = Math.max(-100, Math.min(0, newTranslateX));
 
     setTranslateX(newTranslateX);
+    lastTranslateX.current = newTranslateX; // Store for touchend
 
-    // Prevent scrolling during horizontal drag
-    e.preventDefault();
+    // Stop propagation to prevent child scrolling
+    e.stopPropagation();
   };
 
   const handleTouchEnd = () => {
+    console.log('handleTouchEnd called - isDragging:', isDragging, 'lastTranslateX:', lastTranslateX.current);
+
     if (!isDragging) {
       // Reset if we never actually started dragging
       hasCheckedDirection.current = false;
+      console.log('Not dragging, returning early');
       return;
     }
 
     setIsDragging(false);
     hasCheckedDirection.current = false;
 
+    // Use the last recorded position from touchmove (ref, not state)
+    const finalPosition = lastTranslateX.current;
+
+    console.log('Touch end - finalPosition:', finalPosition, 'isOpen:', isOpen);
+
     // Snap to open or closed based on position
-    if (translateX > -50) {
-      // Closer to open
+    // Using -40 as threshold: need to drag 40% of the way left to close
+    if (finalPosition > -40) {
+      // Less than 40% closed - snap back open
+      console.log('Snapping OPEN');
       setTranslateX(0);
       currentTranslateX.current = 0;
-      if (!isOpen) {
-        // Trigger parent state update (but don't actually need it since we control position)
-      }
     } else {
-      // Closer to closed
+      // More than 40% closed - snap closed
+      console.log('Snapping CLOSED');
       setTranslateX(-100);
       currentTranslateX.current = -100;
-      if (isOpen) {
-        onClose();
-      }
+      onClose(); // Always close if snapping to closed position
     }
   };
 
@@ -164,11 +172,10 @@ export function DraggableMobileNav({
           transition: isDragging ? "none" : "transform 300ms ease-in-out",
           paddingTop: "env(safe-area-inset-top)",
           paddingBottom: "env(safe-area-inset-bottom)",
-          touchAction: isDragging ? "none" : "auto", // Disable all touch actions during drag
         }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        onTouchStartCapture={handleTouchStart}
+        onTouchMoveCapture={handleTouchMove}
+        onTouchEndCapture={handleTouchEnd}
       >
         {/* Close button */}
         <button
