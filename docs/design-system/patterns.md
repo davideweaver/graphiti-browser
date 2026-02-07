@@ -399,6 +399,41 @@ From `lucide-react`:
 
 Use `size="icon"` for square buttons with no text.
 
+### Large Icons in Fixed-Size Buttons
+
+When you need a larger icon while keeping the button size fixed, use the `[&_svg]:!size-*` pattern to target SVG children directly:
+
+```tsx
+<Button
+  variant="ghost"
+  size="icon"
+  className="h-11 w-11 p-0 [&_svg]:!size-6"
+>
+  <Search />
+</Button>
+```
+
+**Pattern breakdown:**
+- `h-11 w-11` - Explicit button size (44px × 44px)
+- `p-0` - Remove padding to maximize icon space
+- `[&_svg]:!size-6` - Target SVG children directly, set size to 6 (24px)
+- `!` - Important flag to override default icon sizes
+- No className on icon component - styling applied via button's SVG selector
+
+**Common size combinations:**
+- Button `h-11 w-11` + Icon `[&_svg]:!size-6` (24px icon in 44px button)
+- Button `h-14 w-14` + Icon `[&_svg]:!size-7` (28px icon in 56px button)
+- Button `h-16 w-16` + Icon `[&_svg]:!size-8` (32px icon in 64px button)
+
+**When to use:**
+- Navigation headers with prominent icon buttons
+- Action buttons that need visual emphasis
+- Touch targets that need larger icons for accessibility
+
+**Used in:**
+- `PrimaryNav` - Main navigation icon buttons (`h-14 w-14` with `[&_svg]:!size-5`)
+- `DocumentsSecondaryNav` - Search button header (`h-11 w-11` with `[&_svg]:!size-6`)
+
 ## Text Truncation
 
 ### Single Line Truncation

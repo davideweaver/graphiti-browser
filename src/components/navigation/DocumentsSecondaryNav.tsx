@@ -2,7 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { documentsService } from "@/api/documentsService";
 import { Button } from "@/components/ui/button";
 import { SecondaryNavItem } from "@/components/navigation/SecondaryNavItem";
-import { SecondaryNavItemTitle, SecondaryNavItemSubtitle } from "@/components/navigation/SecondaryNavItemContent";
+import {
+  SecondaryNavItemTitle,
+  SecondaryNavItemSubtitle,
+} from "@/components/navigation/SecondaryNavItemContent";
 import { Search, ChevronLeft, Folder, FileText } from "lucide-react";
 
 interface DocumentsSecondaryNavProps {
@@ -23,7 +26,8 @@ export function DocumentsSecondaryNav({
   // Fetch folder structure
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["documents-nav", currentFolderPath],
-    queryFn: () => documentsService.getFolderStructure(currentFolderPath || undefined),
+    queryFn: () =>
+      documentsService.getFolderStructure(currentFolderPath || undefined),
   });
 
   // Build breadcrumbs (excluding "Documents" which is our root)
@@ -68,10 +72,10 @@ export function DocumentsSecondaryNav({
         <Button
           variant="ghost"
           size="icon"
-          className="p-1"
+          className="h-11 w-11 p-0 [&_svg]:!size-5"
           onClick={() => onNavigate("/documents/search")}
         >
-          <Search className="h-8 w-8" />
+          <Search />
         </Button>
       </div>
 
@@ -110,7 +114,10 @@ export function DocumentsSecondaryNav({
             onClick={handleBackClick}
           >
             <ChevronLeft className="h-4 w-4 mr-2" />
-            Back to {breadcrumbs.length === 1 ? "Documents" : breadcrumbs[breadcrumbs.length - 2]}
+            Back to{" "}
+            {breadcrumbs.length === 1
+              ? "Documents"
+              : breadcrumbs[breadcrumbs.length - 2]}
           </Button>
         </div>
       )}
@@ -134,8 +141,7 @@ export function DocumentsSecondaryNav({
           <div className="space-y-1">
             {items.map((item) => {
               const isActiveDocument =
-                item.type === "document" &&
-                currentDocumentPath === item.path;
+                item.type === "document" && currentDocumentPath === item.path;
 
               if (item.type === "folder") {
                 return (
@@ -149,7 +155,8 @@ export function DocumentsSecondaryNav({
                       <SecondaryNavItemTitle>{item.name}</SecondaryNavItemTitle>
                       {item.documentCount !== undefined && (
                         <SecondaryNavItemSubtitle>
-                          {item.documentCount} {item.documentCount === 1 ? "document" : "documents"}
+                          {item.documentCount}{" "}
+                          {item.documentCount === 1 ? "document" : "documents"}
                         </SecondaryNavItemSubtitle>
                       )}
                     </div>
