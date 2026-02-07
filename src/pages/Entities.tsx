@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { graphitiService } from "@/api/graphitiService";
 import { useGraphiti } from "@/context/GraphitiContext";
-import Container from "@/layout/Container";
+import Container from "@/components/container/Container";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
-import { ContainerTable, type Column } from "@/components/ContainerTable";
+import { ContainerTable, type Column } from "@/components/container/ContainerTable";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useDebounce } from "@/hooks/use-debounce";
 import type { Entity } from "@/types/graphiti";

@@ -1,6 +1,6 @@
 import { useParams, Navigate } from "react-router-dom";
 import { useGraphiti } from "@/context/GraphitiContext";
-import Container from "@/layout/Container";
+import Container from "@/components/container/Container";
 import ExtractionResults from "@/components/memory/ExtractionResults";
 
 export default function ProcessingResults() {

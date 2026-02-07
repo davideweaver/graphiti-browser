@@ -65,7 +65,64 @@ The application also integrates with xerro-service for agent task management:
 
 These are **global** (not scoped by groupId) and configured via `VITE_XERRO_SERVICE_URL`.
 
+## Design System
+
+This project follows a comprehensive design system documented in `docs/design-system/`.
+
+**Documentation Structure:**
+- [Overview & Getting Started](docs/design-system/README.md) - Tech stack, prerequisites, quick start
+- [Foundations](docs/design-system/foundations.md) - Typography, colors, spacing, radius
+- [Layout](docs/design-system/layout.md) - Container component, page structure, responsive patterns
+- [Components](docs/design-system/components.md) - Button, Card, Dialog, Form patterns with usage examples
+- [Patterns](docs/design-system/patterns.md) - Tool buttons, delete confirmations, back buttons, icons
+- [States](docs/design-system/states.md) - Loading, hover, focus, transitions, mutations
+- [Data Presentation](docs/design-system/data-presentation.md) - Grids, lists, entity coloring, tables
+- [Accessibility](docs/design-system/accessibility.md) - ARIA, focus management, semantic HTML
+
+**Quick References:**
+- Container component: See [Layout Guide](docs/design-system/layout.md#container-component)
+- Tool buttons: See [Patterns Guide](docs/design-system/patterns.md#tool-button-hierarchy)
+- Delete confirmations: See [Patterns Guide](docs/design-system/patterns.md#delete-confirmation-pattern)
+- Color system: See [Foundations](docs/design-system/foundations.md#color-system)
+- Responsive breakpoints: See [Layout Guide](docs/design-system/layout.md#responsive-patterns)
+
+**Note:** For all UI/UX implementation questions, consult the design system documentation first. The design system is framework-agnostic and can be used to build similar applications.
+
+## Design System Maintenance
+
+**Important Rules:**
+
+1. **Reference the Design System:** When implementing UI features, consult `docs/design-system/` first to follow established patterns.
+
+2. **Update When Patterns Change:** If you modify or create new UI patterns, components, or styling conventions:
+   - Update the relevant design system documentation
+   - Document in the appropriate category (foundations.md, components.md, patterns.md, etc.)
+   - Include code examples and usage guidelines
+
+3. **Confirm Before Changes:** Always confirm with the user before:
+   - Modifying existing design system documentation
+   - Adding new patterns to the design system
+   - Removing or deprecating documented patterns
+
+4. **Keep in Sync:** The design system docs should always reflect the current state of the UI implementation. Don't let them drift out of sync.
+
+**When to Update:**
+- Creating new custom components (like ContainerToolButton)
+- Establishing new visual patterns (like entity type coloring)
+- Changing color schemes or spacing conventions
+- Adding new page layout patterns
+- Introducing new interaction patterns
+
+**What to Document:**
+- Component usage with clear examples
+- Visual specifications (colors, spacing, sizing)
+- Behavioral patterns (hover, focus, loading states)
+- Responsive adaptations
+- Accessibility considerations
+
 ### Application Structure
+
+For UI/UX patterns and component usage, see [Design System Documentation](docs/design-system/).
 
 ```
 src/
@@ -74,13 +131,15 @@ src/
 │   └── agentTasksService.ts  # xerro-service agent tasks API
 ├── components/       # Reusable UI components
 │   ├── ui/          # ShadCN UI component library (complete)
+│   ├── container/   # Container, ContainerTable, ContainerToolButton
+│   ├── dialogs/     # DeleteConfirmationDialog
 │   ├── sidebar/     # UserProfileMenu, GraphManagementDialog
 │   ├── search/      # FactCard for search results
 │   ├── entities/    # EntityCard for entity browsing
 │   └── episodes/    # EpisodeCard for episode lists
 ├── context/         # GraphitiContext - global state (baseUrl, groupId)
 ├── hooks/           # Custom React hooks (debounce, scroll, toast, breakpoints)
-├── layout/          # Router, Layout, Container components
+├── layout/          # Router, Layout components
 ├── lib/             # Utilities (cn, lazyImportComponent, graphStorage, cronFormatter)
 ├── pages/           # Route pages (Dashboard, Search, Entities, AgentTasks, etc.)
 └── types/           # TypeScript interfaces (graphiti, agentTasks, etc.)
@@ -105,6 +164,8 @@ Built with **ShadCN UI** (Radix UI + Tailwind CSS):
 - Theming via CSS variables and `next-themes`
 - Responsive design with Tailwind breakpoints
 - Form handling with `react-hook-form` + Zod validation
+
+**For component usage patterns and styling guidelines**, see the [Design System Documentation](docs/design-system/).
 
 ## Development Commands
 

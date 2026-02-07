@@ -12,11 +12,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, Plus, Database, AlertTriangle, Pin, PinOff, Copy, Loader2, CheckCircle } from "lucide-react";
+import { Trash2, Plus, Database, Pin, PinOff, Copy, Loader2, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -25,6 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { getPinnedGraphs, pinGraph, unpinGraph, isGraphPinned } from "@/lib/graphStorage";
+import DeleteConfirmationDialog from "@/components/dialogs/DeleteConfirmationDialog";
 
 type Props = {
   open: boolean;
@@ -103,14 +103,20 @@ export const GraphManagementDialog: React.FC<Props> = ({
     },
   });
 
-  const handleDeleteGraph = (graphIdToDelete: string) => {
-    if (graphIdToDelete === groupId) {
+  const handleDeleteGraph = () => {
+    if (!deleteConfirmGraph) return;
+
+    if (deleteConfirmGraph === groupId) {
       toast.error("Cannot delete the currently active graph. Switch to another graph first.");
       setDeleteConfirmGraph(null);
       return;
     }
 
-    deleteMutation.mutate(graphIdToDelete);
+    deleteMutation.mutate(deleteConfirmGraph);
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteConfirmGraph(null);
   };
 
   const handleTogglePin = (graphId: string) => {
@@ -306,47 +312,14 @@ export const GraphManagementDialog: React.FC<Props> = ({
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog
+      <DeleteConfirmationDialog
         open={deleteConfirmGraph !== null}
         onOpenChange={(open) => !open && setDeleteConfirmGraph(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              Delete Graph?
-            </AlertDialogTitle>
-            <div className="space-y-2">
-              <AlertDialogDescription>
-                Are you sure you want to delete <strong>{deleteConfirmGraph}</strong>?
-              </AlertDialogDescription>
-              <div className="text-sm text-destructive">
-                This will permanently delete all entities, episodes, and facts in this graph. This action cannot be undone.
-              </div>
-            </div>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
-            <Button
-              onClick={(e) => {
-                e.preventDefault();
-                deleteConfirmGraph && handleDeleteGraph(deleteConfirmGraph);
-              }}
-              disabled={deleteMutation.isPending}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                "Delete Graph"
-              )}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onDelete={handleDeleteGraph}
+        onCancel={handleCancelDelete}
+        title="Delete Graph"
+        description={`Are you sure you want to delete "${deleteConfirmGraph}"? This will permanently delete all entities, episodes, and facts in this graph. This action cannot be undone.`}
+      />
 
       {/* Backup Confirmation Dialog */}
       <AlertDialog

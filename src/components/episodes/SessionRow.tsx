@@ -98,6 +98,7 @@ export function SessionRow({
             {timeRange} ({duration})
             {dateInfo && ` • ${dateInfo}`} • {session.episode_count} episode
             {session.episode_count !== 1 ? "s" : ""}
+            {session.programmatic !== undefined && ` • ${session.programmatic ? "Programmatic" : "Manual"}`}
           </p>
         </div>
       </div>

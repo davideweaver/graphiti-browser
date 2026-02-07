@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { graphitiService } from "@/api/graphitiService";
 import { useGraphiti } from "@/context/GraphitiContext";
-import Container from "@/layout/Container";
+import Container from "@/components/container/Container";
 import { Button } from "@/components/ui/button";
+import { ContainerToolButton } from "@/components/container/ContainerToolButton";
+import { ContainerToolToggle } from "@/components/container/ContainerToolToggle";
 import { Calendar } from "@/components/ui/calendar";
-import { Toggle } from "@/components/ui/toggle";
 import {
   Collapsible,
   CollapsibleContent,
@@ -23,8 +24,14 @@ import { Separator } from "@/components/ui/separator";
 import { DayNavigation } from "@/components/episodes/DayNavigation";
 import { SessionRow } from "@/components/episodes/SessionRow";
 import { CalendarIcon, FolderKanban, ChevronDown } from "lucide-react";
-import { toast } from "sonner";
-import { format, startOfDay, endOfDay, isSameDay, addDays, subDays, parse, differenceInMinutes } from "date-fns";
+import {
+  format,
+  startOfDay,
+  endOfDay,
+  addDays,
+  subDays,
+  parse,
+} from "date-fns";
 import type { Session } from "@/types/graphiti";
 
 export default function Sessions() {
@@ -32,16 +39,20 @@ export default function Sessions() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { projectName } = useParams<{ projectName?: string }>();
-  const decodedProjectName = projectName ? decodeURIComponent(projectName) : undefined;
+  const decodedProjectName = projectName
+    ? decodeURIComponent(projectName)
+    : undefined;
 
   // Initialize selected date from query string or default to today
   const [selectedDate, setSelectedDate] = useState(() => {
-    const dateParam = searchParams.get('date');
+    const dateParam = searchParams.get("date");
     if (dateParam) {
       try {
         // Parse date string in local timezone using date-fns
-        const parsed = parse(dateParam, 'yyyy-MM-dd', new Date());
-        return isNaN(parsed.getTime()) ? startOfDay(new Date()) : startOfDay(parsed);
+        const parsed = parse(dateParam, "yyyy-MM-dd", new Date());
+        return isNaN(parsed.getTime())
+          ? startOfDay(new Date())
+          : startOfDay(parsed);
       } catch {
         return startOfDay(new Date());
       }
@@ -52,11 +63,10 @@ export default function Sessions() {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [groupByProject, setGroupByProject] = useState(true); // Default to grouped
   const [openProjects, setOpenProjects] = useState<Set<string>>(new Set()); // Track open projects
-  const queryClient = useQueryClient();
 
   // Update query string when date changes
   useEffect(() => {
-    const dateString = format(selectedDate, 'yyyy-MM-dd');
+    const dateString = format(selectedDate, "yyyy-MM-dd");
     setSearchParams({ date: dateString }, { replace: true });
   }, [selectedDate, setSearchParams]);
 
@@ -75,32 +85,21 @@ export default function Sessions() {
   // Filter by project if projectName is provided from route params
   const { data: sessionsResponse, isLoading } = useQuery({
     queryKey: ["sessions", groupId, decodedProjectName],
-    queryFn: () => graphitiService.listSessions(
-      groupId,
-      500,
-      undefined, // cursor
-      undefined, // search
-      decodedProjectName, // projectName - filter when viewing project-specific sessions
-      undefined, // createdAfter
-      undefined, // createdBefore
-      undefined, // validAfter (don't filter - we need true session dates!)
-      undefined, // validBefore (don't filter - we need true session dates!)
-      'desc' // sortOrder
-    ),
+    queryFn: () =>
+      graphitiService.listSessions(
+        groupId,
+        500,
+        undefined, // cursor
+        undefined, // search
+        decodedProjectName, // projectName - filter when viewing project-specific sessions
+        undefined, // createdAfter
+        undefined, // createdBefore
+        undefined, // validAfter (don't filter - we need true session dates!)
+        undefined, // validBefore (don't filter - we need true session dates!)
+        "desc", // sortOrder
+      ),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (uuid: string) => graphitiService.deleteEpisode(uuid),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["episodes"] });
-      queryClient.invalidateQueries({ queryKey: ["sessions"] });
-      queryClient.invalidateQueries({ queryKey: ["session-stats-by-day"] });
-      toast.success("Episode deleted successfully");
-    },
-    onError: (error) => {
-      toast.error("Failed to delete episode: " + (error as Error).message);
-    },
-  });
 
   // Handle calendar date selection
   const handleCalendarSelect = (date: Date | undefined) => {
@@ -118,12 +117,16 @@ export default function Sessions() {
   };
 
   const viewSessionDetail = (sessionId: string) => {
-    const dateString = format(selectedDate, 'yyyy-MM-dd');
+    const dateString = format(selectedDate, "yyyy-MM-dd");
     // Navigate to project-specific or memory-specific session detail based on context
     if (decodedProjectName) {
-      navigate(`/project/${encodeURIComponent(decodedProjectName)}/sessions/${encodeURIComponent(sessionId)}?date=${dateString}`);
+      navigate(
+        `/project/${encodeURIComponent(decodedProjectName)}/sessions/${encodeURIComponent(sessionId)}?date=${dateString}`,
+      );
     } else {
-      navigate(`/memory/sessions/${encodeURIComponent(sessionId)}?date=${dateString}`);
+      navigate(
+        `/memory/sessions/${encodeURIComponent(sessionId)}?date=${dateString}`,
+      );
     }
   };
 
@@ -148,7 +151,7 @@ export default function Sessions() {
     sessionsResponse.sessions.forEach((session) => {
       // Convert UTC timestamp to local date
       const lastEpisodeDate = new Date(session.last_episode_date);
-      const localDateString = format(lastEpisodeDate, 'yyyy-MM-dd');
+      const localDateString = format(lastEpisodeDate, "yyyy-MM-dd");
 
       stats.set(localDateString, (stats.get(localDateString) || 0) + 1);
     });
@@ -160,13 +163,13 @@ export default function Sessions() {
   const filteredSessions = useMemo(() => {
     if (!sessionsResponse?.sessions) return [];
 
-    const selectedDateString = format(selectedDate, 'yyyy-MM-dd');
+    const selectedDateString = format(selectedDate, "yyyy-MM-dd");
 
     return sessionsResponse.sessions.filter((session) => {
       // Convert UTC timestamp to local date for comparison
       // This ensures sessions are grouped by when they occurred in the user's timezone
       const lastEpisodeDate = new Date(session.last_episode_date);
-      const localDateString = format(lastEpisodeDate, 'yyyy-MM-dd');
+      const localDateString = format(lastEpisodeDate, "yyyy-MM-dd");
       return localDateString === selectedDateString;
     });
   }, [sessionsResponse, selectedDate]);
@@ -204,22 +207,20 @@ export default function Sessions() {
 
   // Toolbar buttons for Container tools
   const calendarTools = (
-    <div className="flex items-center gap-2">
-      <Toggle
-        variant="outline"
-        size="default"
+    <div className="flex gap-2">
+      <ContainerToolToggle
+        size="sm"
         pressed={groupByProject}
         onPressedChange={setGroupByProject}
         aria-label="Group by project"
       >
-        <FolderKanban className="h-4 w-4 mr-2" />
         Group by Project
-      </Toggle>
+      </ContainerToolToggle>
       <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" size="icon">
+          <ContainerToolButton size="sm">
             <CalendarIcon className="h-4 w-4" />
-          </Button>
+          </ContainerToolButton>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="end" sideOffset={8}>
           <Calendar
@@ -244,7 +245,11 @@ export default function Sessions() {
   return (
     <Container
       title={decodedProjectName ? `${decodedProjectName} Sessions` : "Sessions"}
-      description={decodedProjectName ? `Sessions for ${decodedProjectName} project` : "Browse your conversation sessions"}
+      description={
+        decodedProjectName
+          ? `Sessions for ${decodedProjectName} project`
+          : "Browse your conversation sessions"
+      }
       loading={isLoading}
       tools={calendarTools}
     >
@@ -277,60 +282,69 @@ export default function Sessions() {
             </div>
           )}
 
-          {!isLoading && sessionsResponse && sessionsResponse.sessions.length === 0 && (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <h3 className="text-lg font-semibold mb-2">No sessions found</h3>
-                <p className="text-muted-foreground">
-                  Add your first memory to get started.
-                </p>
-              </CardContent>
-            </Card>
-          )}
+          {!isLoading &&
+            sessionsResponse &&
+            sessionsResponse.sessions.length === 0 && (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <h3 className="text-lg font-semibold mb-2">
+                    No sessions found
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Add your first memory to get started.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
-          {!isLoading && filteredSessions.length > 0 && groupByProject && groupedSessions && (
-            <div className="space-y-6">
-              {groupedSessions.map(([project, sessions]) => {
-                const isOpen = openProjects.has(project);
-                return (
-                  <Collapsible key={project} open={isOpen} onOpenChange={() => toggleProject(project)}>
-                    <CollapsibleTrigger asChild>
-                      <div className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-2 -mx-2 rounded-lg transition-colors">
-                        <ChevronDown
-                          className={`h-5 w-5 transition-transform ${
-                            isOpen ? "rotate-0" : "-rotate-90"
-                          }`}
-                        />
-                        <FolderKanban className="h-5 w-5" />
-                        <h2 className="text-xl font-bold">
-                          {project}
-                        </h2>
-                        <span className="text-sm font-normal text-muted-foreground">
-                          ({sessions.length})
-                        </span>
-                      </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <div className="space-y-4 mt-3">
-                        {sessions.map((session, sessionIndex) => (
-                          <div key={session.session_id}>
-                            <SessionRow
-                              session={session}
-                              showProject={false}
-                              onSessionClick={viewSessionDetail}
-                            />
-                            {sessionIndex < sessions.length - 1 && (
-                              <Separator className="mt-4" />
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                );
-              })}
-            </div>
-          )}
+          {!isLoading &&
+            filteredSessions.length > 0 &&
+            groupByProject &&
+            groupedSessions && (
+              <div className="space-y-6">
+                {groupedSessions.map(([project, sessions]) => {
+                  const isOpen = openProjects.has(project);
+                  return (
+                    <Collapsible
+                      key={project}
+                      open={isOpen}
+                      onOpenChange={() => toggleProject(project)}
+                    >
+                      <CollapsibleTrigger asChild>
+                        <div className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-2 -mx-2 rounded-lg transition-colors">
+                          <ChevronDown
+                            className={`h-5 w-5 transition-transform ${
+                              isOpen ? "rotate-0" : "-rotate-90"
+                            }`}
+                          />
+                          <FolderKanban className="h-5 w-5" />
+                          <h2 className="text-xl font-bold">{project}</h2>
+                          <span className="text-sm font-normal text-muted-foreground">
+                            ({sessions.length})
+                          </span>
+                        </div>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="space-y-4 mt-3">
+                          {sessions.map((session, sessionIndex) => (
+                            <div key={session.session_id}>
+                              <SessionRow
+                                session={session}
+                                showProject={false}
+                                onSessionClick={viewSessionDetail}
+                              />
+                              {sessionIndex < sessions.length - 1 && (
+                                <Separator className="mt-4" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  );
+                })}
+              </div>
+            )}
 
           {!isLoading && filteredSessions.length > 0 && !groupByProject && (
             <div className="space-y-4">

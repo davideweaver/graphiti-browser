@@ -3,7 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { graphitiService } from "@/api/graphitiService";
 import { useGraphiti } from "@/context/GraphitiContext";
-import Container from "@/layout/Container";
+import Container from "@/components/container/Container";
+import { ContainerToolButton } from "@/components/container/ContainerToolButton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,17 +21,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { ArrowLeft, Info, Edit, Trash2 } from "lucide-react";
+import DeleteConfirmationDialog from "@/components/dialogs/DeleteConfirmationDialog";
+import { ChevronLeft, Info, Edit, Trash2 } from "lucide-react";
 import { FactCard } from "@/components/search/FactCard";
 import { NodeDetailSheet } from "@/components/shared/NodeDetailSheet";
 import type { Entity, Fact } from "@/types/graphiti";
@@ -132,6 +124,10 @@ export default function EntityDetail() {
     deleteEntityMutation.mutate();
   };
 
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false);
+  };
+
   // Fact edit handlers
   const updateFactMutation = useMutation({
     mutationFn: ({ uuid, fact }: { uuid: string; fact: string }) =>
@@ -177,6 +173,11 @@ export default function EntityDetail() {
     if (selectedFact) {
       deleteFactMutation.mutate(selectedFact.uuid);
     }
+  };
+
+  const handleCancelFactDelete = () => {
+    setDeleteFactDialogOpen(false);
+    setSelectedFact(null);
   };
 
   const getEntityTypeColor = (type: string) => {
@@ -240,13 +241,24 @@ export default function EntityDetail() {
       title="Entities"
       description="View entity information, relationships, and facts"
       tools={
-        <Button
-          variant="secondary"
-          onClick={() => navigate(-1)}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
+        <div className="flex gap-2">
+          <ContainerToolButton size="sm" onClick={() => navigate(-1)}>
+            <ChevronLeft className="h-4 w-4 md:mr-2" />
+            <span className="hidden md:inline">Back</span>
+          </ContainerToolButton>
+          <ContainerToolButton size="sm" onClick={() => setSheetOpen(true)}>
+            <Info className="h-4 w-4 mr-2" />
+            Info
+          </ContainerToolButton>
+          <ContainerToolButton
+            onClick={handleOpenDeleteDialog}
+            disabled={deleteEntityMutation.isPending}
+            size="icon"
+            variant="destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+          </ContainerToolButton>
+        </div>
       }
     >
       <div className="space-y-6">
@@ -272,23 +284,6 @@ export default function EntityDetail() {
                 >
                   {entityType}
                 </Badge>
-              </div>
-              <div className="flex gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleOpenDeleteDialog}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setSheetOpen(true)}
-                >
-                  <Info className="h-5 w-5" />
-                </Button>
               </div>
             </div>
           </CardHeader>
@@ -497,75 +492,24 @@ export default function EntityDetail() {
       </Dialog>
 
       {/* Delete Fact Confirmation Dialog */}
-      <AlertDialog open={deleteFactDialogOpen} onOpenChange={setDeleteFactDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Fact</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this fact?
-              <br /><br />
-              <strong>{selectedFact?.fact}</strong>
-              <br /><br />
-              <span className="text-destructive font-semibold">This action cannot be undone.</span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteFactMutation.isPending}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmFactDelete}
-              disabled={deleteFactMutation.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteFactMutation.isPending ? "Deleting..." : "Delete Fact"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmationDialog
+        open={deleteFactDialogOpen}
+        onOpenChange={setDeleteFactDialogOpen}
+        onDelete={handleConfirmFactDelete}
+        onCancel={handleCancelFactDelete}
+        title="Delete Fact"
+        description={`Are you sure you want to delete this fact?\n\n${selectedFact?.fact || ''}\n\nThis action cannot be undone.`}
+      />
 
       {/* Delete Entity Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Entity</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete <strong>{entity?.name}</strong>?
-              This will permanently remove the entity and all of its relationships from the knowledge graph.
-              {factsData && factsData.facts.length > 0 && (
-                <>
-                  <br /><br />
-                  <strong>The following {factsData.facts.length} fact{factsData.facts.length !== 1 ? 's' : ''} will also be deleted:</strong>
-                  <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
-                    {factsData.facts.slice(0, 5).map((fact) => (
-                      <li key={fact.uuid}>{fact.fact}</li>
-                    ))}
-                    {factsData.facts.length > 5 && (
-                      <li className="text-muted-foreground">
-                        ...and {factsData.facts.length - 5} more
-                      </li>
-                    )}
-                  </ul>
-                </>
-              )}
-              <br />
-              <span className="text-destructive font-semibold">This action cannot be undone.</span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteEntityMutation.isPending}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              disabled={deleteEntityMutation.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteEntityMutation.isPending ? "Deleting..." : "Delete Entity"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onDelete={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        title="Delete Entity"
+        description={`Are you sure you want to delete "${entity?.name}"? This will permanently remove the entity and all of its relationships from the knowledge graph. This action cannot be undone.`}
+      />
 
       {/* NodeDetailSheet for graph navigation */}
       <NodeDetailSheet

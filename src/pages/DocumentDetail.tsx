@@ -1,11 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
 import { documentsService } from "@/api/documentsService";
-import Container from "@/layout/Container";
+import Container from "@/components/container/Container";
+import { ContainerToolButton } from "@/components/container/ContainerToolButton";
 import { Button } from "@/components/ui/button";
 import { Copy, ChevronLeft, FolderOpen } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkBreaks from "remark-breaks";
 import { toast } from "sonner";
 import { getSearchQuery } from "@/lib/documentsSearchStorage";
 import { setCurrentFolderPath, clearLastDocumentPath } from "@/lib/documentsStorage";
@@ -53,9 +55,9 @@ export default function DocumentDetail() {
     }
   };
 
-  // Extract filename
+  // Extract filename and strip .md extension
   const pathSegments = documentPath.split("/");
-  const fileName = pathSegments[pathSegments.length - 1];
+  const fileName = pathSegments[pathSegments.length - 1].replace(/\.md$/, "");
 
   // Format modified date
   const modifiedDate = document?.modified
@@ -78,32 +80,28 @@ export default function DocumentDetail() {
       tools={
         <div className="flex items-center gap-2">
           {hasActiveSearch && (
-            <Button
-              variant="outline"
+            <ContainerToolButton
               size="sm"
               onClick={handleBackToSearch}
-              className="gap-1"
             >
-              <ChevronLeft className="h-4 w-4" />
-              Back
-            </Button>
+              <ChevronLeft className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Back</span>
+            </ContainerToolButton>
           )}
-          <Button
-            variant="outline"
+          <ContainerToolButton
             size="icon"
             onClick={handleShowInFolder}
             disabled={!documentPath}
           >
             <FolderOpen className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
+          </ContainerToolButton>
+          <ContainerToolButton
             size="icon"
             onClick={handleCopyContent}
             disabled={!document}
           >
             <Copy className="h-4 w-4" />
-          </Button>
+          </ContainerToolButton>
         </div>
       }
     >
@@ -135,7 +133,7 @@ export default function DocumentDetail() {
         </div>
       ) : document ? (
         <article className="prose prose-sm dark:prose-invert max-w-none">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
             {document.content}
           </ReactMarkdown>
         </article>

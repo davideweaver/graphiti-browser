@@ -210,6 +210,27 @@ class GraphitiService {
     toast.success("Episode deleted");
   }
 
+  // DELETE /sessions/{group_id}/{session_id} - Delete session and all its episodes
+  async deleteSession(sessionId: string, groupId = DEFAULT_GROUP_ID): Promise<void> {
+    await this.fetch(`/sessions/${groupId}/${sessionId}`, {
+      method: "DELETE",
+    });
+
+    toast.success("Session deleted");
+  }
+
+  // DELETE /projects/{group_id}/{project_name} - Delete project and all its sessions/episodes
+  async deleteProject(projectName: string, groupId = DEFAULT_GROUP_ID): Promise<void> {
+    // URL encode the project name to handle special characters
+    const encodedProjectName = encodeURIComponent(projectName);
+
+    await this.fetch(`/projects/${groupId}/${encodedProjectName}`, {
+      method: "DELETE",
+    });
+
+    toast.success("Project deleted");
+  }
+
   // DELETE /entity-edge/{uuid} - Delete relationship/fact
   async deleteEntityEdge(uuid: string, groupId = DEFAULT_GROUP_ID): Promise<void> {
     await this.fetch(`/entity-edge/${uuid}?group_id=${groupId}`, {

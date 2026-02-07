@@ -1,27 +1,31 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { graphitiService } from "@/api/graphitiService";
 import { useGraphiti } from "@/context/GraphitiContext";
-import Container from "@/layout/Container";
+import Container from "@/components/container/Container";
+import { ContainerToolButton } from "@/components/container/ContainerToolButton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { Info } from "lucide-react";
+import { Info, Trash2, Loader2, AlertTriangle } from "lucide-react";
 import { FactCard } from "@/components/search/FactCard";
 import { SessionRow } from "@/components/episodes/SessionRow";
 import { ProjectTimelineBar } from "@/components/episodes/ProjectTimelineBar";
 import { NodeDetailSheet } from "@/components/shared/NodeDetailSheet";
 import { format } from "date-fns";
+import DeleteConfirmationDialog from "@/components/dialogs/DeleteConfirmationDialog";
 
 export default function ProjectDetail() {
   const { projectName: encodedProjectName } = useParams<{ projectName: string }>();
   const { groupId } = useGraphiti();
   const navigate = useNavigate();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   // Decode the project name from URL
   const projectName = encodedProjectName ? decodeURIComponent(encodedProjectName) : "";
@@ -56,6 +60,36 @@ export default function ProjectDetail() {
     queryFn: () => graphitiService.search(projectName, groupId, 50),
     enabled: !!projectName,
   });
+
+  // Mutation for deleting project
+  const deleteProjectMutation = useMutation({
+    mutationFn: () => graphitiService.deleteProject(projectName, groupId),
+    onSuccess: () => {
+      // Remove queries from cache before navigation to prevent 404 errors
+      queryClient.removeQueries({ queryKey: ["project-metadata", groupId, projectName] });
+      queryClient.removeQueries({ queryKey: ["project-sessions", groupId, projectName] });
+      queryClient.removeQueries({ queryKey: ["project-entities", groupId, projectName] });
+      queryClient.removeQueries({ queryKey: ["project-facts", groupId, projectName] });
+
+      // Invalidate projects list to refresh
+      queryClient.invalidateQueries({ queryKey: ["projects", groupId] });
+
+      // Navigate back to projects list
+      navigate("/projects");
+    },
+  });
+
+  const handleOpenDeleteDialog = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    deleteProjectMutation.mutate();
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false);
+  };
 
   const sessions = sessionsData?.sessions || [];
   const entities = entitiesData?.entities || [];
@@ -114,13 +148,20 @@ export default function ProjectDetail() {
       title={projectName}
       description={projectData.project_path || undefined}
       tools={
-        <Button
-          variant="secondary"
-          onClick={() => setSheetOpen(true)}
-        >
-          <Info className="h-4 w-4 mr-2" />
-          Metadata
-        </Button>
+        <div className="flex gap-2">
+          <ContainerToolButton size="sm" onClick={() => setSheetOpen(true)}>
+            <Info className="h-4 w-4 mr-2" />
+            Info
+          </ContainerToolButton>
+          <ContainerToolButton
+            onClick={handleOpenDeleteDialog}
+            disabled={deleteProjectMutation.isPending}
+            size="icon"
+            variant="destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+          </ContainerToolButton>
+        </div>
       }
     >
       <div className="space-y-6">
@@ -331,6 +372,16 @@ export default function ProjectDetail() {
         nodeId={projectName || null}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
+      />
+
+      {/* Delete Project Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onDelete={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        title="Delete Project"
+        description={`Are you sure you want to delete the project "${projectName}"? This will permanently delete ${projectData?.session_count || 0} session${projectData?.session_count !== 1 ? 's' : ''}, ${projectData?.episode_count || 0} episode${projectData?.episode_count !== 1 ? 's' : ''}, and all associated facts and relationships. This action cannot be undone.`}
       />
     </Container>
   );

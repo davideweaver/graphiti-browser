@@ -158,6 +158,8 @@ class WebSocketService {
       "edge.deleted",
       "episode.created",
       "episode.deleted",
+      "session.deleted",
+      "project.deleted",
       "group.deleted",
       "queue.status",
     ];

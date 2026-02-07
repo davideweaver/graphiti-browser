@@ -117,6 +117,7 @@ export interface Session {
   summary?: string; // Optional AI-generated summary of the session
   project_name?: string; // Optional project name for the session
   first_episode_preview?: string; // Optional preview of the first episode content
+  programmatic?: boolean; // Optional flag indicating if session was created programmatically
 }
 
 // Response from /sessions/{group_id}
@@ -185,6 +186,7 @@ export interface SessionDetailResponse {
   episodes: Episode[];
   project_name?: string; // Optional project name for the session
   first_episode_preview?: string; // Optional preview of the first episode content
+  programmatic?: boolean; // Optional flag indicating if session was created programmatically
 }
 
 // Generic graph navigation types (thin layer over FalkorDB)

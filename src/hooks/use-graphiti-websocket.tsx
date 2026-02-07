@@ -13,6 +13,7 @@ import type {
   EpisodeCreatedEvent,
   EpisodeDeletedEvent,
   GroupDeletedEvent,
+  ProjectDeletedEvent,
   QueueStatusEvent,
 } from "@/types/websocket";
 import type { Entity, Episode } from "@/types/graphiti";
@@ -85,6 +86,12 @@ export function useGraphitiWebSocket(): UseGraphitiWebSocketReturn {
       websocketService.addEventListener("group.deleted", (event) => {
         const typedEvent = event as GroupDeletedEvent;
         handleGroupDeleted(typedEvent, groupId, queryClient);
+      }),
+
+      // Project events
+      websocketService.addEventListener("project.deleted", (event) => {
+        const typedEvent = event as ProjectDeletedEvent;
+        handleProjectDeleted(typedEvent, groupId, queryClient);
       }),
 
       // Queue status events
@@ -410,6 +417,45 @@ function handleEpisodeDeleted(
       queryKey: ["session", groupId, session_id],
     });
   }
+}
+
+/**
+ * Handle project.deleted event
+ * Strategy: Invalidate all project-related queries
+ */
+function handleProjectDeleted(
+  event: ProjectDeletedEvent,
+  groupId: string,
+  queryClient: ReturnType<typeof useQueryClient>
+): void {
+  if (event.group_id !== groupId) {
+    console.debug(`Ignoring project.deleted for different group: ${event.group_id}`);
+    return;
+  }
+
+  const { project_name, deleted_sessions, deleted_episodes } = event.data;
+  console.log("📬 Project deleted:", project_name, `(${deleted_sessions} sessions, ${deleted_episodes} episodes)`);
+
+  // Invalidate all project list queries (includes pagination/filter params)
+  queryClient.invalidateQueries({
+    queryKey: ["projects-list", groupId],
+  });
+
+  // Invalidate the projects-nav-list query used by ProjectsSecondaryNav
+  queryClient.invalidateQueries({
+    queryKey: ["projects-nav-list", groupId],
+  });
+
+  // Invalidate sessions queries (sessions belong to projects)
+  queryClient.invalidateQueries({
+    queryKey: ["sessions", groupId],
+  });
+  queryClient.invalidateQueries({
+    queryKey: ["session-stats-by-day", groupId],
+  });
+
+  // Notify user
+  toast.success(`Project "${project_name}" deleted (${deleted_sessions} sessions, ${deleted_episodes} episodes)`);
 }
 
 /**

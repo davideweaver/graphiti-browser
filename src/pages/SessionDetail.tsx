@@ -1,43 +1,71 @@
 import { useState } from "react";
-import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { graphitiService } from "@/api/graphitiService";
 import { useGraphiti } from "@/context/GraphitiContext";
-import Container from "@/layout/Container";
+import Container from "@/components/container/Container";
+import { ContainerToolButton } from "@/components/container/ContainerToolButton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Calendar, Clock, Hash, FolderGit2, Info } from "lucide-react";
+import { ChevronLeft, Calendar, Clock, Hash, Info, Trash2 } from "lucide-react";
 import { ChatMessage } from "@/components/episodes/ChatMessage";
 import { TimelineBar } from "@/components/episodes/TimelineBar";
 import { NodeDetailSheet } from "@/components/shared/NodeDetailSheet";
 import { format, differenceInMinutes } from "date-fns";
+import DeleteConfirmationDialog from "@/components/dialogs/DeleteConfirmationDialog";
 
 export default function SessionDetail() {
-  const { sessionId, projectName } = useParams<{ sessionId: string; projectName?: string }>();
+  const { sessionId } = useParams<{
+    sessionId: string;
+    projectName?: string;
+  }>();
   const { groupId } = useGraphiti();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const dateParam = searchParams.get('date');
   const [sheetOpen, setSheetOpen] = useState(false);
-  const decodedProjectName = projectName ? decodeURIComponent(projectName) : undefined;
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
 
-  // Compute back path based on context (project or memory)
-  const getBackPath = () => {
-    const basePath = decodedProjectName
-      ? `/project/${encodeURIComponent(decodedProjectName)}/sessions`
-      : '/memory/sessions';
-    return dateParam ? `${basePath}?date=${dateParam}` : basePath;
+  // Navigate back using browser history (respects where user actually came from)
+  const goBack = () => {
+    navigate(-1);
   };
 
   // Fetch session details (includes episodes and metadata)
-  const { data: sessionData, isLoading, error } = useQuery({
+  const {
+    data: sessionData,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["session", groupId, sessionId],
     queryFn: () => graphitiService.getSession(sessionId!, groupId),
     enabled: !!sessionId,
   });
 
+  // Mutation for deleting session
+  const deleteSessionMutation = useMutation({
+    mutationFn: () => graphitiService.deleteSession(sessionId!, groupId),
+    onSuccess: () => {
+      // Remove queries from cache before navigation to prevent 404 errors
+      queryClient.removeQueries({ queryKey: ["session", groupId, sessionId] });
+
+      // Navigate back using browser history
+      goBack();
+    },
+  });
+
+  const handleOpenDeleteDialog = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    deleteSessionMutation.mutate();
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false);
+  };
 
   if (isLoading) {
     return (
@@ -58,25 +86,29 @@ export default function SessionDetail() {
 
   if (!sessionData) {
     return (
-      <Container title="Session Not Found" description="The session could not be found">
+      <Container
+        title="Session Not Found"
+        description="The session could not be found"
+      >
         <Card>
           <CardContent className="p-12 text-center">
             <h3 className="text-lg font-semibold mb-2">Session not found</h3>
             <p className="text-muted-foreground mb-4">
-              The session you're looking for doesn't exist or couldn't be loaded.
+              The session you're looking for doesn't exist or couldn't be
+              loaded.
             </p>
             {error && (
               <p className="text-sm text-destructive mb-4">
-                Error: {error instanceof Error ? error.message : "Unknown error"}
+                Error:{" "}
+                {error instanceof Error ? error.message : "Unknown error"}
               </p>
             )}
             <p className="text-xs text-muted-foreground mb-4">
-              Session ID: {sessionId}<br />
+              Session ID: {sessionId}
+              <br />
               Group ID: {groupId}
             </p>
-            <Button onClick={() => navigate(getBackPath())}>
-              Back to Sessions
-            </Button>
+            <Button onClick={goBack}>Go Back</Button>
           </CardContent>
         </Card>
       </Container>
@@ -85,7 +117,10 @@ export default function SessionDetail() {
 
   if (!sessionData.episodes || sessionData.episodes.length === 0) {
     return (
-      <Container title="Session Not Found" description="No episodes found for this session">
+      <Container
+        title="Session Not Found"
+        description="No episodes found for this session"
+      >
         <Card>
           <CardContent className="p-12 text-center">
             <h3 className="text-lg font-semibold mb-2">No episodes found</h3>
@@ -93,12 +128,11 @@ export default function SessionDetail() {
               This session exists but has no episodes.
             </p>
             <p className="text-xs text-muted-foreground mb-4">
-              Session ID: {sessionData.session_id}<br />
+              Session ID: {sessionData.session_id}
+              <br />
               Episode Count: {sessionData.episode_count}
             </p>
-            <Button onClick={() => navigate(getBackPath())}>
-              Back to Sessions
-            </Button>
+            <Button onClick={goBack}>Go Back</Button>
           </CardContent>
         </Card>
       </Container>
@@ -115,38 +149,43 @@ export default function SessionDetail() {
 
   return (
     <Container
-      title="Sessions"
+      title={
+        sessionData.project_name
+          ? `${sessionData.project_name} Session`
+          : "Session"
+      }
       description="View session messages and conversation history"
-      content="fixedWithScroll"
       tools={
-        <Button
-          variant="secondary"
-          onClick={() => navigate(getBackPath())}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
+        <div className="flex gap-2">
+          <ContainerToolButton size="sm" onClick={goBack}>
+            <ChevronLeft className="h-4 w-4 md:mr-2" />
+            <span className="hidden md:inline">Back</span>
+          </ContainerToolButton>
+          <ContainerToolButton size="sm" onClick={() => setSheetOpen(true)}>
+            <Info className="h-4 w-4 mr-2" />
+            Info
+          </ContainerToolButton>
+          <ContainerToolButton
+            onClick={handleOpenDeleteDialog}
+            disabled={deleteSessionMutation.isPending}
+            size="icon"
+            variant="destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+          </ContainerToolButton>
+        </div>
       }
     >
       <div className="space-y-6">
         {/* Session Summary Card */}
         <Card>
           <CardContent className="pt-6 space-y-4">
-            {/* Info Button */}
-            <div className="flex justify-end -mt-2 -mr-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSheetOpen(true)}
-              >
-                <Info className="h-5 w-5" />
-              </Button>
-            </div>
-
             {/* Summary */}
             {sessionData.summary && (
-              <div className="-mt-2">
-                <p className="text-sm text-muted-foreground">{sessionData.summary}</p>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  {sessionData.summary}
+                </p>
               </div>
             )}
 
@@ -195,12 +234,31 @@ export default function SessionDetail() {
                   <Hash className="h-3 w-3" />
                   Episodes
                 </div>
-                <div className="text-sm font-medium">{sessionData.episode_count}</div>
+                <div className="text-sm font-medium">
+                  {sessionData.episode_count}
+                </div>
               </div>
+
+              {sessionData.programmatic !== undefined && (
+                <div>
+                  <div className="text-xs text-muted-foreground mb-1">Type</div>
+                  <div className="text-sm font-medium">
+                    <Badge
+                      variant={
+                        sessionData.programmatic ? "secondary" : "default"
+                      }
+                    >
+                      {sessionData.programmatic ? "Programmatic" : "Manual"}
+                    </Badge>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Project and Sources */}
-            {(sessionData.project_name || (sessionData.source_descriptions && sessionData.source_descriptions.length > 0)) && (
+            {(sessionData.project_name ||
+              (sessionData.source_descriptions &&
+                sessionData.source_descriptions.length > 0)) && (
               <div className="pt-4 border-t">
                 <div className="flex items-center gap-6 flex-wrap">
                   {/* Project */}
@@ -217,18 +275,21 @@ export default function SessionDetail() {
                   )}
 
                   {/* Sources */}
-                  {sessionData.source_descriptions && sessionData.source_descriptions.length > 0 && (
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-medium">Sources</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {sessionData.source_descriptions.map((source, index) => (
-                          <Badge key={index} variant="secondary">
-                            {source}
-                          </Badge>
-                        ))}
+                  {sessionData.source_descriptions &&
+                    sessionData.source_descriptions.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-medium">Sources</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {sessionData.source_descriptions.map(
+                            (source, index) => (
+                              <Badge key={index} variant="secondary">
+                                {source}
+                              </Badge>
+                            ),
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </div>
               </div>
             )}
@@ -270,6 +331,16 @@ export default function SessionDetail() {
         nodeId={sessionData.uuid || null}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
+      />
+
+      {/* Delete Session Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onDelete={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        title="Delete Session"
+        description={`Are you sure you want to delete this session? This will permanently delete ${sessionData?.episode_count || 0} episode${sessionData?.episode_count !== 1 ? "s" : ""} from this session. This action cannot be undone.`}
       />
     </Container>
   );

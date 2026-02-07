@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { graphitiService } from "@/api/graphitiService";
 import { useGraphiti } from "@/context/GraphitiContext";
+import { useGraphitiWebSocket } from "@/hooks/use-graphiti-websocket";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
@@ -18,6 +19,9 @@ export function ProjectsSecondaryNav({ selectedProject, onNavigate, onProjectSel
   const { groupId } = useGraphiti();
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 300);
+
+  // Connect to WebSocket for real-time updates (project deletions, etc.)
+  useGraphitiWebSocket();
 
   // Fetch projects with search filter
   const { data, isLoading } = useQuery({

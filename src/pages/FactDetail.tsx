@@ -3,14 +3,15 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useGraphiti } from "@/context/GraphitiContext";
 import { graphitiService } from "@/api/graphitiService";
 import type { Fact } from "@/types/graphiti";
-import Container from "@/layout/Container";
+import Container from "@/components/container/Container";
+import { ContainerToolButton } from "@/components/container/ContainerToolButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
-import { ArrowLeft, AlertTriangle, ExternalLink } from "lucide-react";
+import { ChevronLeft, AlertTriangle, ExternalLink } from "lucide-react";
 
 export default function FactDetail() {
   const { uuid } = useParams<{ uuid: string }>();
@@ -65,8 +66,8 @@ export default function FactDetail() {
               {error || "The requested fact could not be found."}
             </p>
             <Button onClick={() => navigate("/memory/search")}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Search
+              <ChevronLeft className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Back to Search</span>
             </Button>
           </CardContent>
         </Card>
@@ -82,10 +83,10 @@ export default function FactDetail() {
       <div className="space-y-6">
         {/* Header Actions */}
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate("/memory/search")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Search
-          </Button>
+          <ContainerToolButton size="sm" onClick={() => navigate("/memory/search")}>
+            <ChevronLeft className="h-4 w-4 md:mr-2" />
+            <span className="hidden md:inline">Back to Search</span>
+          </ContainerToolButton>
           {isInvalid && (
             <Badge variant="outline" className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200">
               <AlertTriangle className="mr-1 h-3 w-3" />

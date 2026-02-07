@@ -50,7 +50,7 @@ const Container: React.FC<Props> = ({
 
   // Container classes and styles based on fullHeight prop
   const containerClasses = isFixed
-    ? "h-screen flex flex-col p-0 ml-0 pt-4 pt-8 overflow-hidden"
+    ? "h-screen flex flex-col p-0 ml-0 pt-4 md:pt-8 overflow-hidden"
     : "h-screen p-0 ml-0 pt-4 md:pt-8";
 
   // Header classes and styles based on fullHeight prop
@@ -70,6 +70,7 @@ const Container: React.FC<Props> = ({
       };
 
   const titleClasses = isFixed ? "pb-2 lg:pb-0" : "pb-2 lg:pb-0";
+  const titleStyle = isMobile ? { marginLeft: 40 } : {};
 
   // Content area classes and styles based on fullHeight prop
   const contentClasses = isFixed
@@ -85,8 +86,8 @@ const Container: React.FC<Props> = ({
             ? 0
             : 80
           : isScrollable
-          ? 0
-          : 50,
+            ? 0
+            : 50,
         marginBottom: isMobile ? 64 : 20, // Add bottom margin for mobile navbar (64px)
         overflow: "hidden",
       }
@@ -102,13 +103,10 @@ const Container: React.FC<Props> = ({
     <div className={containerClasses}>
       {/* Header */}
       <div className={headerClasses} style={headerStyle}>
-        <div className={titleClasses}>
+        <div className={titleClasses} style={titleStyle}>
           <h1
             className="font-bold flex items-center"
-            style={{
-              fontSize: 28,
-              paddingLeft: isMobile ? 40 : 0 // Add 40px on mobile for hamburger space
-            }}
+            style={{ fontSize: 28, lineHeight: 1.2, marginTop: 6 }}
           >
             {title}{" "}
             {loading && (

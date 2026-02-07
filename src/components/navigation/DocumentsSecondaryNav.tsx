@@ -178,7 +178,7 @@ export function DocumentsSecondaryNav({
                   <FileText className="h-4 w-4 mr-3 flex-shrink-0 text-muted-foreground" />
                   <div className="flex flex-col items-start min-w-0 flex-1">
                     <span className="font-medium truncate w-full text-left">
-                      {item.name}
+                      {item.name.replace(/\.md$/, "")}
                     </span>
                     <span className="text-xs text-muted-foreground truncate w-full text-left">
                       {new Date(item.modified).toLocaleDateString()}

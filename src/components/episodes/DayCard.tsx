@@ -30,7 +30,8 @@ export function DayCard({
         compact ? "min-w-[48px] flex-1" : "min-w-[100px]",
         isSelected && "bg-primary text-primary-foreground hover:bg-primary/90",
         isToday && !isSelected && "bg-accent text-accent-foreground",
-        !isSelected && !isToday && "hover:bg-muted/50"
+        !isSelected && !isToday && sessionCount > 0 && "bg-primary/10 hover:bg-primary/20",
+        !isSelected && !isToday && sessionCount === 0 && "hover:bg-muted/50"
       )}
       onClick={onClick}
     >

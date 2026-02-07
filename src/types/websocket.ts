@@ -82,6 +82,16 @@ export interface GroupDeletedEvent extends BaseEvent {
   };
 }
 
+// Project events
+export interface ProjectDeletedEvent extends BaseEvent {
+  event_type: "project.deleted";
+  data: {
+    project_name: string;
+    deleted_sessions: number;
+    deleted_episodes: number;
+  };
+}
+
 // Queue status events
 export interface QueueStatusEvent extends BaseEvent {
   event_type: "queue.status";
@@ -102,6 +112,7 @@ export type WebSocketEvent =
   | EpisodeCreatedEvent
   | EpisodeDeletedEvent
   | GroupDeletedEvent
+  | ProjectDeletedEvent
   | QueueStatusEvent;
 
 // Event handler types

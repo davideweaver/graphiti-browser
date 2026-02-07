@@ -1,21 +1,13 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
-import Container from "@/layout/Container";
+import Container from "@/components/container/Container";
+import { ContainerToolButton } from "@/components/container/ContainerToolButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import DeleteConfirmationDialog from "@/components/dialogs/DeleteConfirmationDialog";
 import { agentTasksService } from "@/api/agentTasksService";
 import {
   formatCronExpression,
@@ -125,23 +117,23 @@ export default function AgentTaskDetail() {
       title={task.name}
       tools={
         <div className="flex items-center gap-2">
-          <Button
+          <ContainerToolButton
             onClick={() => triggerMutation.mutate()}
             disabled={triggerMutation.isPending || !task.enabled}
             size="sm"
+            variant="primary"
           >
             <Play className="h-4 w-4 mr-2" />
             {triggerMutation.isPending ? "Running..." : "Run Task"}
-          </Button>
-          <Button
+          </ContainerToolButton>
+          <ContainerToolButton
             onClick={() => setDeleteDialogOpen(true)}
             disabled={deleteMutation.isPending}
-            size="sm"
+            size="icon"
             variant="destructive"
           >
-            <Trash2 className="h-4 w-4 mr-2" />
-            {deleteMutation.isPending ? "Deleting..." : "Delete"}
-          </Button>
+            <Trash2 className="h-4 w-4" />
+          </ContainerToolButton>
         </div>
       }
     >
@@ -329,33 +321,17 @@ export default function AgentTaskDetail() {
       />
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Task</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{task.name}"? This action cannot
-              be undone. All task configuration, execution history, and
-              scratchpad data will be permanently deleted.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                deleteMutation.mutate();
-                setDeleteDialogOpen(false);
-              }}
-              disabled={deleteMutation.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? "Deleting..." : "Delete Task"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onDelete={() => {
+          deleteMutation.mutate();
+          setDeleteDialogOpen(false);
+        }}
+        onCancel={() => setDeleteDialogOpen(false)}
+        title="Delete Task"
+        description={`Are you sure you want to delete "${task.name}"? This action cannot be undone. All task configuration, execution history, and scratchpad data will be permanently deleted.`}
+      />
     </Container>
   );
 }

@@ -4,7 +4,7 @@ import { useGraphiti } from '@/context/GraphitiContext';
 import { useChatHistory } from '@/hooks/use-chat-history';
 import { useAutoScroll } from '@/hooks/use-auto-scroll';
 import { useBackendChat } from '@/hooks/use-backend-chat';
-import Container from '@/layout/Container';
+import Container from '@/components/container/Container';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import ChatMessage from '@/components/chat/ChatMessage';
@@ -113,7 +113,7 @@ export default function Chat() {
       tools={
         <>
           <ConnectionStatus isOnline={isOnline ?? false} />
-          <Button variant="outline" size="sm" onClick={handleClearHistory} disabled={messages.length === 0}>
+          <Button variant="destructive" size="sm" onClick={handleClearHistory} disabled={messages.length === 0}>
             <Trash2 className="h-4 w-4 mr-2" />
             Clear History
           </Button>

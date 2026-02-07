@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { agentTasksService } from "@/api/agentTasksService";
-import Container from "@/layout/Container";
+import Container from "@/components/container/Container";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AgentTasks() {
