@@ -2,10 +2,9 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { agentTasksService } from "@/api/agentTasksService";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { SecondaryNavItem } from "@/components/navigation/SecondaryNavItem";
 import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks/use-debounce";
 import type { ScheduledTask } from "@/types/agentTasks";
 
@@ -62,7 +61,7 @@ export function AgentTasksSecondaryNav({ selectedTaskId, onNavigate, onTaskSelec
       </div>
 
       {/* Task List */}
-      <div className="flex-1 overflow-auto px-6 pb-4">
+      <div className="flex-1 overflow-auto px-4 pb-4">
         {isLoading ? (
           <div className="space-y-1">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -78,15 +77,9 @@ export function AgentTasksSecondaryNav({ selectedTaskId, onNavigate, onTaskSelec
             {filteredTasks.map((task) => {
               const isActive = selectedTaskId === task.id;
               return (
-                <Button
+                <SecondaryNavItem
                   key={task.id}
-                  variant="ghost"
-                  className={cn(
-                    "w-full justify-start h-auto py-3 px-4 rounded-lg",
-                    isActive
-                      ? "bg-accent text-accent-foreground"
-                      : "hover:bg-accent/50"
-                  )}
+                  isActive={isActive}
                   onClick={() => {
                     const path = `/agent-tasks/${task.id}`;
                     // Use onTaskSelect for user clicks (closes sidebar), or onNavigate as fallback
@@ -112,7 +105,7 @@ export function AgentTasksSecondaryNav({ selectedTaskId, onNavigate, onTaskSelec
                       </span>
                     )}
                   </div>
-                </Button>
+                </SecondaryNavItem>
               );
             })}
           </div>

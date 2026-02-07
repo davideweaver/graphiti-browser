@@ -63,6 +63,7 @@ export default function Sessions() {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [groupByProject, setGroupByProject] = useState(true); // Default to grouped
   const [openProjects, setOpenProjects] = useState<Set<string>>(new Set()); // Track open projects
+  const [deletedSessionIds, setDeletedSessionIds] = useState<Set<string>>(new Set());
 
   // Update query string when date changes
   useEffect(() => {
@@ -85,8 +86,8 @@ export default function Sessions() {
   // Filter by project if projectName is provided from route params
   const { data: sessionsResponse, isLoading } = useQuery({
     queryKey: ["sessions", groupId, decodedProjectName],
-    queryFn: () =>
-      graphitiService.listSessions(
+    queryFn: () => {
+      return graphitiService.listSessions(
         groupId,
         500,
         undefined, // cursor
@@ -97,7 +98,8 @@ export default function Sessions() {
         undefined, // validAfter (don't filter - we need true session dates!)
         undefined, // validBefore (don't filter - we need true session dates!)
         "desc", // sortOrder
-      ),
+      );
+    },
   });
 
 
@@ -130,6 +132,10 @@ export default function Sessions() {
     }
   };
 
+  const handleSessionDeleted = (sessionId: string) => {
+    setDeletedSessionIds((prev) => new Set([...prev, sessionId]));
+  };
+
   const toggleProject = (project: string) => {
     setOpenProjects((prev) => {
       const next = new Set(prev);
@@ -159,20 +165,22 @@ export default function Sessions() {
     return stats;
   }, [sessionsResponse]);
 
-  // Filter sessions to only show the selected date
+  // Filter sessions to only show the selected date, excluding locally deleted sessions
   const filteredSessions = useMemo(() => {
     if (!sessionsResponse?.sessions) return [];
 
     const selectedDateString = format(selectedDate, "yyyy-MM-dd");
 
     return sessionsResponse.sessions.filter((session) => {
+      // Exclude sessions that were deleted locally
+      if (deletedSessionIds.has(session.session_id)) return false;
       // Convert UTC timestamp to local date for comparison
       // This ensures sessions are grouped by when they occurred in the user's timezone
       const lastEpisodeDate = new Date(session.last_episode_date);
       const localDateString = format(lastEpisodeDate, "yyyy-MM-dd");
       return localDateString === selectedDateString;
     });
-  }, [sessionsResponse, selectedDate]);
+  }, [sessionsResponse, selectedDate, deletedSessionIds]);
 
   // Group sessions by project when enabled
   const groupedSessions = useMemo(() => {
@@ -332,6 +340,7 @@ export default function Sessions() {
                                 session={session}
                                 showProject={false}
                                 onSessionClick={viewSessionDetail}
+                                onSessionDeleted={handleSessionDeleted}
                               />
                               {sessionIndex < sessions.length - 1 && (
                                 <Separator className="mt-4" />
@@ -354,6 +363,7 @@ export default function Sessions() {
                     session={session}
                     showProject={true}
                     onSessionClick={viewSessionDetail}
+                    onSessionDeleted={handleSessionDeleted}
                   />
                   {sessionIndex < filteredSessions.length - 1 && (
                     <Separator className="mt-4" />

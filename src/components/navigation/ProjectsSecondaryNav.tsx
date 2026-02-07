@@ -1,12 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { graphitiService } from "@/api/graphitiService";
 import { useGraphiti } from "@/context/GraphitiContext";
-import { useGraphitiWebSocket } from "@/hooks/use-graphiti-websocket";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { SecondaryNavItem } from "@/components/navigation/SecondaryNavItem";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Search } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks/use-debounce";
 
 interface ProjectsSecondaryNavProps {
@@ -15,13 +14,17 @@ interface ProjectsSecondaryNavProps {
   onProjectSelect?: (path: string) => void; // Optional: for user clicks that should close sidebar
 }
 
-export function ProjectsSecondaryNav({ selectedProject, onNavigate, onProjectSelect }: ProjectsSecondaryNavProps) {
+export function ProjectsSecondaryNav({
+  selectedProject,
+  onNavigate,
+  onProjectSelect,
+}: ProjectsSecondaryNavProps) {
   const { groupId } = useGraphiti();
   const [searchInput, setSearchInput] = useState("");
+  const [viewMode, setViewMode] = useState<"recent" | "all">("recent");
   const debouncedSearch = useDebounce(searchInput, 300);
 
-  // Connect to WebSocket for real-time updates (project deletions, etc.)
-  useGraphitiWebSocket();
+  // Note: WebSocket is managed globally in Layout.tsx
 
   // Fetch projects with search filter
   const { data, isLoading } = useQuery({
@@ -33,7 +36,7 @@ export function ProjectsSecondaryNav({ selectedProject, onNavigate, onProjectSel
         undefined,
         debouncedSearch || undefined,
         undefined,
-        "desc" // Sort by last episode date
+        "desc", // Sort by last episode date
       );
     },
     select: (data) => ({
@@ -43,7 +46,23 @@ export function ProjectsSecondaryNav({ selectedProject, onNavigate, onProjectSel
     }),
   });
 
-  const projects = data?.projects || [];
+  // Filter projects based on view mode
+  const projects = useMemo(() => {
+    const allProjects = data?.projects || [];
+
+    if (viewMode === "all") {
+      return allProjects;
+    }
+
+    // Filter to show only recent projects (last 5 days)
+    const fiveDaysAgo = new Date();
+    fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+
+    return allProjects.filter((project) => {
+      const lastEpisodeDate = new Date(project.last_episode_date);
+      return lastEpisodeDate >= fiveDaysAgo;
+    });
+  }, [data?.projects, viewMode]);
 
   // Auto-select first project if none selected
   useEffect(() => {
@@ -55,8 +74,25 @@ export function ProjectsSecondaryNav({ selectedProject, onNavigate, onProjectSel
   return (
     <nav className="w-[380px] bg-card flex flex-col">
       {/* Header */}
-      <div className="pt-4 md:pt-8 px-6 flex items-center mb-4">
-        <h2 className="font-bold" style={{ fontSize: 28 }}>Projects</h2>
+      <div className="pt-4 md:pt-8 px-6 flex items-center justify-between mb-4">
+        <h2 className="font-bold" style={{ fontSize: 28 }}>
+          Projects
+        </h2>
+        <ToggleGroup
+          type="single"
+          value={viewMode}
+          onValueChange={(value) => {
+            if (value) setViewMode(value as "recent" | "all");
+          }}
+          size="sm"
+        >
+          <ToggleGroupItem value="recent" aria-label="Show recent projects">
+            Recent
+          </ToggleGroupItem>
+          <ToggleGroupItem value="all" aria-label="Show all projects">
+            All
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
       {/* Search */}
@@ -73,31 +109,32 @@ export function ProjectsSecondaryNav({ selectedProject, onNavigate, onProjectSel
       </div>
 
       {/* Project List */}
-      <div className="flex-1 overflow-auto px-6 pb-4">
+      <div className="flex-1 overflow-auto px-4 pb-4">
         {isLoading ? (
           <div className="space-y-1">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-16 bg-accent/50 rounded-lg animate-pulse" />
+              <div
+                key={i}
+                className="h-16 bg-accent/50 rounded-lg animate-pulse"
+              />
             ))}
           </div>
         ) : projects.length === 0 ? (
           <div className="text-sm text-muted-foreground text-center py-8">
-            {searchInput ? "No projects found" : "No projects available"}
+            {searchInput
+              ? "No projects found"
+              : viewMode === "recent"
+                ? "No recent projects (last 5 days)"
+                : "No projects available"}
           </div>
         ) : (
           <div className="space-y-1">
             {projects.map((project) => {
               const isActive = selectedProject === project.name;
               return (
-                <Button
+                <SecondaryNavItem
                   key={project.name}
-                  variant="ghost"
-                  className={cn(
-                    "w-full justify-start h-auto py-3 px-4 rounded-lg",
-                    isActive
-                      ? "bg-accent text-accent-foreground"
-                      : "hover:bg-accent/50"
-                  )}
+                  isActive={isActive}
                   onClick={() => {
                     const path = `/project/${encodeURIComponent(project.name)}`;
                     // Use onProjectSelect for user clicks (closes sidebar), or onNavigate as fallback
@@ -113,10 +150,11 @@ export function ProjectsSecondaryNav({ selectedProject, onNavigate, onProjectSel
                       {project.name}
                     </span>
                     <span className="text-xs text-muted-foreground truncate w-full text-left">
-                      {project.episode_count} episodes • {project.session_count} sessions
+                      {project.session_count} sessions • {project.episode_count}{" "}
+                      episodes
                     </span>
                   </div>
-                </Button>
+                </SecondaryNavItem>
               );
             })}
           </div>

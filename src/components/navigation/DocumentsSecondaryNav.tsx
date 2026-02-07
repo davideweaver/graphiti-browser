@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { documentsService } from "@/api/documentsService";
 import { Button } from "@/components/ui/button";
+import { SecondaryNavItem } from "@/components/navigation/SecondaryNavItem";
 import { Search, ChevronLeft, Folder, FileText } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface DocumentsSecondaryNavProps {
   currentDocumentPath: string | null;
@@ -119,7 +119,7 @@ export function DocumentsSecondaryNav({
       )}
 
       {/* Items List */}
-      <div className="flex-1 overflow-auto px-6 pb-4">
+      <div className="flex-1 overflow-auto px-4 pb-4">
         {isLoading ? (
           <div className="space-y-1">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -142,10 +142,9 @@ export function DocumentsSecondaryNav({
 
               if (item.type === "folder") {
                 return (
-                  <Button
+                  <SecondaryNavItem
                     key={item.path}
-                    variant="ghost"
-                    className="w-full justify-start h-auto py-3 px-4 rounded-lg hover:bg-accent/50"
+                    isActive={false}
                     onClick={() => handleFolderClick(item.path)}
                   >
                     <Folder className="h-4 w-4 mr-3 flex-shrink-0 text-muted-foreground" />
@@ -159,20 +158,14 @@ export function DocumentsSecondaryNav({
                         </span>
                       )}
                     </div>
-                  </Button>
+                  </SecondaryNavItem>
                 );
               }
 
               return (
-                <Button
+                <SecondaryNavItem
                   key={item.path}
-                  variant="ghost"
-                  className={cn(
-                    "w-full justify-start h-auto py-3 px-4 rounded-lg",
-                    isActiveDocument
-                      ? "bg-accent text-accent-foreground"
-                      : "hover:bg-accent/50"
-                  )}
+                  isActive={isActiveDocument}
                   onClick={() => handleDocumentClick(item.path)}
                 >
                   <FileText className="h-4 w-4 mr-3 flex-shrink-0 text-muted-foreground" />
@@ -184,7 +177,7 @@ export function DocumentsSecondaryNav({
                       {new Date(item.modified).toLocaleDateString()}
                     </span>
                   </div>
-                </Button>
+                </SecondaryNavItem>
               );
             })}
           </div>

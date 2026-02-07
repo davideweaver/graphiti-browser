@@ -147,8 +147,9 @@ src/
 │   └── agentTasksService.ts  # xerro-service agent tasks API
 ├── components/       # Reusable UI components
 │   ├── ui/          # ShadCN UI component library (complete)
-│   ├── container/   # Container, ContainerTable, ContainerToolButton
+│   ├── container/   # Container, ContainerTable, ContainerToolButton, ContainerToolToggle
 │   ├── dialogs/     # DeleteConfirmationDialog
+│   ├── navigation/  # PrimaryNav, SecondaryNav, SecondaryNavItem, specific nav implementations
 │   ├── sidebar/     # UserProfileMenu, GraphManagementDialog
 │   ├── search/      # FactCard for search results
 │   ├── entities/    # EntityCard for entity browsing
@@ -182,6 +183,63 @@ Built with **ShadCN UI** (Radix UI + Tailwind CSS):
 - Form handling with `react-hook-form` + Zod validation
 
 **For component usage patterns and styling guidelines**, see the [Design System Documentation](docs/design-system/).
+
+### Navigation Components
+
+**SecondaryNavItem** - Standardized navigation list item for secondary nav:
+
+**Location:** `src/components/navigation/SecondaryNavItem.tsx`
+
+**Purpose:** Provides consistent styling for all secondary navigation list items across the application.
+
+**Styling Standards:**
+- Padding: `py-3 px-3` (vertical: 12px, horizontal: 12px)
+- Active state:
+  - Light mode: `bg-accent` (full opacity)
+  - Dark mode: `bg-accent/60` (60% opacity)
+  - Text: `text-accent-foreground`
+- Hover state: `bg-accent/50` (50% opacity)
+- Border radius: `rounded-lg`
+- Width: `w-full`
+- Alignment: `justify-start`
+- Height: `h-auto` (flexible based on content)
+
+**Container Standards:**
+- List container padding: `px-4` (horizontal: 16px)
+- Container should use `flex-1 overflow-auto` for scrollable content
+- Use `space-y-1` for consistent spacing between items
+
+**Usage:**
+
+```tsx
+import { SecondaryNavItem } from "@/components/navigation/SecondaryNavItem";
+
+<SecondaryNavItem
+  isActive={selectedItem === item.id}
+  onClick={() => handleSelect(item.id)}
+>
+  <div className="flex flex-col items-start w-full">
+    <span className="font-medium truncate w-full text-left">
+      {item.title}
+    </span>
+    <span className="text-xs text-muted-foreground">
+      {item.subtitle}
+    </span>
+  </div>
+</SecondaryNavItem>
+```
+
+**Used In:**
+- `ProjectsSecondaryNav` - Project list navigation
+- `DocumentsSecondaryNav` - Document/folder navigation
+- `AgentTasksSecondaryNav` - Agent task list navigation
+- `SecondaryNav` - Generic secondary navigation items
+
+**Benefits:**
+- Single source of truth for navigation item styling
+- Consistent active/hover states across all navigation
+- Easy to update styling globally
+- Type-safe props with TypeScript
 
 ## Development Commands
 

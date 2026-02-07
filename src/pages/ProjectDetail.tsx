@@ -91,7 +91,15 @@ export default function ProjectDetail() {
     setDeleteDialogOpen(false);
   };
 
-  const sessions = sessionsData?.sessions || [];
+  const [deletedSessionIds, setDeletedSessionIds] = useState<Set<string>>(new Set());
+
+  const handleSessionDeleted = (sessionId: string) => {
+    setDeletedSessionIds((prev) => new Set([...prev, sessionId]));
+  };
+
+  const sessions = (sessionsData?.sessions || []).filter(
+    (s) => !deletedSessionIds.has(s.session_id)
+  );
   const entities = entitiesData?.entities || [];
   const facts = factsData?.facts || [];
 
@@ -252,6 +260,7 @@ export default function ProjectDetail() {
                         onSessionClick={(sessionId) =>
                           navigate(`/project/${encodeURIComponent(projectName)}/sessions/${encodeURIComponent(sessionId)}`)
                         }
+                        onSessionDeleted={handleSessionDeleted}
                       />
                       {sessionIndex < sessions.length - 1 && (
                         <Separator className="mt-4" />

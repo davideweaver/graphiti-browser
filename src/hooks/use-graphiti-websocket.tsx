@@ -12,6 +12,7 @@ import type {
   EdgeDeletedEvent,
   EpisodeCreatedEvent,
   EpisodeDeletedEvent,
+  SessionDeletedEvent,
   GroupDeletedEvent,
   ProjectDeletedEvent,
   QueueStatusEvent,
@@ -80,6 +81,12 @@ export function useGraphitiWebSocket(): UseGraphitiWebSocketReturn {
       websocketService.addEventListener("episode.deleted", (event) => {
         const typedEvent = event as EpisodeDeletedEvent;
         handleEpisodeDeleted(typedEvent, groupId, queryClient);
+      }),
+
+      // Session events
+      websocketService.addEventListener("session.deleted", (event) => {
+        const typedEvent = event as SessionDeletedEvent;
+        handleSessionDeleted(typedEvent, groupId, queryClient);
       }),
 
       // Group events
@@ -417,6 +424,51 @@ function handleEpisodeDeleted(
       queryKey: ["session", groupId, session_id],
     });
   }
+}
+
+/**
+ * Handle session.deleted event
+ * Strategy: Remove from cache and invalidate related queries
+ */
+function handleSessionDeleted(
+  event: SessionDeletedEvent,
+  groupId: string,
+  queryClient: ReturnType<typeof useQueryClient>
+): void {
+  if (event.group_id !== groupId) {
+    console.debug(`Ignoring session.deleted for different group: ${event.group_id}`);
+    return;
+  }
+
+  const { session_id } = event.data;
+
+  // Directly remove the session from cached data
+  const queryCache = queryClient.getQueryCache();
+  queryCache.getAll().forEach(query => {
+    const key = query.queryKey;
+    if ((key[0] === "sessions" || key[0] === "project-sessions") && key[1] === groupId) {
+      queryClient.setQueryData(key, (oldData: any) => {
+        if (!oldData?.sessions) return oldData;
+        const filtered = oldData.sessions.filter(
+          (s: any) => s.session_id !== session_id
+        );
+        if (filtered.length !== oldData.sessions.length) {
+          return { ...oldData, sessions: filtered };
+        }
+        return oldData;
+      });
+    }
+  });
+
+  // Invalidate session detail queries
+  queryClient.invalidateQueries({
+    queryKey: ["session", groupId, session_id],
+  });
+
+  // Invalidate session stats for day navigation
+  queryClient.invalidateQueries({
+    queryKey: ["session-stats-by-day", groupId],
+  });
 }
 
 /**

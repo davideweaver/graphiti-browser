@@ -82,6 +82,16 @@ export interface GroupDeletedEvent extends BaseEvent {
   };
 }
 
+// Session events
+export interface SessionDeletedEvent extends BaseEvent {
+  event_type: "session.deleted";
+  data: {
+    session_id: string;
+    uuid: string;
+    episode_count: number;
+  };
+}
+
 // Project events
 export interface ProjectDeletedEvent extends BaseEvent {
   event_type: "project.deleted";
@@ -111,6 +121,7 @@ export type WebSocketEvent =
   | EdgeDeletedEvent
   | EpisodeCreatedEvent
   | EpisodeDeletedEvent
+  | SessionDeletedEvent
   | GroupDeletedEvent
   | ProjectDeletedEvent
   | QueueStatusEvent;

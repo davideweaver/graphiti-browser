@@ -16,7 +16,12 @@ interface PrimaryNavProps {
   footer?: React.ReactNode;
 }
 
-export function PrimaryNav({ navigationConfig, activePrimary, onNavigate, footer }: PrimaryNavProps) {
+export function PrimaryNav({
+  navigationConfig,
+  activePrimary,
+  onNavigate,
+  footer,
+}: PrimaryNavProps) {
   const isMobile = useIsMobile();
 
   return (
@@ -27,7 +32,7 @@ export function PrimaryNav({ navigationConfig, activePrimary, onNavigate, footer
       </div>
 
       {/* Navigation buttons */}
-      <div className="flex-1 flex flex-col gap-4 p-2 pt-6">
+      <div className="flex-1 flex flex-col items-center gap-4 p-2 pt-6">
         <TooltipProvider delayDuration={300}>
           {navigationConfig.map((item) => {
             const isActive = activePrimary === item.key;
@@ -36,14 +41,12 @@ export function PrimaryNav({ navigationConfig, activePrimary, onNavigate, footer
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  "h-12 w-12 rounded-lg transition-colors",
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-accent"
+                  "h-14 w-14 rounded-lg transition-colors [&_svg]:!size-5",
+                  isActive ? "bg-muted text-primary" : "hover:bg-accent",
                 )}
                 onClick={() => onNavigate(item.defaultPath)}
               >
-                <item.icon className="h-6 w-6" />
+                <item.icon />
               </Button>
             );
 
@@ -54,12 +57,8 @@ export function PrimaryNav({ navigationConfig, activePrimary, onNavigate, footer
 
             return (
               <Tooltip key={item.key}>
-                <TooltipTrigger asChild>
-                  {button}
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  {item.label}
-                </TooltipContent>
+                <TooltipTrigger asChild>{button}</TooltipTrigger>
+                <TooltipContent side="right">{item.label}</TooltipContent>
               </Tooltip>
             );
           })}
@@ -67,11 +66,7 @@ export function PrimaryNav({ navigationConfig, activePrimary, onNavigate, footer
       </div>
 
       {/* Footer - UserProfileMenu */}
-      {footer && (
-        <div className="p-2">
-          {footer}
-        </div>
-      )}
+      {footer && <div className="p-2">{footer}</div>}
     </nav>
   );
 }

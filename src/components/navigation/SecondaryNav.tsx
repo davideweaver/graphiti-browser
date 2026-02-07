@@ -1,5 +1,4 @@
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { SecondaryNavItem } from "@/components/navigation/SecondaryNavItem";
 import { navigationConfig } from "@/lib/navigationConfig";
 
 interface SecondaryNavProps {
@@ -32,20 +31,17 @@ export function SecondaryNav({ activePrimary, pathname, onNavigate }: SecondaryN
             {secondaryItems.map((item) => {
               const isActive = pathname === item.path;
               return (
-                <Button
+                <SecondaryNavItem
                   key={item.path}
-                  variant="ghost"
-                  className={cn(
-                    "w-full justify-start gap-3 h-11 rounded-lg px-4",
-                    isActive
-                      ? "bg-accent text-accent-foreground font-medium"
-                      : "hover:bg-accent/50"
-                  )}
+                  isActive={isActive}
                   onClick={() => onNavigate(item.path)}
+                  className="gap-3 h-11"
                 >
                   <item.icon className="h-5 w-5" />
-                  <span>{item.label}</span>
-                </Button>
+                  <span className={isActive ? "font-medium" : ""}>
+                    {item.label}
+                  </span>
+                </SecondaryNavItem>
               );
             })}
           </div>
