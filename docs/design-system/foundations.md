@@ -61,6 +61,70 @@ Applied via Tailwind's `font-inter` class (configure in `tailwind.config.js`).
 - 600: Semibold (card titles, section headers)
 - 700: Bold (page titles, strong emphasis)
 
+### Code Blocks
+
+Monospace text styling for code blocks and inline code, matching the configuration display pattern used throughout the application (e.g., AgentTaskDetail).
+
+**Block Code (`<pre>` tags):**
+
+```css
+.prose pre {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  padding: 1rem;                    /* 16px */
+  border-radius: 0.5rem;            /* 8px */
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 0.75rem;               /* 12px */
+  line-height: 1rem;                /* 16px */
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+```
+
+**Inline Code (`` `code` `` in markdown):**
+
+```css
+.prose :not(pre) > code {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  padding: 0.125rem 0.375rem;       /* 2px 6px */
+  border-radius: 0.25rem;           /* 4px */
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 0.75rem;               /* 12px */
+  font-weight: 400;
+}
+```
+
+**Usage in React:**
+
+```tsx
+// Block code (JSON/configuration display)
+<pre className="bg-muted p-4 rounded-lg text-xs overflow-auto whitespace-pre-wrap break-words font-mono">
+  {JSON.stringify(data, null, 2)}
+</pre>
+
+// Inline code
+<code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">
+  command
+</code>
+```
+
+**Theme Colors:**
+
+The `--muted` background adapts to light/dark mode:
+- **Light mode**: `hsl(210 40% 96.1%)` - Light gray-blue
+- **Dark mode**: `hsl(217.2 32.6% 17.5%)` - Dark blue-gray
+
+**Key Features:**
+- Consistent with application configuration displays
+- Automatic theme adaptation via CSS variables
+- Readable 12px monospace font with proper line height
+- Scrollable with word wrapping for long lines
+- Subtle background that doesn't compete with content
+
 ## Color System
 
 ### CSS Variables

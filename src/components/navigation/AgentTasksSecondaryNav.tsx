@@ -42,7 +42,7 @@ export function AgentTasksSecondaryNav({ selectedTaskId, onNavigate, onTaskSelec
   }, [selectedTaskId, filteredTasks, isLoading, onNavigate]);
 
   return (
-    <nav className="w-[380px] border-r border-border bg-background flex flex-col">
+    <nav className="w-[380px] bg-card flex flex-col">
       {/* Header */}
       <div className="pt-4 md:pt-8 px-6 flex items-center mb-4">
         <h2 className="font-bold" style={{ fontSize: 28 }}>Agent Tasks</h2>

@@ -17,7 +17,7 @@ export function SecondaryNav({ activePrimary, pathname, onNavigate }: SecondaryN
   const activePrimaryLabel = primaryConfig?.label || "";
 
   return (
-    <nav className="w-[380px] border-r border-border bg-background flex flex-col">
+    <nav className="w-[380px] bg-card flex flex-col">
       {/* Header */}
       <div className="pt-4 md:pt-8 px-6 flex items-center">
         <h2 className="font-bold" style={{ fontSize: 28 }}>

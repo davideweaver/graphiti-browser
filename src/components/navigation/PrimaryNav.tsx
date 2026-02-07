@@ -20,7 +20,7 @@ export function PrimaryNav({ navigationConfig, activePrimary, onNavigate, footer
   const isMobile = useIsMobile();
 
   return (
-    <nav className="w-[75px] border-r border-border bg-background flex flex-col">
+    <nav className="w-[75px] bg-background flex flex-col">
       {/* Header spacer */}
       <div className="h-16 flex items-center justify-center">
         {/* Optional logo or title initial */}
