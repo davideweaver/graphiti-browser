@@ -2,6 +2,9 @@ import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { useGraphitiWebSocket } from "@/hooks/use-graphiti-websocket";
 import { useState, useEffect, useRef } from "react";
+
+// Animation duration for mobile nav gestures (in ms)
+const MOBILE_NAV_ANIMATION_DURATION = 200;
 import { PrimaryNav } from "@/components/navigation/PrimaryNav";
 import { SecondaryNav } from "@/components/navigation/SecondaryNav";
 import { ProjectsSecondaryNav } from "@/components/navigation/ProjectsSecondaryNav";
@@ -33,21 +36,22 @@ const Layout = () => {
   const isConnected = connectionState === "connected";
   const activePrimary = getActivePrimary(pathname);
 
-  // Track drag state for opening nav from edge
+  // Drag-to-open state: tracks progress when swiping from left edge
   const [dragOpenProgress, setDragOpenProgress] = useState(0);
   const touchStartXRef = useRef(0);
   const touchStartYRef = useRef(0);
   const isDraggingOpenRef = useRef(false);
   const hasCheckedDirectionRef = useRef(false);
 
-  // Handle edge drag to open
+  // Handle swipe from left edge to open nav
   useEffect(() => {
     const handleTouchStart = (e: TouchEvent) => {
-      if (window.innerWidth >= 768) return; // Desktop only
+      if (window.innerWidth >= 768) return; // Only on mobile
       if (mobileNavOpen) return; // Already open
 
       const touch = e.touches[0];
-      if (touch.pageX <= 50) { // Within edge threshold
+      // Start tracking if touch begins within 50px of left edge
+      if (touch.pageX <= 50) {
         touchStartXRef.current = touch.pageX;
         touchStartYRef.current = touch.pageY;
         isDraggingOpenRef.current = true;
@@ -64,22 +68,23 @@ const Layout = () => {
       const absDeltaX = Math.abs(deltaX);
       const absDeltaY = Math.abs(deltaY);
 
-      // Check direction on first significant movement
+      // Check direction on first significant movement (5px threshold)
       if (!hasCheckedDirectionRef.current && (absDeltaX > 5 || absDeltaY > 5)) {
         hasCheckedDirectionRef.current = true;
-        // If more vertical than horizontal, cancel the drag
         if (absDeltaY > absDeltaX) {
+          // More vertical - cancel drag, allow normal scrolling
           isDraggingOpenRef.current = false;
           setDragOpenProgress(0);
           return;
         }
       }
 
-      if (deltaX > 0) { // Only track rightward movement
+      // Track rightward drag progress as percentage of screen width
+      if (deltaX > 0) {
         const progress = Math.min(deltaX / window.innerWidth, 1);
         setDragOpenProgress(progress);
 
-        // Prevent scrolling during horizontal drag
+        // Prevent page scrolling during horizontal drag
         if (absDeltaX > absDeltaY && deltaX > 10) {
           e.preventDefault();
         }
@@ -89,23 +94,37 @@ const Layout = () => {
     const handleTouchEnd = () => {
       if (!isDraggingOpenRef.current) return;
 
-      console.log('Drag-to-open ended - progress:', dragOpenProgress);
-
-      // If dragged more than 40% of screen width, open the nav
+      // Snap threshold: 40% of screen width
       if (dragOpenProgress > 0.4) {
-        console.log('Opening nav');
-        setMobileNavOpen(true);
-        setDragOpenProgress(0); // Clear immediately so it doesn't show during open animation
-      } else {
-        console.log('Not opening - animating closed');
-        // Animate closed over 300ms
+        // Complete the opening animation
         const startProgress = dragOpenProgress;
         const startTime = Date.now();
-        const duration = 300;
+
+        const animateOpen = () => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / MOBILE_NAV_ANIMATION_DURATION, 1);
+          const easedProgress = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+          const currentProgress = startProgress + (1 - startProgress) * easedProgress;
+
+          setDragOpenProgress(currentProgress);
+
+          if (progress < 1) {
+            requestAnimationFrame(animateOpen);
+          } else {
+            setDragOpenProgress(0);
+            setMobileNavOpen(true);
+          }
+        };
+
+        requestAnimationFrame(animateOpen);
+      } else {
+        // Snap back to closed
+        const startProgress = dragOpenProgress;
+        const startTime = Date.now();
 
         const animateClose = () => {
           const elapsed = Date.now() - startTime;
-          const progress = Math.min(elapsed / duration, 1);
+          const progress = Math.min(elapsed / MOBILE_NAV_ANIMATION_DURATION, 1);
           const easedProgress = 1 - Math.pow(1 - progress, 3); // ease-out cubic
           const currentProgress = startProgress * (1 - easedProgress);
 
@@ -121,7 +140,7 @@ const Layout = () => {
         requestAnimationFrame(animateClose);
       }
 
-      // Reset
+      // Reset drag state
       isDraggingOpenRef.current = false;
       hasCheckedDirectionRef.current = false;
       touchStartXRef.current = 0;
@@ -139,14 +158,14 @@ const Layout = () => {
     };
   }, [mobileNavOpen, dragOpenProgress]);
 
-  // iOS Safari: prevent back/forward navigation gesture near screen edges
-  // Must be on document level to intercept before browser claims the gesture
+  // iOS Safari: Prevent back/forward browser navigation gestures
+  // This must be at document level to intercept before the browser claims the gesture
   useEffect(() => {
     const handleTouchStart = (e: TouchEvent) => {
-      // Only on mobile
-      if (window.innerWidth >= 768) return;
+      if (window.innerWidth >= 768) return; // Only on mobile
+
       const touch = e.touches[0];
-      // Block browser gesture when touch starts within 20px of either edge
+      // Block browser gestures that start within 20px of screen edges
       if (touch.pageX <= 20 || touch.pageX >= window.innerWidth - 20) {
         e.preventDefault();
       }
