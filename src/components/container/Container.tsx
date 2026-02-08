@@ -55,8 +55,8 @@ const Container: React.FC<Props> = ({
 
   // Header classes and styles based on fullHeight prop
   const headerClasses = isFixed
-    ? "flex max-w-screen-lg flex-col lg:flex-row justify-between items-start w-auto mb-4 lg:mb-6 lg:flex-shrink-0"
-    : "flex max-w-screen-lg flex-col lg:flex-row justify-between items-start w-auto mb-4 lg:mb-10";
+    ? "flex max-w-screen-lg flex-col lg:flex-row justify-between items-start w-full mb-4 lg:mb-6 lg:flex-shrink-0"
+    : "flex max-w-screen-lg flex-col lg:flex-row justify-between items-start w-full mb-4 lg:mb-10";
 
   const headerStyle = isFixed
     ? {
@@ -70,7 +70,7 @@ const Container: React.FC<Props> = ({
       };
 
   const titleClasses = isFixed ? "pb-2 lg:pb-0" : "pb-2 lg:pb-0";
-  const titleStyle = isMobile ? { marginLeft: 40 } : {};
+  const titleStyle = isMobile ? { marginLeft: 40, maxWidth: "calc(100% - 40px)" } : {};
 
   // Content area classes and styles based on fullHeight prop
   const contentClasses = isFixed
@@ -103,7 +103,7 @@ const Container: React.FC<Props> = ({
     <div className={containerClasses}>
       {/* Header */}
       <div className={headerClasses} style={headerStyle}>
-        <div className={titleClasses} style={titleStyle}>
+        <div className={`${titleClasses} min-w-0 flex-1`} style={titleStyle}>
           <h1
             className="font-bold flex items-center"
             style={{ fontSize: 28, lineHeight: 1.2, marginTop: 6 }}
@@ -114,12 +114,12 @@ const Container: React.FC<Props> = ({
             )}
           </h1>
           {description && (
-            <p className="text-sm text-muted-foreground mb-4 md:mb-0">
+            <div className="text-sm text-muted-foreground mb-4 md:mb-0 min-w-0 w-full overflow-hidden">
               {description}
-            </p>
+            </div>
           )}
         </div>
-        <div className="flex flex-col md:flex-row gap-2 h-full items-center">
+        <div className="flex flex-col md:flex-row gap-2 h-full items-center flex-shrink-0">
           {tools}
         </div>
       </div>

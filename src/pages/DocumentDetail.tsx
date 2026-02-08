@@ -8,9 +8,12 @@ import { Copy, ChevronLeft, FolderOpen } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
+import remarkWikiLinks from "@/lib/remarkWikiLinks";
 import { toast } from "sonner";
 import { getSearchQuery } from "@/lib/documentsSearchStorage";
 import { setCurrentFolderPath, clearLastDocumentPath } from "@/lib/documentsStorage";
+import { MarkdownLink } from "@/components/markdown/MarkdownLink";
+import type { Components } from "react-markdown";
 
 export default function DocumentDetail() {
   const params = useParams();
@@ -64,12 +67,25 @@ export default function DocumentDetail() {
     ? new Date(document.modified).toLocaleString()
     : "";
 
+  // Custom link component for markdown rendering
+  const markdownComponents: Components = {
+    a: ({ href, children, ...props }) => (
+      <MarkdownLink
+        href={href}
+        currentDocumentPath={documentPath}
+        {...props}
+      >
+        {children}
+      </MarkdownLink>
+    ),
+  };
+
   return (
     <Container
       title={fileName || "Document"}
       description={
-        <div className="flex flex-col gap-1">
-          <span className="text-sm text-muted-foreground">{documentPath}</span>
+        <div className="flex flex-col gap-1 min-w-0 w-full">
+          <span className="text-sm text-muted-foreground truncate block">{documentPath}</span>
           {modifiedDate && (
             <span className="text-xs text-muted-foreground">
               Modified: {modifiedDate}
@@ -133,7 +149,10 @@ export default function DocumentDetail() {
         </div>
       ) : document ? (
         <article className="prose prose-sm dark:prose-invert max-w-none">
-          <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+          <ReactMarkdown
+            remarkPlugins={[remarkWikiLinks, remarkGfm, remarkBreaks]}
+            components={markdownComponents}
+          >
             {document.content}
           </ReactMarkdown>
         </article>
