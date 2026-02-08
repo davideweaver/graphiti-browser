@@ -1,4 +1,5 @@
 import { SecondaryNavItem } from "@/components/navigation/SecondaryNavItem";
+import { SecondaryNavContainer } from "@/components/navigation/SecondaryNavContainer";
 import { navigationConfig } from "@/lib/navigationConfig";
 
 interface SecondaryNavProps {
@@ -16,14 +17,7 @@ export function SecondaryNav({ activePrimary, pathname, onNavigate }: SecondaryN
   const activePrimaryLabel = primaryConfig?.label || "";
 
   return (
-    <nav className="w-full md:w-[380px] bg-card flex flex-col min-w-0">
-      {/* Header */}
-      <div className="pt-4 md:pt-8 px-6 flex items-center">
-        <h2 className="font-bold" style={{ fontSize: 28 }}>
-          {activePrimaryLabel}
-        </h2>
-      </div>
-
+    <SecondaryNavContainer title={activePrimaryLabel}>
       {/* Menu items */}
       <div className="flex-1 overflow-auto p-4">
         {secondaryItems.length > 0 ? (
@@ -52,6 +46,6 @@ export function SecondaryNav({ activePrimary, pathname, onNavigate }: SecondaryN
           </div>
         )}
       </div>
-    </nav>
+    </SecondaryNavContainer>
   );
 }

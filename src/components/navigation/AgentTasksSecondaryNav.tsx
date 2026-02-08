@@ -7,6 +7,7 @@ import {
   SecondaryNavItemTitle,
   SecondaryNavItemSubtitle,
 } from "@/components/navigation/SecondaryNavItemContent";
+import { SecondaryNavContainer } from "@/components/navigation/SecondaryNavContainer";
 import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -46,14 +47,7 @@ export function AgentTasksSecondaryNav({
   }, [selectedTaskId, filteredTasks, isLoading, onNavigate]);
 
   return (
-    <nav className="w-full md:w-[380px] bg-card flex flex-col min-w-0">
-      {/* Header */}
-      <div className="pt-4 md:pt-8 px-6 flex items-center mb-4">
-        <h2 className="font-bold" style={{ fontSize: 28 }}>
-          Agent Tasks
-        </h2>
-      </div>
-
+    <SecondaryNavContainer title="Agent Tasks">
       {/* Search */}
       <div className="px-6 pb-4">
         <div className="relative">
@@ -124,6 +118,6 @@ export function AgentTasksSecondaryNav({
           </div>
         )}
       </div>
-    </nav>
+    </SecondaryNavContainer>
   );
 }

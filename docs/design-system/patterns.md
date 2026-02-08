@@ -50,6 +50,140 @@ const tools = (
 );
 ```
 
+## Secondary Navigation Tool Buttons
+
+Secondary navigation sidebars use **SecondaryNavToolButton** for header toolbar actions. These are icon-only buttons with a more compact design compared to page Container tool buttons.
+
+### Component Code
+
+```tsx
+import * as React from "react";
+import { cva, type VariantProps } from "class-variance-authority";
+import { cn } from "@/lib/utils";
+
+const secondaryNavToolButtonVariants = cva(
+  // Base classes with fixed h-10 w-10 sizing
+  "inline-flex items-center justify-center h-10 w-10 rounded-md ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  {
+    variants: {
+      variant: {
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+      },
+    },
+    defaultVariants: {
+      variant: "ghost",
+    },
+  },
+);
+
+export interface SecondaryNavToolButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof secondaryNavToolButtonVariants> {}
+
+export const SecondaryNavToolButton = React.forwardRef<
+  HTMLButtonElement,
+  SecondaryNavToolButtonProps
+>(({ className, variant, ...props }, ref) => {
+  return (
+    <button
+      className={cn(secondaryNavToolButtonVariants({ variant, className }))}
+      ref={ref}
+      {...props}
+    />
+  );
+});
+
+SecondaryNavToolButton.displayName = "SecondaryNavToolButton";
+```
+
+### Design Specifications
+
+| Property | Value | Notes |
+|----------|-------|-------|
+| **Button Size** | h-10 w-10 (40x40px) | Fixed square size |
+| **Variant** | ghost | Only variant available |
+| **Icon Control** | Via icon's size prop | No CSS override - icons control their own size |
+| **Gap** | gap-1 (4px) | Set by SecondaryNavContainer, not button |
+| **Border Radius** | rounded-md | Consistent with other buttons |
+
+### Icon Sizing
+
+**Important:** Icons control their own size using the `size` prop. The button does not enforce a default icon size via CSS.
+
+```tsx
+// Smaller icon (18px)
+<SecondaryNavToolButton onClick={handleRefresh}>
+  <RefreshCw size={18} />
+</SecondaryNavToolButton>
+
+// Standard icon (20px)
+<SecondaryNavToolButton onClick={handleSearch}>
+  <Search size={20} />
+</SecondaryNavToolButton>
+
+// Larger icon (24px)
+<SecondaryNavToolButton onClick={handleAdd}>
+  <Plus size={24} />
+</SecondaryNavToolButton>
+```
+
+### Comparison with ContainerToolButton
+
+| Feature | ContainerToolButton | SecondaryNavToolButton |
+|---------|---------------------|------------------------|
+| **Use Case** | Page toolbar actions | Secondary nav toolbar actions |
+| **Button Size** | h-9 (36px) | h-10 (40px) |
+| **Sizes Available** | sm, icon | None (always fixed) |
+| **Variants** | default, primary, destructive, outline, ghost | ghost only |
+| **Text Support** | Yes (with icon or alone) | No (icon-only) |
+| **Icon Size** | size-4 (16px) via CSS | Controlled by icon's size prop |
+
+### Usage Example
+
+```tsx
+import { SecondaryNavContainer } from "@/components/navigation/SecondaryNavContainer";
+import { SecondaryNavToolButton } from "@/components/navigation/SecondaryNavToolButton";
+import { RefreshCw, Search, Plus } from "lucide-react";
+
+export function MySecondaryNav() {
+  return (
+    <SecondaryNavContainer
+      title="Documents"
+      tools={
+        <>
+          <SecondaryNavToolButton onClick={handleRefresh}>
+            <RefreshCw size={18} />
+          </SecondaryNavToolButton>
+          <SecondaryNavToolButton onClick={handleSearch}>
+            <Search size={20} />
+          </SecondaryNavToolButton>
+          <SecondaryNavToolButton onClick={handleAdd}>
+            <Plus size={22} />
+          </SecondaryNavToolButton>
+        </>
+      }
+    >
+      {/* Navigation content */}
+    </SecondaryNavContainer>
+  );
+}
+```
+
+### Best Practices
+
+1. **Icon-Only Design** - Never add text to these buttons. Use tooltips if labels are needed.
+2. **Icon Size Range** - Keep icons between 16px-24px for balance with 40px button size.
+3. **Common Actions** - Typical actions include refresh, search, add, filter, settings.
+4. **Compact Spacing** - SecondaryNavContainer uses gap-1 (4px) between buttons.
+5. **Visual Balance** - Similar-sized icons (within 2-4px of each other) look best together.
+
+### Common Icon Sizes
+
+- **18px** - Compact icons (RefreshCw, X, Filter)
+- **20px** - Standard icons (Search, Settings, Bell)
+- **22px** - Prominent icons (Plus, Download, Upload)
+- **24px** - Large icons (rare, use sparingly)
+
 ## Back Button Pattern
 
 The back button should always be the **first tool** (left-most position) in the toolbar.

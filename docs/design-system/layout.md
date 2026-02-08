@@ -269,6 +269,137 @@ const tools = (
 
 See [patterns.md](./patterns.md#tool-button-hierarchy) for toolbar button patterns.
 
+## SecondaryNavContainer Component
+
+The **SecondaryNavContainer** component provides a consistent layout structure for secondary navigation sidebars. It follows the same title + tools + children pattern as the Container component but is specifically designed for navigation contexts.
+
+### Component Code
+
+```tsx
+import type { ReactNode } from "react";
+
+interface SecondaryNavContainerProps {
+  title: string;
+  tools?: ReactNode;
+  children: ReactNode;
+}
+
+export function SecondaryNavContainer({
+  title,
+  tools,
+  children,
+}: SecondaryNavContainerProps) {
+  return (
+    <nav className="w-full md:w-[380px] bg-card flex flex-col min-w-0">
+      {/* Header */}
+      <div className="pt-4 md:pt-8 px-6 flex items-center justify-between mb-4">
+        <h2 className="font-bold" style={{ fontSize: 28 }}>
+          {title}
+        </h2>
+        {tools && <div className="flex items-center gap-1">{tools}</div>}
+      </div>
+
+      {/* Scrollable Content Area */}
+      <div className="flex-1 overflow-auto">{children}</div>
+    </nav>
+  );
+}
+```
+
+### Props
+
+- **title** (string, required) - Navigation section title displayed in header
+- **tools** (ReactNode, optional) - Toolbar buttons or controls for the header
+- **children** (ReactNode, required) - Scrollable navigation content
+
+### Key Features
+
+1. **Fixed Width on Desktop** - 380px width on md+ breakpoints, full width on mobile
+2. **Consistent Header** - Title + tools layout with responsive padding
+3. **Scrollable Content** - Content area uses flex-1 overflow-auto for scrolling
+4. **Tool Buttons** - Uses gap-1 (4px) between toolbar items for compact spacing
+5. **Responsive Padding** - pt-4 on mobile, pt-8 on desktop
+
+### Usage Example
+
+```tsx
+import { SecondaryNavContainer } from "@/components/navigation/SecondaryNavContainer";
+import { SecondaryNavToolButton } from "@/components/navigation/SecondaryNavToolButton";
+import { SecondaryNavItem } from "@/components/navigation/SecondaryNavItem";
+import { RefreshCw, Search } from "lucide-react";
+
+export function DocumentsSecondaryNav() {
+  return (
+    <SecondaryNavContainer
+      title="Documents"
+      tools={
+        <>
+          <SecondaryNavToolButton onClick={handleRefresh}>
+            <RefreshCw size={18} />
+          </SecondaryNavToolButton>
+          <SecondaryNavToolButton onClick={handleSearch}>
+            <Search size={20} />
+          </SecondaryNavToolButton>
+        </>
+      }
+    >
+      {/* Navigation items */}
+      <div className="px-4 pb-4">
+        <SecondaryNavItem isActive={false} onClick={handleClick}>
+          Item content
+        </SecondaryNavItem>
+      </div>
+    </SecondaryNavContainer>
+  );
+}
+```
+
+### Comparison with Container Component
+
+| Feature | Container | SecondaryNavContainer |
+|---------|-----------|----------------------|
+| **Purpose** | Primary page content | Secondary navigation sidebar |
+| **Width** | Full width (max-width constraints) | Fixed 380px on desktop, full on mobile |
+| **Title Type** | ReactNode (can be JSX) | String only |
+| **Tool Button Gap** | gap-2 (8px) | gap-1 (4px) |
+| **Tool Button Component** | ContainerToolButton | SecondaryNavToolButton |
+| **Content Scrolling** | Configurable (full/fixed/fixedWithScroll) | Always scrollable |
+
+### Content Structure
+
+SecondaryNavContainer children typically include:
+
+1. **Breadcrumbs** (optional) - Navigation breadcrumb trail
+2. **Back Button** (optional) - Return to parent navigation
+3. **Items List** - Scrollable list of navigation items using SecondaryNavItem
+
+```tsx
+<SecondaryNavContainer title="Documents" tools={tools}>
+  {/* Breadcrumbs */}
+  {breadcrumbs.length > 0 && (
+    <div className="px-6 pb-2">
+      {/* Breadcrumb content */}
+    </div>
+  )}
+
+  {/* Back Button */}
+  {canGoBack && (
+    <div className="px-6 pb-2">
+      <Button onClick={handleBack}>Back</Button>
+    </div>
+  )}
+
+  {/* Items List */}
+  <div className="flex-1 overflow-auto px-4 pb-4">
+    {items.map(item => (
+      <SecondaryNavItem key={item.id} {...item} />
+    ))}
+  </div>
+</SecondaryNavContainer>
+```
+
+See [patterns.md](./patterns.md#secondary-navigation-tool-buttons) for toolbar button patterns.
+
 ## Page Structure
 
 ### Standard Page Template

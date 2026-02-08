@@ -5,6 +5,7 @@ import { useGraphiti } from "@/context/GraphitiContext";
 import { Input } from "@/components/ui/input";
 import { SecondaryNavItem } from "@/components/navigation/SecondaryNavItem";
 import { SecondaryNavItemTitle, SecondaryNavItemSubtitle } from "@/components/navigation/SecondaryNavItemContent";
+import { SecondaryNavContainer } from "@/components/navigation/SecondaryNavContainer";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Search } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -72,12 +73,9 @@ export function ProjectsSecondaryNav({
   }, [selectedProject, projects, isLoading, onNavigate]);
 
   return (
-    <nav className="w-full md:w-[380px] bg-card flex flex-col min-w-0">
-      {/* Header */}
-      <div className="pt-4 md:pt-8 px-6 flex items-center justify-between mb-4">
-        <h2 className="font-bold" style={{ fontSize: 28 }}>
-          Projects
-        </h2>
+    <SecondaryNavContainer
+      title="Projects"
+      tools={
         <ToggleGroup
           type="single"
           value={viewMode}
@@ -93,8 +91,8 @@ export function ProjectsSecondaryNav({
             All
           </ToggleGroupItem>
         </ToggleGroup>
-      </div>
-
+      }
+    >
       {/* Search */}
       <div className="px-6 pb-4">
         <div className="relative">
@@ -158,6 +156,6 @@ export function ProjectsSecondaryNav({
           </div>
         )}
       </div>
-    </nav>
+    </SecondaryNavContainer>
   );
 }

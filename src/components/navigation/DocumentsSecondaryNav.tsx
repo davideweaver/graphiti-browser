@@ -6,7 +6,10 @@ import {
   SecondaryNavItemTitle,
   SecondaryNavItemSubtitle,
 } from "@/components/navigation/SecondaryNavItemContent";
-import { Search, ChevronLeft, Folder, FileText } from "lucide-react";
+import { SecondaryNavContainer } from "@/components/navigation/SecondaryNavContainer";
+import { SecondaryNavToolButton } from "@/components/navigation/SecondaryNavToolButton";
+import { Search, ChevronLeft, Folder, FileText, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 
 interface DocumentsSecondaryNavProps {
   currentDocumentPath: string | null;
@@ -24,7 +27,11 @@ export function DocumentsSecondaryNav({
   onDocumentSelect,
 }: DocumentsSecondaryNavProps) {
   // Fetch folder structure
-  const { data: items = [], isLoading } = useQuery({
+  const {
+    data: items = [],
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["documents-nav", currentFolderPath],
     queryFn: () =>
       documentsService.getFolderStructure(currentFolderPath || undefined),
@@ -62,23 +69,27 @@ export function DocumentsSecondaryNav({
     onFolderChange(newPath);
   };
 
-  return (
-    <nav className="w-full md:w-[380px] bg-card flex flex-col min-w-0">
-      {/* Header */}
-      <div className="pt-4 md:pt-8 px-6 flex items-center justify-between mb-4">
-        <h2 className="font-bold" style={{ fontSize: 28 }}>
-          Documents
-        </h2>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-11 w-11 p-0 [&_svg]:!size-5"
-          onClick={() => onNavigate("/documents/search")}
-        >
-          <Search />
-        </Button>
-      </div>
+  const handleRefresh = () => {
+    refetch();
+    toast.success("Folder list refreshed");
+  };
 
+  return (
+    <SecondaryNavContainer
+      title="Documents"
+      tools={
+        <>
+          <SecondaryNavToolButton onClick={handleRefresh}>
+            <RefreshCw size={20} />
+          </SecondaryNavToolButton>
+          <SecondaryNavToolButton
+            onClick={() => onNavigate("/documents/search")}
+          >
+            <Search size={22} />
+          </SecondaryNavToolButton>
+        </>
+      }
+    >
       {/* Breadcrumbs */}
       {breadcrumbs.length > 0 && (
         <div className="px-6 pb-2">
@@ -185,6 +196,6 @@ export function DocumentsSecondaryNav({
           </div>
         )}
       </div>
-    </nav>
+    </SecondaryNavContainer>
   );
 }
