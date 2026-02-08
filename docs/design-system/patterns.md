@@ -266,11 +266,17 @@ function MyComponent() {
   // Mutation for deleting the item
   const deleteMutation = useMutation({
     mutationFn: () => myService.deleteItem(itemToDelete!.id),
+    onError: () => {
+      // Close dialog on error (error toast shown by service)
+      setDeleteDialogOpen(false);
+    },
     onSuccess: () => {
-      // Cleanup and navigation
-      queryClient.invalidateQueries({ queryKey: ["items"] });
+      // Close dialog immediately
       setDeleteDialogOpen(false);
       setItemToDelete(null);
+
+      // Cleanup and navigation
+      queryClient.invalidateQueries({ queryKey: ["items"] });
       navigate("/items"); // Or wherever appropriate
     },
   });
@@ -314,6 +320,7 @@ function MyComponent() {
         onCancel={handleCancelDelete}
         title="Delete Item"
         description={`Are you sure you want to delete "${itemToDelete?.name}"? This action cannot be undone.`}
+        isDeleting={deleteMutation.isPending}
       />
     </>
   );
@@ -328,6 +335,12 @@ function MyComponent() {
 - On confirm: execute the mutation and clean up state on success
 - On cancel: just close the dialog and reset state
 
+**Loading State:**
+- Pass `isDeleting={deleteMutation.isPending}` to the dialog
+- Delete button shows spinner and "Deleting..." text while pending
+- Both buttons are disabled during deletion to prevent multiple clicks
+- Dialog closes automatically on success or error
+
 **Description Format:**
 - Always include "This action cannot be undone." for destructive operations
 - Include the item name in the description for context
@@ -335,8 +348,8 @@ function MyComponent() {
 
 **Mutation Handling:**
 - Use React Query's `useMutation` for delete operations
+- Handle both `onError` and `onSuccess` to close dialog
 - Invalidate relevant queries on success
-- Clean up dialog state after successful deletion
 - Navigate away from deleted item's detail page
 
 ### Examples in Codebase

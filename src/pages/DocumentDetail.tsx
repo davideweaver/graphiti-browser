@@ -1,9 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
 import { documentsService } from "@/api/documentsService";
 import Container from "@/components/container/Container";
 import { ContainerToolButton } from "@/components/container/ContainerToolButton";
-import { Copy, ChevronLeft, FolderOpen, RefreshCw } from "lucide-react";
+import { Copy, ChevronLeft, FolderOpen, RefreshCw, Trash2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -12,13 +12,47 @@ import { toast } from "sonner";
 import { getSearchQuery } from "@/lib/documentsSearchStorage";
 import { setCurrentFolderPath } from "@/lib/documentsStorage";
 import { MarkdownLink } from "@/components/markdown/MarkdownLink";
+import DeleteConfirmationDialog from "@/components/dialogs/DeleteConfirmationDialog";
 import type { Components } from "react-markdown";
+import { useState } from "react";
 
 export default function DocumentDetail() {
   const params = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const documentPath = params["*"] || "";
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+  // Delete mutation (defined early so we can use isPending in query)
+  const deleteDocumentMutation = useMutation({
+    mutationFn: () => documentsService.deleteDocument(documentPath),
+    onError: (error) => {
+      console.error("Failed to delete document:", error);
+      setDeleteDialogOpen(false);
+    },
+    onSuccess: () => {
+      // Close dialog immediately
+      setDeleteDialogOpen(false);
+
+      // Remove document query from cache to prevent refetch
+      queryClient.removeQueries({ queryKey: ["document", documentPath] });
+
+      // Extract parent folder path
+      const pathSegments = documentPath.split("/");
+      const parentPath = pathSegments.slice(0, -1).join("/");
+
+      // Invalidate folder structure with correct query key to refresh secondary nav
+      queryClient.invalidateQueries({ queryKey: ["documents-nav", parentPath] });
+      queryClient.invalidateQueries({ queryKey: ["documents-nav"] });
+
+      toast.success("Document deleted successfully");
+
+      // Navigate immediately to documents root
+      navigate("/documents");
+    },
+  });
+
+  // Disable query during deletion to prevent 500 error
   const {
     data: document,
     isLoading,
@@ -26,7 +60,7 @@ export default function DocumentDetail() {
   } = useQuery({
     queryKey: ["document", documentPath],
     queryFn: () => documentsService.getDocument(documentPath),
-    enabled: !!documentPath,
+    enabled: !!documentPath && !deleteDocumentMutation.isPending,
   });
 
   // Check if we came from search
@@ -64,6 +98,18 @@ export default function DocumentDetail() {
   const handleRefresh = () => {
     refetch();
     toast.success("Document refreshed");
+  };
+
+  const handleOpenDeleteDialog = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    deleteDocumentMutation.mutate();
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false);
   };
 
   // Extract filename and strip .md extension
@@ -128,6 +174,14 @@ export default function DocumentDetail() {
           >
             <Copy className="h-4 w-4" />
           </ContainerToolButton>
+          <ContainerToolButton
+            size="icon"
+            onClick={handleOpenDeleteDialog}
+            disabled={!documentPath}
+            variant="destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+          </ContainerToolButton>
         </div>
       }
     >
@@ -176,6 +230,17 @@ export default function DocumentDetail() {
           <p className="text-muted-foreground">Document not found</p>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onDelete={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        title="Delete Document"
+        description={`Are you sure you want to delete "${fileName}"? This action cannot be undone.`}
+        isDeleting={deleteDocumentMutation.isPending}
+      />
     </Container>
   );
 }

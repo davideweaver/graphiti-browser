@@ -43,7 +43,18 @@ class DocumentsService {
         throw new Error(errorMessage);
       }
 
-      return await response.json();
+      // Handle empty responses (e.g., successful DELETE operations)
+      const contentType = response.headers.get("content-type");
+      if (!contentType?.includes("application/json")) {
+        return undefined as T;
+      }
+
+      const text = await response.text();
+      if (!text) {
+        return undefined as T;
+      }
+
+      return JSON.parse(text) as T;
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "An unknown error occurred";
@@ -138,6 +149,16 @@ class DocumentsService {
       {
         method: "POST",
         body: JSON.stringify(body),
+      }
+    );
+  }
+
+  async deleteDocument(path: string): Promise<void> {
+    const params = new URLSearchParams({ path });
+    return this.fetch<void>(
+      `/api/v1/obsidian/documents?${params}`,
+      {
+        method: "DELETE",
       }
     );
   }

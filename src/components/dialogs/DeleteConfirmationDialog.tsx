@@ -7,6 +7,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 type Props = {
   open: boolean;
@@ -15,6 +16,7 @@ type Props = {
   onCancel: () => void;
   title: string;
   description: string;
+  isDeleting?: boolean;
 };
 
 const DeleteConfirmationDialog: React.FC<Props> = ({
@@ -24,6 +26,7 @@ const DeleteConfirmationDialog: React.FC<Props> = ({
   onCancel,
   title,
   description,
+  isDeleting = false,
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -33,11 +36,12 @@ const DeleteConfirmationDialog: React.FC<Props> = ({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <div className="flex gap-2 justify-end mt-4">
-          <Button variant="outline" onClick={onCancel}>
+          <Button variant="outline" onClick={onCancel} disabled={isDeleting}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={onDelete}>
-            Delete
+          <Button variant="destructive" onClick={onDelete} disabled={isDeleting}>
+            {isDeleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isDeleting ? "Deleting..." : "Delete"}
           </Button>
         </div>
       </DialogContent>
