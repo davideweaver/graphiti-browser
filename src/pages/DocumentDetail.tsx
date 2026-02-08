@@ -3,15 +3,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import { documentsService } from "@/api/documentsService";
 import Container from "@/components/container/Container";
 import { ContainerToolButton } from "@/components/container/ContainerToolButton";
-import { Button } from "@/components/ui/button";
-import { Copy, ChevronLeft, FolderOpen } from "lucide-react";
+import { Copy, ChevronLeft, FolderOpen, RefreshCw } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import remarkWikiLinks from "@/lib/remarkWikiLinks";
 import { toast } from "sonner";
 import { getSearchQuery } from "@/lib/documentsSearchStorage";
-import { setCurrentFolderPath, clearLastDocumentPath } from "@/lib/documentsStorage";
+import { setCurrentFolderPath } from "@/lib/documentsStorage";
 import { MarkdownLink } from "@/components/markdown/MarkdownLink";
 import type { Components } from "react-markdown";
 
@@ -20,7 +19,11 @@ export default function DocumentDetail() {
   const navigate = useNavigate();
   const documentPath = params["*"] || "";
 
-  const { data: document, isLoading } = useQuery({
+  const {
+    data: document,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["document", documentPath],
     queryFn: () => documentsService.getDocument(documentPath),
     enabled: !!documentPath,
@@ -52,10 +55,15 @@ export default function DocumentDetail() {
       window.dispatchEvent(
         new CustomEvent("documents-folder-change", {
           detail: { folderPath: parentPath },
-        })
+        }),
       );
       toast.success("Showing folder in sidebar");
     }
+  };
+
+  const handleRefresh = () => {
+    refetch();
+    toast.success("Document refreshed");
   };
 
   // Extract filename and strip .md extension
@@ -70,11 +78,7 @@ export default function DocumentDetail() {
   // Custom link component for markdown rendering
   const markdownComponents: Components = {
     a: ({ href, children, ...props }) => (
-      <MarkdownLink
-        href={href}
-        currentDocumentPath={documentPath}
-        {...props}
-      >
+      <MarkdownLink href={href} currentDocumentPath={documentPath} {...props}>
         {children}
       </MarkdownLink>
     ),
@@ -85,7 +89,9 @@ export default function DocumentDetail() {
       title={fileName || "Document"}
       description={
         <div className="flex flex-col gap-1 min-w-0 w-full">
-          <span className="text-sm text-muted-foreground truncate block">{documentPath}</span>
+          <span className="text-sm text-muted-foreground truncate block">
+            {documentPath}
+          </span>
           {modifiedDate && (
             <span className="text-xs text-muted-foreground">
               Modified: {modifiedDate}
@@ -96,14 +102,18 @@ export default function DocumentDetail() {
       tools={
         <div className="flex items-center gap-2">
           {hasActiveSearch && (
-            <ContainerToolButton
-              size="sm"
-              onClick={handleBackToSearch}
-            >
+            <ContainerToolButton size="sm" onClick={handleBackToSearch}>
               <ChevronLeft className="h-4 w-4 md:mr-2" />
               <span className="hidden md:inline">Back</span>
             </ContainerToolButton>
           )}
+          <ContainerToolButton
+            size="icon"
+            onClick={handleRefresh}
+            disabled={!documentPath}
+          >
+            <RefreshCw className="h-4 w-4" />
+          </ContainerToolButton>
           <ContainerToolButton
             size="icon"
             onClick={handleShowInFolder}
@@ -122,19 +132,24 @@ export default function DocumentDetail() {
       }
     >
       {/* Frontmatter Display */}
-      {document?.frontmatter && Object.keys(document.frontmatter).length > 0 && (
-        <div className="mb-6 p-4 bg-accent/50 rounded-lg">
-          <h3 className="text-sm font-semibold mb-2">Metadata</h3>
-          <div className="grid gap-2 text-sm">
-            {Object.entries(document.frontmatter).map(([key, value]) => (
-              <div key={key} className="flex gap-2">
-                <span className="font-medium text-muted-foreground shrink-0">{key}:</span>
-                <span className="break-all overflow-hidden">{String(value)}</span>
-              </div>
-            ))}
+      {document?.frontmatter &&
+        Object.keys(document.frontmatter).length > 0 && (
+          <div className="mb-6 p-4 bg-accent/50 rounded-lg">
+            <h3 className="text-sm font-semibold mb-2">Metadata</h3>
+            <div className="grid gap-2 text-sm">
+              {Object.entries(document.frontmatter).map(([key, value]) => (
+                <div key={key} className="flex gap-2">
+                  <span className="font-medium text-muted-foreground shrink-0">
+                    {key}:
+                  </span>
+                  <span className="break-all overflow-hidden">
+                    {String(value)}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Document Content */}
       {isLoading ? (
