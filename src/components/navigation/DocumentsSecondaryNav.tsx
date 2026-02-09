@@ -26,9 +26,14 @@ export function DocumentsSecondaryNav({
   onNavigate,
   onDocumentSelect,
 }: DocumentsSecondaryNavProps) {
+  // Folders to hide from the navigation (configured via environment variable)
+  const HIDDEN_FOLDERS = import.meta.env.VITE_HIDDEN_FOLDERS
+    ? import.meta.env.VITE_HIDDEN_FOLDERS.split(",").map((f: string) => f.trim()).filter(Boolean)
+    : [];
+
   // Fetch folder structure
   const {
-    data: items = [],
+    data: rawItems = [],
     isLoading,
     refetch,
   } = useQuery({
@@ -36,6 +41,13 @@ export function DocumentsSecondaryNav({
     queryFn: () =>
       documentsService.getFolderStructure(currentFolderPath || undefined),
   });
+
+  // Filter out hidden folders (only if HIDDEN_FOLDERS is configured)
+  const items = HIDDEN_FOLDERS.length > 0
+    ? rawItems.filter(
+        (item) => item.type !== "folder" || !HIDDEN_FOLDERS.includes(item.name)
+      )
+    : rawItems;
 
   // Build breadcrumbs (excluding "Documents" which is our root)
   const breadcrumbs = currentFolderPath

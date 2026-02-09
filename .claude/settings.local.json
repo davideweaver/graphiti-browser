@@ -82,7 +82,9 @@
       "Bash(__NEW_LINE_816398e4708d161b__ cat /tmp/project-d0961452-checklist.txt)",
       "Bash(1 << 'EOF'\nfrom falkordb import FalkorDB\nclient = FalkorDB\\(host='falkordb.appkit.local', port=6379\\)\ngraph = client.select_graph\\('dave-weaver'\\)\n\nchecks = []\n\n# 1. Project by UUID\nr = graph.query\\('MATCH \\(p:Project {uuid: \"d0961452-2445-424d-9eea-c49d84d62f02\"}\\) RETURN count\\(p\\)'\\)\nchecks.append\\(\\(\"Project node\", r.result_set[0][0] == 0\\)\\)\n\n# 2. Sessions with project_name tmp\nr = graph.query\\('MATCH \\(s:Session {project_name: \"tmp\"}\\) RETURN count\\(s\\)'\\)\nchecks.append\\(\\(\"Sessions \\(project_name=tmp\\)\", r.result_set[0][0] == 0\\)\\)\n\n# 3. Episodes with project_name tmp  \nr = graph.query\\('MATCH \\(e:Episodic {project_name: \"tmp\"}\\) RETURN count\\(e\\)'\\)\nchecks.append\\(\\(\"Episodes \\(project_name=tmp\\)\", r.result_set[0][0] == 0\\)\\)\n\n# 4. Orphaned session\nr = graph.query\\('MATCH \\(s:Session {uuid: \"94e7a9ae-d833-467f-acad-f6f91664b87b\"}\\) RETURN count\\(s\\)'\\)\norphan_session = r.result_set[0][0]\nchecks.append\\(\\(\"Orphaned session\", orphan_session == 0\\)\\)\n\n# 5. Orphaned episode\nr = graph.query\\('MATCH \\(e:Episodic {uuid: \"8847e20d-308d-4633-b64d-f2aee9d3c8ce\"}\\) RETURN count\\(e\\)'\\)\norphan_episode = r.result_set[0][0]\nchecks.append\\(\\(\"Orphaned episode\", orphan_episode == 0\\)\\)\n\nprint\\(\"\\\\n\" + \"=\"*60\\)\nprint\\(\"DELETION VERIFICATION RESULTS\"\\)\nprint\\(\"=\"*60\\)\nfor name, passed in checks:\n    status = \"✅ PASS\" if passed else \"❌ FAIL\"\n    print\\(f\"{status} - {name}\"\\)\n\nall_passed = all\\(p for _, p in checks\\)\nprint\\(\"=\"*60\\)\nif all_passed:\n    print\\(\"✅ COMPLETE CLEAN DELETION - NO ERRORS\"\\)\nelse:\n    print\\(\"⚠️  PARTIAL DELETION - Some items remain\"\\)\n    if not checks[3][1] or not checks[4][1]:\n        print\\(\"   \\(Orphaned session/episode may need manual cleanup\\)\"\\)\nprint\\(\"=\"*60\\)\nEOF)",
       "Bash(wc:*)",
-      "WebFetch(domain:pqina.nl)"
+      "WebFetch(domain:pqina.nl)",
+      "Bash(npm ls:*)",
+      "Bash(test:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
