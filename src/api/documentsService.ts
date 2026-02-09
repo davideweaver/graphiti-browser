@@ -70,12 +70,14 @@ class DocumentsService {
   async listDocuments(
     folder?: string,
     limit = 100,
-    offset = 0
+    offset = 0,
+    recursive = true
   ): Promise<DocumentListResponse> {
     const params = new URLSearchParams();
     if (folder) params.append("folder", folder);
     params.append("limit", limit.toString());
     params.append("offset", offset.toString());
+    params.append("recursive", recursive.toString());
 
     return this.fetch<DocumentListResponse>(
       `/api/v1/obsidian/documents?${params}`
@@ -90,50 +92,40 @@ class DocumentsService {
   }
 
   async getFolderStructure(folder?: string): Promise<NavigationItem[]> {
-    // Fetch documents with high limit to get complete folder view
-    const response = await this.listDocuments(folder, 500);
+    // Use non-recursive mode to efficiently get immediate children only
+    const response = await this.listDocuments(folder, 1000, 0, false);
 
-    // Extract immediate children from document paths
-    const folderMap = new Map<string, number>(); // folder name -> document count
-    const documentItems: DocumentItem[] = [];
-
-    const currentPathSegments = folder ? folder.split("/").length : 0;
-
-    for (const doc of response.documents) {
-      const pathSegments = doc.path.split("/");
-
-      // Extract the next segment after current folder
-      if (pathSegments.length > currentPathSegments + 1) {
-        // This is a nested item - extract folder
-        const folderName = pathSegments[currentPathSegments];
-        folderMap.set(folderName, (folderMap.get(folderName) || 0) + 1);
-      } else if (pathSegments.length === currentPathSegments + 1) {
-        // This is a direct child document
-        const fileName = pathSegments[pathSegments.length - 1];
-        documentItems.push({
-          name: fileName,
-          path: doc.path,
-          type: "document",
-          modified: doc.modified,
-        });
-      }
-    }
-
-    // Build folder items
-    const folderItems: FolderItem[] = Array.from(folderMap.entries())
-      .map(([name, count]) => ({
-        name,
-        path: folder ? `${folder}/${name}` : name,
-        type: "folder" as const,
-        documentCount: count,
-      }))
+    // Build folder items from API response
+    const folderItems: FolderItem[] = (response.folders || [])
+      .map((folderPath) => {
+        const segments = folderPath.split("/");
+        const name = segments[segments.length - 1];
+        return {
+          name,
+          path: folderPath,
+          type: "folder" as const,
+          // Note: API doesn't return document count per folder in non-recursive mode
+          // We could add this later with a separate API call if needed
+        };
+      })
       .sort((a, b) => a.name.localeCompare(b.name));
 
-    // Sort documents by modified date (newest first)
-    documentItems.sort(
-      (a, b) =>
-        new Date(b.modified).getTime() - new Date(a.modified).getTime()
-    );
+    // Build document items from API response
+    const documentItems: DocumentItem[] = response.documents
+      .map((doc) => {
+        const segments = doc.path.split("/");
+        const name = segments[segments.length - 1];
+        return {
+          name,
+          path: doc.path,
+          type: "document" as const,
+          modified: doc.modified,
+        };
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.modified).getTime() - new Date(a.modified).getTime()
+      );
 
     // Return folders first, then documents
     return [...folderItems, ...documentItems];

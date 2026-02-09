@@ -219,7 +219,7 @@ export default function DocumentDetail() {
       ) : document ? (
         <article className="prose prose-sm dark:prose-invert max-w-none">
           <ReactMarkdown
-            remarkPlugins={[remarkWikiLinks, remarkGfm, remarkBreaks]}
+            remarkPlugins={[remarkGfm, remarkBreaks, remarkWikiLinks]}
             components={markdownComponents}
           >
             {document.content}

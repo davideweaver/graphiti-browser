@@ -7,6 +7,7 @@ export interface ObsidianDocument {
 
 export interface DocumentListResponse {
   documents: ObsidianDocument[];
+  folders?: string[]; // Only present when recursive=false
   total: number;
   hasMore: boolean;
 }

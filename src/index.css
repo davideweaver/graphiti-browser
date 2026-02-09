@@ -173,6 +173,15 @@
   font-weight: 400 !important;
 }
 
+/* Remove backticks from code pseudo-elements (added by Tailwind Typography) */
+.prose :not(pre) > code::before {
+  content: none !important;
+}
+
+.prose :not(pre) > code::after {
+  content: none !important;
+}
+
 /* Mobile navigation sheet - force full height on iOS */
 .mobile-nav-sheet {
   top: 0 !important;
