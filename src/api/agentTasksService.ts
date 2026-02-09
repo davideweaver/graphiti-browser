@@ -104,6 +104,34 @@ class AgentTasksService {
     }
   }
 
+  async getRecentRuns(limit: number = 50): Promise<Array<TaskExecution & { taskId: string; taskName: string }>> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/scheduled-tasks/executions?limit=${limit}`
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch task history: ${response.statusText}`
+        );
+      }
+
+      const data = await response.json();
+      return data.executions || [];
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch task history";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
   async getScratchpad(id: string): Promise<{ path: string; content: unknown; isEmpty: boolean }> {
     try {
       const response = await fetch(

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { agentTasksService } from "@/api/agentTasksService";
 import { Input } from "@/components/ui/input";
@@ -9,17 +9,19 @@ import {
 } from "@/components/navigation/SecondaryNavItemContent";
 import { SecondaryNavContainer } from "@/components/navigation/SecondaryNavContainer";
 import { Badge } from "@/components/ui/badge";
-import { Search } from "lucide-react";
+import { Search, Clock } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 
 interface AgentTasksSecondaryNavProps {
   selectedTaskId: string | null;
+  currentView: "history" | "task";
   onNavigate: (path: string) => void;
   onTaskSelect?: (path: string) => void; // Optional: for user clicks that should close sidebar
 }
 
 export function AgentTasksSecondaryNav({
   selectedTaskId,
+  currentView,
   onNavigate,
   onTaskSelect,
 }: AgentTasksSecondaryNavProps) {
@@ -39,15 +41,29 @@ export function AgentTasksSecondaryNav({
     task.name.toLowerCase().includes(debouncedSearch.toLowerCase()),
   );
 
-  // Auto-select first task if none selected
-  useEffect(() => {
-    if (!selectedTaskId && filteredTasks.length > 0 && !isLoading) {
-      onNavigate(`/agent-tasks/${filteredTasks[0].id}`);
+  const handleNavigation = (path: string) => {
+    if (onTaskSelect) {
+      onTaskSelect(path);
+    } else {
+      onNavigate(path);
     }
-  }, [selectedTaskId, filteredTasks, isLoading, onNavigate]);
+  };
 
   return (
     <SecondaryNavContainer title="Agent Tasks">
+      {/* Primary Menu Items */}
+      <div className="px-4 pb-4 space-y-1">
+        <SecondaryNavItem
+          isActive={currentView === "history"}
+          onClick={() => handleNavigation("/agent-tasks/history")}
+        >
+          <div className="flex items-center gap-2 w-full">
+            <Clock className="h-4 w-4" />
+            <SecondaryNavItemTitle>Task History</SecondaryNavItemTitle>
+          </div>
+        </SecondaryNavItem>
+      </div>
+
       {/* Search */}
       <div className="px-6 pb-4">
         <div className="relative">
@@ -84,15 +100,7 @@ export function AgentTasksSecondaryNav({
                 <SecondaryNavItem
                   key={task.id}
                   isActive={isActive}
-                  onClick={() => {
-                    const path = `/agent-tasks/${task.id}`;
-                    // Use onTaskSelect for user clicks (closes sidebar), or onNavigate as fallback
-                    if (onTaskSelect) {
-                      onTaskSelect(path);
-                    } else {
-                      onNavigate(path);
-                    }
-                  }}
+                  onClick={() => handleNavigation(`/agent-tasks/${task.id}`)}
                 >
                   <div className="flex flex-col items-start w-full gap-1">
                     <div className="flex items-start gap-2 w-full">

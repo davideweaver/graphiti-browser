@@ -65,7 +65,7 @@ export function TaskExecutionSheet({
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Clock className="h-4 w-4" />
                   <span className="text-sm font-mono">
-                    {execution.durationMs}ms
+                    {(execution.durationMs / 1000).toFixed(1)}s
                   </span>
                 </div>
               </div>

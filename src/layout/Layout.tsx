@@ -187,6 +187,14 @@ const Layout = () => {
   const selectedTaskId = params.id || null;
   const isAgentTasksSection = activePrimary === "agent-tasks";
 
+  // Determine current view for Agent Tasks section
+  const getAgentTasksView = (): "history" | "task" => {
+    if (pathname === "/agent-tasks/history") return "history";
+    if (selectedTaskId) return "task";
+    return "history"; // Default
+  };
+  const agentTasksView = getAgentTasksView();
+
   // Save folder path to localStorage whenever it changes
   useEffect(() => {
     saveCurrentFolderPath(currentFolderPath);
@@ -270,6 +278,7 @@ const Layout = () => {
         ) : isAgentTasksSection ? (
           <AgentTasksSecondaryNav
             selectedTaskId={selectedTaskId}
+            currentView={agentTasksView}
             onNavigate={handleNavigate}
           />
         ) : (
@@ -321,6 +330,7 @@ const Layout = () => {
               ) : isAgentTasksSection ? (
                 <AgentTasksSecondaryNav
                   selectedTaskId={selectedTaskId}
+                  currentView={agentTasksView}
                   onNavigate={() => {}}
                 />
               ) : (
@@ -360,6 +370,7 @@ const Layout = () => {
             ) : isAgentTasksSection ? (
               <AgentTasksSecondaryNav
                 selectedTaskId={selectedTaskId}
+                currentView={agentTasksView}
                 onNavigate={handleNavigate}
                 onTaskSelect={handleMobileNavigate}
               />

@@ -259,7 +259,7 @@ export default function AgentTaskDetail() {
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Clock className="h-4 w-4" />
-                      <span className="text-xs">{execution.durationMs}ms</span>
+                      <span className="text-xs">{(execution.durationMs / 1000).toFixed(1)}s</span>
                     </div>
                   </div>
                 ))}
