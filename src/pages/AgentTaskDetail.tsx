@@ -246,9 +246,9 @@ export default function AgentTaskDetail() {
                           {formatTimestamp(execution.timestamp)}
                         </span>
                       </div>
-                      {execution.message && (
+                      {(execution.normalizedResult?.display.summary || execution.message) && (
                         <p className="text-sm text-muted-foreground pl-6 truncate max-w-2xl">
-                          {execution.message}
+                          {execution.normalizedResult?.display.summary || execution.message}
                         </p>
                       )}
                       {execution.error && (

@@ -7,9 +7,8 @@ import {
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2, XCircle, Clock } from "lucide-react";
-import { formatTimestamp } from "@/lib/cronFormatter";
 import type { TaskExecution } from "@/types/agentTasks";
+import { TaskExecutionDisplay } from "./TaskExecutionDisplay";
 
 interface TaskExecutionSheetProps {
   execution: TaskExecution | null;
@@ -27,53 +26,31 @@ export function TaskExecutionSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto w-full sm:max-w-xl">
-        <SheetHeader>
+        <SheetHeader className="-mt-0 pt-1">
           <SheetTitle>Execution Details</SheetTitle>
-          <SheetDescription>
-            {formatTimestamp(execution.timestamp)}
-          </SheetDescription>
         </SheetHeader>
 
         <div className="mt-6 space-y-4">
-          {/* Status */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Status</span>
-                {execution.success ? (
-                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                    <CheckCircle2 className="h-5 w-5" />
+          {/* Status - Only show standalone for legacy executions */}
+          {!execution.normalizedResult && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Status</span>
+                  {execution.success ? (
                     <Badge variant="default" className="bg-green-600">
                       Success
                     </Badge>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
-                    <XCircle className="h-5 w-5" />
+                  ) : (
                     <Badge variant="destructive">Failed</Badge>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Duration */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Duration</span>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Clock className="h-4 w-4" />
-                  <span className="text-sm font-mono">
-                    {(execution.durationMs / 1000).toFixed(1)}s
-                  </span>
+                  )}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Message */}
-          {execution.message && (
+          {/* Message - Only show if no normalized result (legacy executions) */}
+          {execution.message && !execution.normalizedResult && (
             <Card>
               <CardContent className="pt-6">
                 <div className="space-y-2">
@@ -102,18 +79,9 @@ export function TaskExecutionSheet({
             </Card>
           )}
 
-          {/* Additional Data */}
-          {execution.data && Object.keys(execution.data).length > 0 && (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-2">
-                  <span className="text-sm font-medium">Additional Data</span>
-                  <pre className="text-xs bg-muted p-3 rounded-md overflow-auto whitespace-pre-wrap break-words">
-                    {JSON.stringify(execution.data, null, 2)}
-                  </pre>
-                </div>
-              </CardContent>
-            </Card>
+          {/* Task Execution Display - New normalized format */}
+          {(execution.normalizedResult || execution.data) && (
+            <TaskExecutionDisplay execution={execution} />
           )}
 
           {/* Timestamp */}
