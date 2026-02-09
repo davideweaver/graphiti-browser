@@ -3,18 +3,15 @@ import { useParams, useNavigate } from "react-router-dom";
 import { documentsService } from "@/api/documentsService";
 import Container from "@/components/container/Container";
 import { ContainerToolButton } from "@/components/container/ContainerToolButton";
-import { Copy, ChevronLeft, FolderOpen, RefreshCw, Trash2 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import remarkBreaks from "remark-breaks";
-import remarkWikiLinks from "@/lib/remarkWikiLinks";
+import { Copy, ChevronLeft, FolderOpen, RefreshCw, Trash2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { getSearchQuery } from "@/lib/documentsSearchStorage";
 import { setCurrentFolderPath } from "@/lib/documentsStorage";
-import { MarkdownLink } from "@/components/markdown/MarkdownLink";
 import DeleteConfirmationDialog from "@/components/dialogs/DeleteConfirmationDialog";
-import type { Components } from "react-markdown";
 import { useState } from "react";
+import { MarkdownViewer, ExcalidrawViewer } from "@/components/document-viewers";
+import { getFileType, DocumentFileType } from "@/lib/fileTypeUtils";
+import { isExcalidrawMarkdown, parseExcalidrawMarkdown } from "@/lib/excalidrawParser";
 
 export default function DocumentDetail() {
   const params = useParams();
@@ -66,11 +63,43 @@ export default function DocumentDetail() {
   // Check if we came from search
   const hasActiveSearch = !!getSearchQuery();
 
+  // Detect file type
+  const fileType = getFileType(documentPath);
+
   const handleCopyContent = () => {
     if (document?.content) {
-      navigator.clipboard.writeText(document.content);
-      toast.success("Content copied to clipboard");
+      let contentToCopy = document.content;
+      let contentType = "content";
+
+      // For Excalidraw files, copy the decompressed JSON
+      if (fileType === DocumentFileType.EXCALIDRAW) {
+        try {
+          if (isExcalidrawMarkdown(document.content)) {
+            const parsed = parseExcalidrawMarkdown(document.content);
+            contentToCopy = JSON.stringify(parsed, null, 2);
+            contentType = "Excalidraw JSON";
+          } else {
+            // Already JSON, just prettify it
+            const parsed = JSON.parse(document.content);
+            contentToCopy = JSON.stringify(parsed, null, 2);
+            contentType = "Excalidraw JSON";
+          }
+        } catch (error) {
+          // If parsing fails, copy raw content
+          console.error("Failed to parse Excalidraw content:", error);
+          contentType = "raw content";
+        }
+      }
+
+      navigator.clipboard.writeText(contentToCopy);
+      toast.success(`${contentType} copied to clipboard`);
     }
+  };
+
+  const handleExcalidrawError = (error: Error) => {
+    toast.error("Failed to load Excalidraw diagram", {
+      description: error.message,
+    });
   };
 
   const handleBackToSearch = () => {
@@ -112,23 +141,23 @@ export default function DocumentDetail() {
     setDeleteDialogOpen(false);
   };
 
-  // Extract filename and strip .md extension
+  // Extract filename and clean up extension
   const pathSegments = documentPath.split("/");
-  const fileName = pathSegments[pathSegments.length - 1].replace(/\.md$/, "");
+  const rawFileName = pathSegments[pathSegments.length - 1];
+  let fileName = rawFileName;
+
+  if (fileType === DocumentFileType.EXCALIDRAW) {
+    // Remove .excalidraw.md or .excalidraw extension
+    fileName = rawFileName.replace(/\.excalidraw\.md$/, "").replace(/\.excalidraw$/, "");
+  } else if (fileType === DocumentFileType.MARKDOWN) {
+    // Remove .md extension for markdown files
+    fileName = rawFileName.replace(/\.md$/, "");
+  }
 
   // Format modified date
   const modifiedDate = document?.modified
     ? new Date(document.modified).toLocaleString()
     : "";
-
-  // Custom link component for markdown rendering
-  const markdownComponents: Components = {
-    a: ({ href, children, ...props }) => (
-      <MarkdownLink href={href} currentDocumentPath={documentPath} {...props}>
-        {children}
-      </MarkdownLink>
-    ),
-  };
 
   return (
     <Container
@@ -185,8 +214,9 @@ export default function DocumentDetail() {
         </div>
       }
     >
-      {/* Frontmatter Display */}
-      {document?.frontmatter &&
+      {/* Frontmatter Display - hide for Excalidraw files */}
+      {fileType !== DocumentFileType.EXCALIDRAW &&
+        document?.frontmatter &&
         Object.keys(document.frontmatter).length > 0 && (
           <div className="mb-6 p-4 bg-accent/50 rounded-lg">
             <h3 className="text-sm font-semibold mb-2">Metadata</h3>
@@ -217,14 +247,28 @@ export default function DocumentDetail() {
           ))}
         </div>
       ) : document ? (
-        <article className="prose prose-sm dark:prose-invert max-w-none">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm, remarkBreaks, remarkWikiLinks]}
-            components={markdownComponents}
-          >
-            {document.content}
-          </ReactMarkdown>
-        </article>
+        <>
+          {fileType === DocumentFileType.MARKDOWN && (
+            <MarkdownViewer content={document.content} documentPath={documentPath} />
+          )}
+          {fileType === DocumentFileType.EXCALIDRAW && (
+            <ExcalidrawViewer
+              content={document.content}
+              onError={handleExcalidrawError}
+            />
+          )}
+          {fileType === DocumentFileType.UNKNOWN && (
+            <div className="flex items-center justify-center h-96 border rounded-lg">
+              <div className="text-center p-6">
+                <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-lg font-semibold mb-2">Unsupported File Type</p>
+                <p className="text-sm text-muted-foreground">
+                  This file type cannot be previewed in the browser.
+                </p>
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         <div className="text-center py-12">
           <p className="text-muted-foreground">Document not found</p>

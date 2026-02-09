@@ -8,8 +8,9 @@ import {
 } from "@/components/navigation/SecondaryNavItemContent";
 import { SecondaryNavContainer } from "@/components/navigation/SecondaryNavContainer";
 import { SecondaryNavToolButton } from "@/components/navigation/SecondaryNavToolButton";
-import { Search, ChevronLeft, Folder, FileText, RefreshCw } from "lucide-react";
+import { Search, ChevronLeft, Folder, FileText, RefreshCw, PenTool } from "lucide-react";
 import { toast } from "sonner";
+import { getFileType, DocumentFileType } from "@/lib/fileTypeUtils";
 
 interface DocumentsSecondaryNavProps {
   currentDocumentPath: string | null;
@@ -187,16 +188,32 @@ export function DocumentsSecondaryNav({
                 );
               }
 
+              // Determine icon based on file type
+              const documentFileType = getFileType(item.path);
+              const DocumentIcon = documentFileType === DocumentFileType.EXCALIDRAW
+                ? PenTool
+                : FileText;
+
+              // Clean up display name
+              let displayName = item.name;
+              if (documentFileType === DocumentFileType.EXCALIDRAW) {
+                // Remove .excalidraw.md or .excalidraw extension
+                displayName = item.name.replace(/\.excalidraw\.md$/, "").replace(/\.excalidraw$/, "");
+              } else if (documentFileType === DocumentFileType.MARKDOWN) {
+                // Remove .md extension for markdown files
+                displayName = item.name.replace(/\.md$/, "");
+              }
+
               return (
                 <SecondaryNavItem
                   key={item.path}
                   isActive={isActiveDocument}
                   onClick={() => handleDocumentClick(item.path)}
                 >
-                  <FileText className="h-4 w-4 mr-3 flex-shrink-0 text-muted-foreground" />
+                  <DocumentIcon className="h-4 w-4 mr-3 flex-shrink-0 text-muted-foreground" />
                   <div className="flex flex-col items-start min-w-0 flex-1">
                     <SecondaryNavItemTitle>
-                      {item.name.replace(/\.md$/, "")}
+                      {displayName}
                     </SecondaryNavItemTitle>
                     <SecondaryNavItemSubtitle>
                       {new Date(item.modified).toLocaleDateString()}

@@ -84,7 +84,9 @@
       "Bash(wc:*)",
       "WebFetch(domain:pqina.nl)",
       "Bash(npm ls:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "WebFetch(domain:docs.excalidraw.com)",
+      "Bash(npm uninstall:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
