@@ -1,24 +1,34 @@
 import type { Session } from "@/types/graphiti";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { format, formatDistanceToNow } from "date-fns";
-import { Calendar, FolderKanban, MessageSquare } from "lucide-react";
+import { Calendar, FolderKanban, MessageSquare, Info } from "lucide-react";
 
 interface SessionCardProps {
   session: Session;
   onSessionClick?: (sessionId: string) => void;
+  onInfoClick?: (sessionId: string) => void;
 }
 
-export function SessionCard({ session, onSessionClick }: SessionCardProps) {
+export function SessionCard({ session, onSessionClick, onInfoClick }: SessionCardProps) {
   const navigate = useNavigate();
 
   const handleClick = () => {
     if (onSessionClick) {
-      // Pass uuid for consistent graph navigation
-      onSessionClick(session.uuid);
+      // Custom click handler (e.g., for selection)
+      onSessionClick(session.session_id);
     } else {
-      navigate(`/session/${session.session_id}`);
+      // Default: navigate to session detail page
+      navigate(`/memory/sessions/${session.session_id}`);
+    }
+  };
+
+  const handleInfoClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onInfoClick) {
+      onInfoClick(session.uuid);
     }
   };
 
@@ -61,12 +71,24 @@ export function SessionCard({ session, onSessionClick }: SessionCardProps) {
                   {session.session_id}
                 </p>
               </div>
-              <Badge
-                variant="secondary"
-                className={getSessionBgColor()}
-              >
-                {session.episode_count} {session.episode_count === 1 ? 'episode' : 'episodes'}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant="secondary"
+                  className={getSessionBgColor()}
+                >
+                  {session.episode_count} {session.episode_count === 1 ? 'episode' : 'episodes'}
+                </Badge>
+                {onInfoClick && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={handleInfoClick}
+                  >
+                    <Info className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Summary or first episode preview */}

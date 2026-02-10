@@ -26,12 +26,48 @@ import type { Fact } from "@/types/graphiti";
 type SearchMode = "facts" | "sessions";
 type NodeType = "fact" | "session" | "entity";
 
+interface SessionSearchState {
+  searchQuery: string;
+  page: number;
+  limit: number;
+  sortOrder: 'asc' | 'desc';
+  performed: boolean;
+}
+
+const STORAGE_KEY = 'graphiti-session-search-state';
+
+// Helper functions for localStorage
+const loadSessionSearchState = (groupId: string): SessionSearchState | null => {
+  try {
+    const stored = localStorage.getItem(`${STORAGE_KEY}-${groupId}`);
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
+  }
+};
+
+const saveSessionSearchState = (groupId: string, state: SessionSearchState) => {
+  try {
+    localStorage.setItem(`${STORAGE_KEY}-${groupId}`, JSON.stringify(state));
+  } catch {
+    // Ignore storage errors
+  }
+};
+
+const clearSessionSearchState = (groupId: string) => {
+  try {
+    localStorage.removeItem(`${STORAGE_KEY}-${groupId}`);
+  } catch {
+    // Ignore storage errors
+  }
+};
+
 export default function Search() {
   const { groupId } = useGraphiti();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Get mode from URL or default to "facts"
-  const urlMode = (searchParams.get("mode") || "facts") as SearchMode;
+  // Get mode from URL or default to "sessions"
+  const urlMode = (searchParams.get("mode") || "sessions") as SearchMode;
   const [mode, setMode] = useState<SearchMode>(urlMode);
 
   // Facts mode state
@@ -46,81 +82,70 @@ export default function Search() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [nodeDetailOpen, setNodeDetailOpen] = useState(false);
 
-  // Sessions mode state
-  const urlPage = parseInt(searchParams.get("page") || "1", 10);
-  const urlSessionSearch = searchParams.get("search") || "";
-  const urlSortOrder = (searchParams.get("sort") || "desc") as 'asc' | 'desc';
-  const [sessionSearchInput, setSessionSearchInput] = useState(urlSessionSearch);
-  const [sessionSearchQuery, setSessionSearchQuery] = useState(urlSessionSearch);
-  const [sessionSearchPerformed, setSessionSearchPerformed] = useState(urlSessionSearch !== "" || urlPage > 1);
-  const [page, setPage] = useState(urlPage);
-  const [sessionLimit, setSessionLimit] = useState(urlLimit);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(urlSortOrder);
+  // Sessions mode state - load from localStorage if available
+  const savedState = loadSessionSearchState(groupId);
+  const [sessionSearchInput, setSessionSearchInput] = useState(savedState?.searchQuery || "");
+  const [sessionSearchQuery, setSessionSearchQuery] = useState(savedState?.searchQuery || "");
+  const [sessionSearchPerformed, setSessionSearchPerformed] = useState(savedState?.performed || false);
+  const [page, setPage] = useState(savedState?.page || 1);
+  const [sessionLimit, setSessionLimit] = useState(savedState?.limit || 10);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(savedState?.sortOrder || 'desc');
   const [cursors, setCursors] = useState<(string | undefined)[]>([undefined]);
 
-  // Update URL params helper
-  const updateParams = useCallback((updates: Record<string, string | number>) => {
-    const newParams = new URLSearchParams(searchParams);
-    Object.entries(updates).forEach(([key, value]) => {
-      // Remove default values to keep URL clean
-      if ((key === "mode" && value === "facts") ||
-          (key === "page" && value === 1) ||
-          (key === "sort" && value === "desc") ||
-          (key === "limit" && value === 10) ||
-          value === "") {
-        newParams.delete(key);
-      } else {
-        newParams.set(key, String(value));
-      }
-    });
-    setSearchParams(newParams);
-  }, [searchParams, setSearchParams]);
-
-  // Sync state with URL params
+  // Save session search state to localStorage when it changes
   useEffect(() => {
-    const urlMode = (searchParams.get("mode") || "facts") as SearchMode;
-    const urlQuery = searchParams.get("q") || "";
-    const urlLimit = parseInt(searchParams.get("limit") || "10", 10);
-    const urlPage = parseInt(searchParams.get("page") || "1", 10);
-    const urlSortOrder = (searchParams.get("sort") || "desc") as 'asc' | 'desc';
-    const urlSessionSearch = searchParams.get("search") || "";
-    const hasSessionParams = searchParams.has("search") || urlPage > 1;
-
-    setMode(urlMode);
-    setSearchInput(urlQuery);
-    setSearchQuery(urlQuery);
-    setLimit(urlLimit);
-    setSessionLimit(urlLimit);
-    setPage(urlPage);
-    setSortOrder(urlSortOrder);
-    setSessionSearchInput(urlSessionSearch);
-    setSessionSearchQuery(urlSessionSearch);
-    setSessionSearchPerformed(hasSessionParams);
-  }, [searchParams]);
+    if (sessionSearchPerformed) {
+      saveSessionSearchState(groupId, {
+        searchQuery: sessionSearchQuery,
+        page,
+        limit: sessionLimit,
+        sortOrder,
+        performed: sessionSearchPerformed,
+      });
+    }
+  }, [groupId, sessionSearchQuery, page, sessionLimit, sortOrder, sessionSearchPerformed]);
 
   // Reset cursors when sort or limit changes
   useEffect(() => {
     setCursors([undefined]);
   }, [sortOrder, sessionLimit]);
 
-  // Reset everything when graph changes
+  // Load state from localStorage when graph changes
   useEffect(() => {
-    setCursors([undefined]);
-    setPage(1);
-    setSearchQuery("");
-    setSearchInput("");
-    setSessionSearchQuery("");
-    setSessionSearchInput("");
-    setSessionSearchPerformed(false);
-    // Clear URL params when switching graphs
-    setSearchParams(new URLSearchParams());
+    const savedState = loadSessionSearchState(groupId);
+    if (savedState) {
+      setSessionSearchQuery(savedState.searchQuery);
+      setSessionSearchInput(savedState.searchQuery);
+      setSessionSearchPerformed(savedState.performed);
+      setPage(savedState.page);
+      setSessionLimit(savedState.limit);
+      setSortOrder(savedState.sortOrder);
+      setCursors([undefined]);
+    } else {
+      // Reset to defaults if no saved state
+      setCursors([undefined]);
+      setPage(1);
+      setSearchQuery("");
+      setSearchInput("");
+      setSessionSearchQuery("");
+      setSessionSearchInput("");
+      setSessionSearchPerformed(false);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupId]);
 
   // Handle mode change
   const handleModeChange = (newMode: string) => {
     setMode(newMode as SearchMode);
-    updateParams({ mode: newMode, page: 1 });
+    setSearchParams(currentParams => {
+      const newParams = new URLSearchParams(currentParams);
+      if (newMode === "sessions") {
+        newParams.delete("mode");
+      } else {
+        newParams.set("mode", newMode);
+      }
+      return newParams;
+    });
     setCursors([undefined]);
   };
 
@@ -130,7 +155,6 @@ export default function Search() {
     if (searchInput.trim()) {
       const query = searchInput.trim();
       setSearchQuery(query);
-      updateParams({ q: query, limit });
     }
   };
 
@@ -138,9 +162,6 @@ export default function Search() {
   const handleFactsLimitChange = (value: string) => {
     const newLimit = parseInt(value, 10);
     setLimit(newLimit);
-    if (searchQuery) {
-      updateParams({ q: searchQuery, limit: newLimit });
-    }
   };
 
   // Sessions mode: Search handler
@@ -150,7 +171,6 @@ export default function Search() {
     setSessionSearchPerformed(true);
     setPage(1);
     setCursors([undefined]);
-    updateParams({ search: sessionSearchInput.trim(), page: 1, limit: sessionLimit });
   };
 
   // Sessions mode: Limit change
@@ -159,7 +179,6 @@ export default function Search() {
     setSessionLimit(newLimit);
     setPage(1);
     setCursors([undefined]);
-    updateParams({ limit: newLimit, page: 1 });
   };
 
   // Open node detail sheet (works for facts, sessions, entities)
@@ -211,17 +230,13 @@ export default function Search() {
   // Sessions mode: Pagination handlers
   const handlePreviousPage = () => {
     if (page > 1) {
-      const newPage = page - 1;
-      setPage(newPage);
-      updateParams({ page: newPage });
+      setPage(page - 1);
     }
   };
 
   const handleNextPage = () => {
     if (sessionsQuery.data?.has_more) {
-      const newPage = page + 1;
-      setPage(newPage);
-      updateParams({ page: newPage });
+      setPage(page + 1);
     }
   };
 
@@ -230,7 +245,6 @@ export default function Search() {
     setSortOrder(value as 'asc' | 'desc');
     setPage(1);
     setCursors([undefined]);
-    updateParams({ sort: value, page: 1 });
   };
 
   // Determine loading and content states
@@ -256,8 +270,8 @@ export default function Search() {
         <div className="flex items-center justify-between gap-4">
           <Segments value={mode} onValueChange={handleModeChange}>
             <SegmentsList>
-              <SegmentsTrigger value="facts">Facts</SegmentsTrigger>
               <SegmentsTrigger value="sessions">Sessions</SegmentsTrigger>
+              <SegmentsTrigger value="facts">Facts</SegmentsTrigger>
             </SegmentsList>
           </Segments>
 
@@ -468,7 +482,7 @@ export default function Search() {
                       <SessionCard
                         key={session.session_id}
                         session={session}
-                        onSessionClick={(sessionId) => handleOpenNodeDetail("session", sessionId)}
+                        onInfoClick={(sessionId) => handleOpenNodeDetail("session", sessionId)}
                       />
                     ))}
                   </div>
