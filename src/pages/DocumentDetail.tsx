@@ -6,7 +6,7 @@ import { ContainerToolButton } from "@/components/container/ContainerToolButton"
 import { Copy, ChevronLeft, FolderOpen, RefreshCw, Trash2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { getSearchQuery } from "@/lib/documentsSearchStorage";
-import { setCurrentFolderPath } from "@/lib/documentsStorage";
+import { setCurrentFolderPath, clearLastDocumentPath } from "@/lib/documentsStorage";
 import DeleteConfirmationDialog from "@/components/dialogs/DeleteConfirmationDialog";
 import { useState } from "react";
 import { MarkdownViewer, ExcalidrawViewer } from "@/components/document-viewers";
@@ -19,6 +19,7 @@ export default function DocumentDetail() {
   const queryClient = useQueryClient();
   const documentPath = params["*"] || "";
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleted, setIsDeleted] = useState(false);
 
   // Delete mutation (defined early so we can use isPending in query)
   const deleteDocumentMutation = useMutation({
@@ -28,6 +29,9 @@ export default function DocumentDetail() {
       setDeleteDialogOpen(false);
     },
     onSuccess: () => {
+      // Mark as deleted to prevent query from re-enabling
+      setIsDeleted(true);
+
       // Close dialog immediately
       setDeleteDialogOpen(false);
 
@@ -42,6 +46,9 @@ export default function DocumentDetail() {
       queryClient.invalidateQueries({ queryKey: ["documents-nav", parentPath] });
       queryClient.invalidateQueries({ queryKey: ["documents-nav"] });
 
+      // Clear last document from localStorage to prevent auto-restore
+      clearLastDocumentPath();
+
       toast.success("Document deleted successfully");
 
       // Navigate immediately to documents root
@@ -49,7 +56,7 @@ export default function DocumentDetail() {
     },
   });
 
-  // Disable query during deletion to prevent 500 error
+  // Disable query during and after deletion to prevent 500 error
   const {
     data: document,
     isLoading,
@@ -57,7 +64,7 @@ export default function DocumentDetail() {
   } = useQuery({
     queryKey: ["document", documentPath],
     queryFn: () => documentsService.getDocument(documentPath),
-    enabled: !!documentPath && !deleteDocumentMutation.isPending,
+    enabled: !!documentPath && !deleteDocumentMutation.isPending && !isDeleted,
   });
 
   // Check if we came from search
