@@ -24,6 +24,11 @@ export default defineConfig(({ mode }) => {
           target: env.VITE_XERRO_SERVICE_URL || "http://localhost:9205",
           changeOrigin: true,
         },
+        "/llamacpp-admin": {
+          target: env.VITE_LLAMACPP_ADMIN_URL || "http://localhost:9200",
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/llamacpp-admin/, ""),
+        },
         "/api": {
           target: graphitiServer,
           changeOrigin: true,

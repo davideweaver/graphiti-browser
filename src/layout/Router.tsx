@@ -99,6 +99,36 @@ const Router = createBrowserRouter(
         lazy={lazyImportComponent(() => import("@/pages/AgentTaskDetail"))}
       />
 
+      {/* System routes */}
+      <Route
+        path="/system"
+        lazy={lazyImportComponent(() => import("@/pages/System"))}
+      />
+      <Route
+        path="/system/xerro-service"
+        lazy={lazyImportComponent(() => import("@/pages/XerroServiceStatus"))}
+      />
+      <Route
+        path="/system/llamacpp-servers"
+        lazy={lazyImportComponent(() => import("@/pages/LlamacppServers"))}
+      />
+      <Route
+        path="/system/llamacpp-models"
+        lazy={lazyImportComponent(() => import("@/pages/LlamacppModels"))}
+      />
+      <Route
+        path="/system/llamacpp-router"
+        lazy={lazyImportComponent(() => import("@/pages/LlamacppRouter"))}
+      />
+      <Route
+        path="/system/logs/xerro"
+        lazy={lazyImportComponent(() => import("@/pages/XerroLogs"))}
+      />
+      <Route
+        path="/system/logs/router"
+        lazy={lazyImportComponent(() => import("@/pages/RouterLogs"))}
+      />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Route>
   ),

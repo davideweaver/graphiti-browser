@@ -10,6 +10,7 @@ import { SecondaryNav } from "@/components/navigation/SecondaryNav";
 import { ProjectsSecondaryNav } from "@/components/navigation/ProjectsSecondaryNav";
 import { DocumentsSecondaryNav } from "@/components/navigation/DocumentsSecondaryNav";
 import { AgentTasksSecondaryNav } from "@/components/navigation/AgentTasksSecondaryNav";
+import { SystemSecondaryNav } from "@/components/navigation/SystemSecondaryNav";
 import { MobileNavTrigger } from "@/components/navigation/MobileNavTrigger";
 import { DraggableMobileNav } from "@/components/navigation/DraggableMobileNav";
 import { PrimaryNavFooter } from "@/components/navigation/PrimaryNavFooter";
@@ -187,6 +188,9 @@ const Layout = () => {
   const selectedTaskId = params.id || null;
   const isAgentTasksSection = activePrimary === "agent-tasks";
 
+  // System section flag
+  const isSystemSection = activePrimary === "system";
+
   // Determine current view for Agent Tasks section
   const getAgentTasksView = (): "history" | "task" => {
     if (pathname === "/agent-tasks/history") return "history";
@@ -281,6 +285,8 @@ const Layout = () => {
             currentView={agentTasksView}
             onNavigate={handleNavigate}
           />
+        ) : isSystemSection ? (
+          <SystemSecondaryNav onNavigate={handleNavigate} />
         ) : (
           <SecondaryNav
             activePrimary={activePrimary}
@@ -333,6 +339,8 @@ const Layout = () => {
                   currentView={agentTasksView}
                   onNavigate={() => {}}
                 />
+              ) : isSystemSection ? (
+                <SystemSecondaryNav onNavigate={() => {}} />
               ) : (
                 <SecondaryNav
                   activePrimary={activePrimary}
@@ -373,6 +381,11 @@ const Layout = () => {
                 currentView={agentTasksView}
                 onNavigate={handleNavigate}
                 onTaskSelect={handleMobileNavigate}
+              />
+            ) : isSystemSection ? (
+              <SystemSecondaryNav
+                onNavigate={handleNavigate}
+                onItemSelect={handleMobileNavigate}
               />
             ) : undefined
           }

@@ -1,0 +1,106 @@
+// Llamacpp Admin Service Types
+// Remote LLM server and model management
+
+export interface HealthResponse {
+  status: "healthy";
+  uptime: number;
+  timestamp: string;
+}
+
+export interface ServerInfo {
+  id: string;
+  modelName: string;
+  modelPath: string;
+  port: number;
+  host: string;
+  status: "running" | "stopped" | "crashed" | "starting";
+  pid?: number;
+  threads?: number;
+  ctxSize?: number;
+  gpuLayers?: number;
+  verbose?: boolean;
+  customFlags?: string[];
+  label: string;
+  plistPath: string;
+  stdoutPath: string;
+  stderrPath: string;
+  lastStarted?: string;
+  lastStopped?: string;
+  createdAt: string;
+}
+
+export interface ModelInfo {
+  filename: string;
+  path: string;
+  size: number; // bytes
+  formattedSize: string;
+  serversUsing: number;
+  serverIds: string[];
+}
+
+export interface RouterConfig {
+  port: number;
+  host: string;
+  verbose: boolean;
+  requestTimeout: number;
+  healthCheckInterval: number;
+  createdAt?: string;
+  lastStarted?: string;
+  lastStopped?: string;
+}
+
+export interface RouterStatus {
+  status: "running" | "stopped" | "not_configured";
+  config: RouterConfig | null;
+  pid?: number;
+  isRunning: boolean;
+  availableModels?: string[];
+  createdAt?: string;
+  lastStarted?: string;
+  lastStopped?: string;
+}
+
+export interface SystemStatusResponse {
+  servers: {
+    total: number;
+    running: number;
+    stopped: number;
+    crashed: number;
+  };
+  models: {
+    total: number;
+    totalSize: number;
+  };
+  system: {
+    uptime: number;
+    timestamp: string;
+  };
+}
+
+export interface ServerListResponse {
+  servers: ServerInfo[];
+}
+
+export interface ModelListResponse {
+  models: ModelInfo[];
+}
+
+export interface ServerControlResponse {
+  server: ServerInfo;
+}
+
+export interface RouterControlResponse {
+  success: boolean;
+  status: "running" | "stopped";
+  pid?: number;
+}
+
+export interface LogResponse {
+  stdout: string;
+  stderr: string;
+}
+
+export interface LogQueryParams {
+  type?: "stdout" | "stderr" | "both";
+  lines?: number;
+}
