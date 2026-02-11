@@ -5,7 +5,7 @@ import Container from "@/components/container/Container";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { agentTasksService } from "@/api/agentTasksService";
-import { formatTimestamp } from "@/lib/cronFormatter";
+import { formatTimestamp, formatDuration } from "@/lib/cronFormatter";
 import { CheckCircle2, XCircle, Clock } from "lucide-react";
 import { TaskExecutionSheet } from "@/components/tasks/TaskExecutionSheet";
 import type { TaskExecution } from "@/types/agentTasks";
@@ -95,7 +95,7 @@ export default function AgentTaskHistory() {
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Clock className="h-4 w-4" />
-                <span className="text-xs">{(execution.durationMs / 1000).toFixed(1)}s</span>
+                <span className="text-xs">{formatDuration(execution.durationMs)}</span>
               </div>
             </div>
           ))

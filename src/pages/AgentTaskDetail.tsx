@@ -13,9 +13,11 @@ import {
   formatCronExpression,
   formatTimestamp,
   formatRelativeTime,
+  formatDuration,
 } from "@/lib/cronFormatter";
 import { CheckCircle2, XCircle, Clock, Play, Trash2 } from "lucide-react";
 import { TaskExecutionSheet } from "@/components/tasks/TaskExecutionSheet";
+import { RunAgentConfigForm } from "@/components/agent-tasks/RunAgentConfigForm";
 import type { TaskExecution } from "@/types/agentTasks";
 
 export default function AgentTaskDetail() {
@@ -259,7 +261,7 @@ export default function AgentTaskDetail() {
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Clock className="h-4 w-4" />
-                      <span className="text-xs">{(execution.durationMs / 1000).toFixed(1)}s</span>
+                      <span className="text-xs">{formatDuration(execution.durationMs)}</span>
                     </div>
                   </div>
                 ))}
@@ -277,24 +279,34 @@ export default function AgentTaskDetail() {
 
           {/* Configuration Tab */}
           <TabsContent value="config" className="mt-6">
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                Properties
-              </h3>
-              {Object.keys(task.properties).length > 0 ? (
-                <pre className="bg-muted p-4 rounded-lg text-xs overflow-auto whitespace-pre-wrap break-words">
-                  {JSON.stringify(task.properties, null, 2)}
-                </pre>
-              ) : (
-                <Card>
-                  <CardContent className="p-12 text-center">
-                    <p className="text-sm text-muted-foreground">
-                      No properties configured
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+            {task.task === "run-agent" ? (
+              <RunAgentConfigForm
+                task={task}
+                onSaved={() => {
+                  queryClient.invalidateQueries({ queryKey: ["agent-task", id] });
+                  queryClient.invalidateQueries({ queryKey: ["agent-tasks"] });
+                }}
+              />
+            ) : (
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                  Properties
+                </h3>
+                {Object.keys(task.properties).length > 0 ? (
+                  <pre className="bg-muted p-4 rounded-lg text-xs overflow-auto whitespace-pre-wrap break-words">
+                    {JSON.stringify(task.properties, null, 2)}
+                  </pre>
+                ) : (
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        No properties configured
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
           </TabsContent>
 
           {/* Scratchpad Tab */}

@@ -8,9 +8,11 @@ import {
   SecondaryNavItemSubtitle,
 } from "@/components/navigation/SecondaryNavItemContent";
 import { SecondaryNavContainer } from "@/components/navigation/SecondaryNavContainer";
+import { SecondaryNavToolButton } from "@/components/navigation/SecondaryNavToolButton";
 import { Badge } from "@/components/ui/badge";
-import { Search, Clock } from "lucide-react";
+import { Search, Clock, RefreshCw } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
+import { toast } from "sonner";
 
 interface AgentTasksSecondaryNavProps {
   selectedTaskId: string | null;
@@ -29,7 +31,7 @@ export function AgentTasksSecondaryNav({
   const debouncedSearch = useDebounce(searchInput, 300);
 
   // Fetch all tasks
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["agent-tasks-nav", debouncedSearch],
     queryFn: () => agentTasksService.listTasks(),
   });
@@ -49,8 +51,20 @@ export function AgentTasksSecondaryNav({
     }
   };
 
+  const handleRefresh = () => {
+    refetch();
+    toast.success("Task list refreshed");
+  };
+
   return (
-    <SecondaryNavContainer title="Agent Tasks">
+    <SecondaryNavContainer
+      title="Agent Tasks"
+      tools={
+        <SecondaryNavToolButton onClick={handleRefresh}>
+          <RefreshCw size={20} />
+        </SecondaryNavToolButton>
+      }
+    >
       {/* Primary Menu Items */}
       <div className="px-4 pb-4 space-y-1">
         <SecondaryNavItem

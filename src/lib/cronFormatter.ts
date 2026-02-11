@@ -22,6 +22,13 @@ export function formatCronExpression(cron: string): string {
     return `Every ${interval} minutes`;
   }
 
+  // Every N hours at specific minute
+  if (!minute.includes("*") && hour.startsWith("*/") && dayOfMonth === "*" && month === "*" && dayOfWeek === "*") {
+    const interval = hour.substring(2);
+    const minuteStr = minute === "0" ? "" : ` at :${minute.padStart(2, "0")}`;
+    return `Every ${interval} hours${minuteStr}`;
+  }
+
   // Hourly at specific minute
   if (!minute.includes("*") && hour === "*" && dayOfMonth === "*" && month === "*" && dayOfWeek === "*") {
     return `Hourly at :${minute.padStart(2, "0")}`;
@@ -52,13 +59,42 @@ export function formatCronExpression(cron: string): string {
   }
 
   // Specific day of week
-  if (!minute.includes("*") && !hour.includes("*") && dayOfMonth === "*" && month === "*" && !dayOfWeek.includes("*")) {
+  if (!minute.includes("*") && !hour.includes("*") && dayOfMonth === "*" && month === "*" && !dayOfWeek.includes("*") && !dayOfWeek.includes("/")) {
     const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const dayNames = dayOfWeek.split(",").map(d => days[parseInt(d, 10)]).join(", ");
     const formattedHour = parseInt(hour, 10);
     const period = formattedHour >= 12 ? "PM" : "AM";
     const displayHour = formattedHour > 12 ? formattedHour - 12 : formattedHour === 0 ? 12 : formattedHour;
     return `Every ${dayNames} at ${displayHour}:${minute.padStart(2, "0")} ${period}`;
+  }
+
+  // Every N days at specific time
+  if (!minute.includes("*") && !hour.includes("*") && dayOfMonth.startsWith("*/") && month === "*" && dayOfWeek === "*") {
+    const interval = dayOfMonth.substring(2);
+    const formattedHour = parseInt(hour, 10);
+    const period = formattedHour >= 12 ? "PM" : "AM";
+    const displayHour = formattedHour > 12 ? formattedHour - 12 : formattedHour === 0 ? 12 : formattedHour;
+    return `Every ${interval} days at ${displayHour}:${minute.padStart(2, "0")} ${period}`;
+  }
+
+  // Weekly on specific day (using step notation like */7 or 0/7)
+  if (!minute.includes("*") && !hour.includes("*") && dayOfMonth === "*" && month === "*" && dayOfWeek.includes("/")) {
+    const match = dayOfWeek.match(/^(\d+)\/(\d+)$/);
+    if (match) {
+      const startDay = parseInt(match[1], 10);
+      const interval = parseInt(match[2], 10);
+      const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const dayName = days[startDay];
+      const formattedHour = parseInt(hour, 10);
+      const period = formattedHour >= 12 ? "PM" : "AM";
+      const displayHour = formattedHour > 12 ? formattedHour - 12 : formattedHour === 0 ? 12 : formattedHour;
+
+      if (interval === 7) {
+        return `Every ${dayName} at ${displayHour}:${minute.padStart(2, "0")} ${period}`;
+      } else if (interval === 14) {
+        return `Every other ${dayName} at ${displayHour}:${minute.padStart(2, "0")} ${period}`;
+      }
+    }
   }
 
   // Monthly on specific day
@@ -128,4 +164,16 @@ export function formatTimestamp(dateString: string): string {
     minute: "2-digit",
     hour12: true,
   });
+}
+
+/**
+ * Format duration in milliseconds to human-readable format
+ * Examples: "500ms", "7.5s", "7m 6s"
+ */
+export function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+  const minutes = Math.floor(ms / 60000);
+  const seconds = ((ms % 60000) / 1000).toFixed(0);
+  return `${minutes}m ${seconds}s`;
 }

@@ -56,3 +56,18 @@ export interface ScheduledTaskListResponse {
   tasks: ScheduledTask[];
   count: number;
 }
+
+/**
+ * Properties for run-agent tasks
+ * Based on xerro-service/src/tasks/run-agent.ts
+ */
+export interface RunAgentProperties {
+  /** The prompt/task to execute (required) */
+  prompt: string;
+  /** Working directory for the agent (optional) */
+  cwd?: string;
+  /** Permission mode: 'allow_all' or custom allow list (optional) */
+  permissions?: 'allow_all' | { allowList: string[] };
+  /** Use local LLM server instead of Anthropic API (optional) */
+  local?: boolean;
+}

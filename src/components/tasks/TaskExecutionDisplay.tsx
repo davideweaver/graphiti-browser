@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { DollarSign, Clock, Hash, Wrench, ChevronDown, ChevronUp, Copy } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { formatDuration } from "@/lib/cronFormatter";
 
 interface TaskExecutionDisplayProps {
   execution: TaskExecution;
@@ -187,14 +188,6 @@ function formatCost(cost: number): string {
   if (cost < 0.001) return "<$0.001";
   if (cost < 0.01) return `$${cost.toFixed(4)}`;
   return `$${cost.toFixed(3)}`;
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-  const minutes = Math.floor(ms / 60000);
-  const seconds = ((ms % 60000) / 1000).toFixed(0);
-  return `${minutes}m ${seconds}s`;
 }
 
 function truncateSessionId(id: string): string {

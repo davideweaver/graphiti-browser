@@ -199,6 +199,51 @@ class AgentTasksService {
     }
   }
 
+  async updateTask(
+    id: string,
+    updates: {
+      name?: string;
+      description?: string;
+      enabled?: boolean;
+      properties?: Record<string, unknown>;
+    }
+  ): Promise<ScheduledTask> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/scheduled-tasks/${id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updates),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to update task: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      toast({
+        title: "Task updated",
+        description: "Configuration saved successfully",
+      });
+
+      return result;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to update task";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
   async deleteTask(id: string): Promise<{ success: boolean; id: string }> {
     try {
       const response = await fetch(
