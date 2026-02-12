@@ -3,6 +3,8 @@ import type {
   ScheduledTask,
   ScheduledTaskListResponse,
   TaskExecution,
+  ToolsResponse,
+  AgentExecutionTrace,
 } from "@/types/agentTasks";
 
 class AgentTasksService {
@@ -79,12 +81,12 @@ class AgentTasksService {
   ): Promise<TaskExecution[]> {
     try {
       const response = await fetch(
-        `${this.baseUrl}/api/v1/scheduled-tasks/${id}/history?limit=${limit}`
+        `${this.baseUrl}/api/v1/scheduled-tasks/${id}/executions?limit=${limit}`
       );
 
       if (!response.ok) {
         throw new Error(
-          `Failed to fetch task history: ${response.statusText}`
+          `Failed to fetch task executions: ${response.statusText}`
         );
       }
 
@@ -94,7 +96,7 @@ class AgentTasksService {
       const message =
         error instanceof Error
           ? error.message
-          : "Failed to fetch task history";
+          : "Failed to fetch task executions";
       toast({
         title: "Error",
         description: message,
@@ -159,8 +161,15 @@ class AgentTasksService {
     }
   }
 
-  async triggerTask(id: string): Promise<TaskExecution> {
+  async triggerTask(id: string, withTrace: boolean = false): Promise<TaskExecution> {
     try {
+      // Enable trace by updating task properties temporarily
+      if (withTrace) {
+        const task = await this.getTask(id);
+        const updatedProperties = { ...task.properties, trace: true };
+        await this.updateTask(id, { properties: updatedProperties });
+      }
+
       const response = await fetch(
         `${this.baseUrl}/api/v1/scheduled-tasks/${id}/run`,
         {
@@ -183,6 +192,14 @@ class AgentTasksService {
           : "Task execution failed",
         variant: execution.success ? "default" : "destructive",
       });
+
+      // Restore original trace setting
+      if (withTrace) {
+        const task = await this.getTask(id);
+        const restoredProperties = { ...task.properties };
+        delete restoredProperties.trace;
+        await this.updateTask(id, { properties: restoredProperties });
+      }
 
       return execution;
     } catch (error) {
@@ -272,6 +289,93 @@ class AgentTasksService {
         error instanceof Error
           ? error.message
           : "Failed to delete task";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async getTools(): Promise<ToolsResponse> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/scheduled-tasks/tools`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch tools: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to fetch tools";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async clearScratchpad(id: string): Promise<{ success: boolean }> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/scheduled-tasks/${id}/scratchpad`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to clear scratchpad: ${response.statusText}`
+        );
+      }
+
+      const result = await response.json();
+
+      toast({
+        title: "Scratchpad cleared",
+        description: "The scratchpad has been cleared successfully",
+      });
+
+      return result;
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to clear scratchpad";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async getTrace(id: string): Promise<{ path: string; trace: AgentExecutionTrace | null; isEmpty: boolean }> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/scheduled-tasks/${id}/trace`
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch trace: ${response.statusText}`
+        );
+      }
+
+      return await response.json();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch trace";
       toast({
         title: "Error",
         description: message,

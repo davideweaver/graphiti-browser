@@ -8,16 +8,42 @@ const FOLDER_PATH_KEY = "graphiti-documents-folder-path";
 const LAST_DOCUMENT_KEY = "graphiti-documents-last-document";
 
 /**
+ * Remove "Documents/" prefix from paths for API compatibility
+ */
+function migratePath(path: string | null): string {
+  if (!path) return "";
+
+  // Remove "Documents/" prefix if present
+  if (path.startsWith("Documents/")) {
+    return path.substring("Documents/".length);
+  }
+
+  // If path is exactly "Documents", return empty string (root)
+  if (path === "Documents") {
+    return "";
+  }
+
+  return path;
+}
+
+/**
  * Get the current folder path from localStorage
- * @returns The folder path or "Documents" as default
+ * @returns The folder path or empty string as default (root)
  */
 export function getCurrentFolderPath(): string {
   try {
     const stored = localStorage.getItem(FOLDER_PATH_KEY);
-    return stored || "Documents";
+    const migrated = migratePath(stored);
+
+    // Update storage if path was migrated
+    if (stored && migrated !== stored) {
+      localStorage.setItem(FOLDER_PATH_KEY, migrated);
+    }
+
+    return migrated;
   } catch (error) {
     console.error("Failed to read folder path from localStorage:", error);
-    return "Documents";
+    return "";
   }
 }
 
@@ -39,7 +65,17 @@ export function setCurrentFolderPath(path: string): void {
  */
 export function getLastDocumentPath(): string | null {
   try {
-    return localStorage.getItem(LAST_DOCUMENT_KEY);
+    const stored = localStorage.getItem(LAST_DOCUMENT_KEY);
+    if (!stored) return null;
+
+    const migrated = migratePath(stored);
+
+    // Update storage if path was migrated
+    if (migrated !== stored) {
+      localStorage.setItem(LAST_DOCUMENT_KEY, migrated);
+    }
+
+    return migrated || null;
   } catch (error) {
     console.error("Failed to read last document from localStorage:", error);
     return null;

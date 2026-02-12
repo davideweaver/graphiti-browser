@@ -40,17 +40,7 @@ export function MarkdownLink({
 
     // Handle path resolution (only if currentDocumentPath is provided)
     if (currentDocumentPath) {
-      // Check if this is an absolute path from the Documents root
-      // (e.g., "Home/Lab/..." when current path is "Documents/Home/Lab/...")
-      const firstSegment = linkPath.split("/")[0];
-      const isAbsoluteFromDocumentsRoot =
-        currentDocumentPath.startsWith("Documents/") &&
-        currentDocumentPath.includes(`/${firstSegment}/`);
-
-      if (isAbsoluteFromDocumentsRoot) {
-        // This is an absolute path from Documents root, prepend "Documents/"
-        linkPath = `Documents/${linkPath}`;
-      } else if (linkPath.startsWith("/")) {
+      if (linkPath.startsWith("/")) {
         // Remove leading slash for absolute paths
         linkPath = linkPath.substring(1);
       } else if (!linkPath.startsWith("/")) {

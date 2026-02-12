@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -14,9 +15,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ContainerToolButton } from "@/components/container/ContainerToolButton";
+import { ToolsMultiSelect } from "@/components/agent-tasks/ToolsMultiSelect";
 import { agentTasksService } from "@/api/agentTasksService";
 import type { ScheduledTask, RunAgentProperties } from "@/types/agentTasks";
-import { Pencil, Save, Loader2 } from "lucide-react";
+import { Pencil, Save, Loader2, X } from "lucide-react";
 
 interface RunAgentConfigFormProps {
   task: ScheduledTask;
@@ -28,7 +30,7 @@ export function RunAgentConfigForm({ task, onSaved }: RunAgentConfigFormProps) {
   const [isEditing, setIsEditing] = useState(false);
 
   // Parse current properties
-  const props = task.properties as RunAgentProperties;
+  const props = task.properties as unknown as RunAgentProperties;
   const currentPermissions = props.permissions;
   const currentPermissionMode =
     typeof currentPermissions === "string" && currentPermissions === "allow_all"
@@ -36,8 +38,8 @@ export function RunAgentConfigForm({ task, onSaved }: RunAgentConfigFormProps) {
       : "custom";
   const currentAllowList =
     typeof currentPermissions === "object" && currentPermissions.allowList
-      ? currentPermissions.allowList.join(", ")
-      : "";
+      ? currentPermissions.allowList
+      : [];
 
   // Form state
   const [prompt, setPrompt] = useState(props.prompt || "");
@@ -45,7 +47,11 @@ export function RunAgentConfigForm({ task, onSaved }: RunAgentConfigFormProps) {
   const [permissionMode, setPermissionMode] = useState<"allow_all" | "custom">(
     currentPermissionMode
   );
-  const [allowList, setAllowList] = useState(currentAllowList);
+  const [allowList, setAllowList] = useState<string[]>(currentAllowList);
+  const [additionalDirectories, setAdditionalDirectories] = useState<string[]>(
+    props.additionalDirectories || []
+  );
+  const [newDirectory, setNewDirectory] = useState("");
   const [local, setLocal] = useState(props.local || false);
 
   // Validation
@@ -64,12 +70,7 @@ export function RunAgentConfigForm({ task, onSaved }: RunAgentConfigFormProps) {
       if (permissionMode === "allow_all") {
         permissions = "allow_all";
       } else {
-        // Parse comma-separated allow list
-        const parsedList = allowList
-          .split(",")
-          .map((item) => item.trim())
-          .filter((item) => item.length > 0);
-        permissions = { allowList: parsedList };
+        permissions = { allowList };
       }
 
       // Build updated properties
@@ -77,11 +78,12 @@ export function RunAgentConfigForm({ task, onSaved }: RunAgentConfigFormProps) {
         prompt: prompt.trim(),
         ...(cwd.trim() && { cwd: cwd.trim() }),
         permissions,
+        ...(additionalDirectories.length > 0 && { additionalDirectories }),
         local,
       };
 
       return agentTasksService.updateTask(task.id, {
-        properties: updatedProperties,
+        properties: updatedProperties as unknown as Record<string, unknown>,
       });
     },
     onSuccess: () => {
@@ -103,6 +105,8 @@ export function RunAgentConfigForm({ task, onSaved }: RunAgentConfigFormProps) {
     setCwd(props.cwd || "");
     setPermissionMode(currentPermissionMode);
     setAllowList(currentAllowList);
+    setAdditionalDirectories(props.additionalDirectories || []);
+    setNewDirectory("");
     setLocal(props.local || false);
     setPromptError("");
     setIsEditing(false);
@@ -170,6 +174,24 @@ export function RunAgentConfigForm({ task, onSaved }: RunAgentConfigFormProps) {
               </h3>
               <p className="text-sm">{props.local ? "Yes" : "No"}</p>
             </div>
+
+            {props.additionalDirectories && props.additionalDirectories.length > 0 && (
+              <div className="md:col-span-2">
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                  Additional Directories
+                </h3>
+                <div className="flex flex-wrap gap-1">
+                  {props.additionalDirectories.map((dir, index) => (
+                    <span
+                      key={index}
+                      className="text-xs bg-muted px-2 py-1 rounded font-mono"
+                    >
+                      {dir}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -263,18 +285,78 @@ export function RunAgentConfigForm({ task, onSaved }: RunAgentConfigFormProps) {
 
             {permissionMode === "custom" && (
               <div className="space-y-2 mt-2">
-                <Textarea
-                  value={allowList}
-                  onChange={(e) => setAllowList(e.target.value)}
-                  placeholder="Bash, Read, Write, Grep"
-                  rows={3}
+                <ToolsMultiSelect
+                  selectedTools={allowList}
+                  onChange={setAllowList}
                   disabled={updateMutation.isPending}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Comma-separated list of allowed tools
+                  Select tools the agent is allowed to use. Tools are grouped by category.
                 </p>
               </div>
             )}
+          </div>
+
+          {/* Additional Directories Field */}
+          <div className="space-y-2">
+            <Label htmlFor="additionalDirectories">Additional Directories</Label>
+            <div className="space-y-2">
+              {additionalDirectories.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {additionalDirectories.map((dir, index) => (
+                    <Badge
+                      key={index}
+                      variant="secondary"
+                      className="gap-1 font-mono"
+                    >
+                      {dir}
+                      <X
+                        className="h-3 w-3 cursor-pointer hover:text-foreground"
+                        onClick={() => {
+                          setAdditionalDirectories(
+                            additionalDirectories.filter((_, i) => i !== index)
+                          );
+                        }}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Input
+                  id="additionalDirectories"
+                  value={newDirectory}
+                  onChange={(e) => setNewDirectory(e.target.value)}
+                  placeholder="/path/to/directory"
+                  disabled={updateMutation.isPending}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (newDirectory.trim() && !additionalDirectories.includes(newDirectory.trim())) {
+                        setAdditionalDirectories([...additionalDirectories, newDirectory.trim()]);
+                        setNewDirectory("");
+                      }
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    if (newDirectory.trim() && !additionalDirectories.includes(newDirectory.trim())) {
+                      setAdditionalDirectories([...additionalDirectories, newDirectory.trim()]);
+                      setNewDirectory("");
+                    }
+                  }}
+                  disabled={updateMutation.isPending || !newDirectory.trim()}
+                >
+                  Add
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Additional directories the agent is allowed to access beyond the working directory
+              </p>
+            </div>
           </div>
 
           {/* Local LLM Switch */}

@@ -5,6 +5,7 @@ import Container from "@/components/container/Container";
 import { ContainerToolButton } from "@/components/container/ContainerToolButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DeleteConfirmationDialog from "@/components/dialogs/DeleteConfirmationDialog";
@@ -15,10 +16,18 @@ import {
   formatRelativeTime,
   formatDuration,
 } from "@/lib/cronFormatter";
-import { CheckCircle2, XCircle, Clock, Play, Trash2 } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Play, Trash2, Copy, ChevronDown } from "lucide-react";
 import { TaskExecutionSheet } from "@/components/tasks/TaskExecutionSheet";
 import { RunAgentConfigForm } from "@/components/agent-tasks/RunAgentConfigForm";
+import ReactMarkdown from "react-markdown";
+import { toast } from "sonner";
 import type { TaskExecution } from "@/types/agentTasks";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function AgentTaskDetail() {
   const { id } = useParams<{ id: string }>();
@@ -28,6 +37,7 @@ export default function AgentTaskDetail() {
     useState<TaskExecution | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [clearScratchpadDialogOpen, setClearScratchpadDialogOpen] = useState(false);
 
   const { data: task, isLoading: isLoadingTask } = useQuery({
     queryKey: ["agent-task", id],
@@ -47,14 +57,23 @@ export default function AgentTaskDetail() {
     enabled: !!id,
   });
 
+  const { data: trace, isLoading: isLoadingTrace } = useQuery({
+    queryKey: ["agent-task-trace", id],
+    queryFn: () => agentTasksService.getTrace(id!),
+    enabled: !!id,
+  });
+
   // Mutation to trigger task execution
   const triggerMutation = useMutation({
-    mutationFn: () => agentTasksService.triggerTask(id!),
+    mutationFn: ({ withTrace }: { withTrace: boolean }) => agentTasksService.triggerTask(id!, withTrace),
     onSuccess: (execution) => {
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["agent-task-history", id] });
       queryClient.invalidateQueries({
         queryKey: ["agent-task-scratchpad", id],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["agent-task-trace", id],
       });
 
       // Show the execution result in the sheet
@@ -74,6 +93,15 @@ export default function AgentTaskDetail() {
 
       // Navigate back to the task list (will redirect to first task)
       navigate("/agent-tasks", { replace: true });
+    },
+  });
+
+  // Mutation to clear scratchpad
+  const clearScratchpadMutation = useMutation({
+    mutationFn: () => agentTasksService.clearScratchpad(id!),
+    onSuccess: () => {
+      // Invalidate scratchpad query to refresh data
+      queryClient.invalidateQueries({ queryKey: ["agent-task-scratchpad", id] });
     },
   });
 
@@ -122,15 +150,36 @@ export default function AgentTaskDetail() {
       title={task.name}
       tools={
         <div className="flex items-center gap-2">
-          <ContainerToolButton
-            onClick={() => triggerMutation.mutate()}
-            disabled={triggerMutation.isPending || !task.enabled}
-            size="sm"
-            variant="primary"
-          >
-            <Play className="h-4 w-4 mr-2" />
-            {triggerMutation.isPending ? "Running..." : "Run Task"}
-          </ContainerToolButton>
+          {/* Combo Button for Run */}
+          <div className="flex items-center">
+            <ContainerToolButton
+              onClick={() => triggerMutation.mutate({ withTrace: false })}
+              disabled={triggerMutation.isPending || !task.enabled}
+              size="sm"
+              variant="primary"
+              className="rounded-r-none border-r-0"
+            >
+              <Play className="h-4 w-4 mr-2" />
+              {triggerMutation.isPending ? "Running..." : "Run"}
+            </ContainerToolButton>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <ContainerToolButton
+                  disabled={triggerMutation.isPending || !task.enabled}
+                  size="sm"
+                  variant="primary"
+                  className="rounded-l-none px-2"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </ContainerToolButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => triggerMutation.mutate({ withTrace: true })}>
+                  Run with Tracing
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
           <ContainerToolButton
             onClick={() => setDeleteDialogOpen(true)}
             disabled={deleteMutation.isPending}
@@ -188,6 +237,28 @@ export default function AgentTaskDetail() {
               </div>
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                  Task ID
+                </h3>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-mono break-all">{task.id}</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 flex-shrink-0"
+                    onClick={() => {
+                      navigator.clipboard.writeText(task.id).then(() => {
+                        toast.success("Task ID copied to clipboard");
+                      }).catch(() => {
+                        toast.error("Failed to copy Task ID");
+                      });
+                    }}
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">
                   Created
                 </h3>
                 <p className="text-sm">{formatTimestamp(task.createdAt)}</p>
@@ -210,7 +281,7 @@ export default function AgentTaskDetail() {
 
         {/* Tabs */}
         <Tabs defaultValue="history">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="history">
               History {history ? `(${history.length})` : ''}
             </TabsTrigger>
@@ -219,6 +290,9 @@ export default function AgentTaskDetail() {
             </TabsTrigger>
             <TabsTrigger value="scratchpad">
               Scratchpad
+            </TabsTrigger>
+            <TabsTrigger value="trace">
+              Last Trace
             </TabsTrigger>
           </TabsList>
 
@@ -249,9 +323,9 @@ export default function AgentTaskDetail() {
                         </span>
                       </div>
                       {(execution.normalizedResult?.display.summary || execution.message) && (
-                        <p className="text-sm text-muted-foreground pl-6 truncate max-w-2xl">
-                          {execution.normalizedResult?.display.summary || execution.message}
-                        </p>
+                        <div className="text-sm text-muted-foreground pl-6 truncate max-w-2xl prose prose-sm dark:prose-invert prose-p:inline prose-strong:font-semibold">
+                          <ReactMarkdown>{execution.normalizedResult?.display.summary || execution.message}</ReactMarkdown>
+                        </div>
                       )}
                       {execution.error && (
                         <p className="text-sm text-red-600 dark:text-red-400 pl-6 truncate max-w-2xl">
@@ -317,19 +391,174 @@ export default function AgentTaskDetail() {
                 <Skeleton className="h-16 w-full" />
               </div>
             ) : scratchpad && !scratchpad.isEmpty && scratchpad.content ? (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground font-mono mb-2">
-                  {scratchpad.path}
-                </p>
-                <pre className="bg-muted p-4 rounded-lg text-xs overflow-auto whitespace-pre-wrap break-words">
-                  {JSON.stringify(scratchpad.content, null, 2)}
-                </pre>
-              </div>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-end pb-3">
+                  <ContainerToolButton
+                    onClick={() => setClearScratchpadDialogOpen(true)}
+                    disabled={clearScratchpadMutation.isPending}
+                    size="icon"
+                    variant="ghost"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </ContainerToolButton>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <pre className="text-xs overflow-auto whitespace-pre-wrap break-words">
+                    {JSON.stringify(scratchpad.content, null, 2)}
+                  </pre>
+                </CardContent>
+              </Card>
             ) : (
               <Card>
                 <CardContent className="p-12 text-center">
                   <p className="text-sm text-muted-foreground">
                     No scratchpad data
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Trace Tab */}
+          <TabsContent value="trace" className="mt-6">
+            {isLoadingTrace ? (
+              <div className="space-y-2">
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+              </div>
+            ) : trace && !trace.isEmpty && trace.trace ? (
+              <div className="space-y-4">
+                {/* Execution Metadata */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Execution Details</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-xs">
+                    <div className="grid grid-cols-2 gap-4">
+                      {trace.trace.toolCalls.length > 0 && (
+                        <div>
+                          <span className="text-muted-foreground">Executed At:</span>
+                          <p>{formatTimestamp(trace.trace.toolCalls[0].calledAt)}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatRelativeTime(trace.trace.toolCalls[0].calledAt)}
+                          </p>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-muted-foreground">Execution ID:</span>
+                        <p className="font-mono">{trace.trace.executionId}</p>
+                      </div>
+                      {trace.trace.sessionId && (
+                        <div>
+                          <span className="text-muted-foreground">Session ID:</span>
+                          <p className="font-mono">{trace.trace.sessionId}</p>
+                        </div>
+                      )}
+                      {trace.trace.cwd && (
+                        <div>
+                          <span className="text-muted-foreground">Working Dir:</span>
+                          <p className="font-mono">{trace.trace.cwd}</p>
+                        </div>
+                      )}
+                      {trace.trace.permissionMode && (
+                        <div>
+                          <span className="text-muted-foreground">Permissions:</span>
+                          <p className="font-mono">{trace.trace.permissionMode}</p>
+                        </div>
+                      )}
+                      {trace.trace.totalCostUsd !== undefined && (
+                        <div>
+                          <span className="text-muted-foreground">Cost:</span>
+                          <p className="font-mono">${trace.trace.totalCostUsd.toFixed(4)}</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Tool Calls Timeline */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Tool Calls ({trace.trace.toolCalls.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {trace.trace.toolCalls.map((call, idx) => {
+                      const result = trace.trace!.toolResults.find(r => r.toolUseId === call.id);
+                      return (
+                        <div key={call.id} className="border-l-2 border-muted pl-4 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="font-mono text-xs">{call.name}</Badge>
+                              {result && (
+                                result.isError ? (
+                                  <XCircle className="h-3 w-3 text-red-500" />
+                                ) : (
+                                  <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                )
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(call.calledAt).toLocaleTimeString()}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Input:</p>
+                            <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-32">
+                              {JSON.stringify(call.input, null, 2)}
+                            </pre>
+                          </div>
+                          {result && (
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <p className="text-xs text-muted-foreground">Output:</p>
+                                {result.truncated && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    Truncated ({result.originalSizeBytes} bytes)
+                                  </Badge>
+                                )}
+                              </div>
+                              <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-48 whitespace-pre-wrap break-words">
+                                {result.content}
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+
+                {/* Permission Decisions */}
+                {trace.trace.permissions.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm">Permission Decisions</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {trace.trace.permissions.map((perm, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-xs border-b pb-2 last:border-0">
+                            <div className="flex items-center gap-2">
+                              <Badge variant={perm.decision === 'allow' ? 'default' : 'destructive'}>
+                                {perm.decision}
+                              </Badge>
+                              <span className="font-mono">{perm.toolName}</span>
+                            </div>
+                            {perm.reason && (
+                              <span className="text-muted-foreground">{perm.reason}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    No trace data available. Run the task with "Run with Tracing" to collect trace data.
                   </p>
                 </CardContent>
               </Card>
@@ -356,6 +585,19 @@ export default function AgentTaskDetail() {
         onCancel={() => setDeleteDialogOpen(false)}
         title="Delete Task"
         description={`Are you sure you want to delete "${task.name}"? This action cannot be undone. All task configuration, execution history, and scratchpad data will be permanently deleted.`}
+      />
+
+      {/* Clear Scratchpad Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={clearScratchpadDialogOpen}
+        onOpenChange={setClearScratchpadDialogOpen}
+        onDelete={() => {
+          clearScratchpadMutation.mutate();
+          setClearScratchpadDialogOpen(false);
+        }}
+        onCancel={() => setClearScratchpadDialogOpen(false)}
+        title="Clear Scratchpad"
+        description="Are you sure you want to clear the scratchpad? This action cannot be undone and all scratchpad data will be permanently deleted."
       />
     </Container>
   );

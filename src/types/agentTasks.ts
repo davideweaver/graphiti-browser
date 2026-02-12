@@ -42,6 +42,8 @@ export interface NormalizedTaskResult {
 }
 
 export interface TaskExecution {
+  /** Unique execution ID */
+  id: string;
   timestamp: string;
   success: boolean;
   durationMs: number;
@@ -68,6 +70,79 @@ export interface RunAgentProperties {
   cwd?: string;
   /** Permission mode: 'allow_all' or custom allow list (optional) */
   permissions?: 'allow_all' | { allowList: string[] };
+  /** Additional directories the agent can access (optional) */
+  additionalDirectories?: string[];
   /** Use local LLM server instead of Anthropic API (optional) */
   local?: boolean;
+}
+
+/**
+ * Tool information from Claude Code
+ */
+export interface ToolInfo {
+  name: string;
+  description: string;
+  category: 'filesystem' | 'execution' | 'search' | 'web' | 'ai' | 'mcp' | 'config' | 'other';
+  riskLevel: 'low' | 'medium' | 'high';
+}
+
+/**
+ * Category metadata
+ */
+export interface CategoryInfo {
+  label: string;
+  description: string;
+}
+
+/**
+ * Response from /api/v1/scheduled-tasks/tools
+ */
+export interface ToolsResponse {
+  tools: ToolInfo[];
+  categories: Record<string, CategoryInfo>;
+}
+
+/**
+ * Agent execution trace types
+ */
+export interface TraceToolCall {
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+  calledAt: string;
+}
+
+export interface TraceToolResult {
+  toolUseId: string;
+  content: string;
+  isError: boolean;
+  receivedAt: string;
+  truncated: boolean;
+  originalSizeBytes: number;
+}
+
+export interface TracePermissionRequest {
+  toolUseId: string;
+  toolName: string;
+  decision: 'allow' | 'deny';
+  reason?: string;
+  timestamp: string;
+}
+
+export interface AgentExecutionTrace {
+  executionId: string;
+  sessionId?: string;
+  model?: string;
+  cwd?: string;
+  permissionMode?: string;
+  toolCalls: TraceToolCall[];
+  toolResults: TraceToolResult[];
+  permissions: TracePermissionRequest[];
+  totalCostUsd?: number;
+  usage?: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheCreationTokens?: number;
+    cacheReadTokens?: number;
+  };
 }

@@ -9,6 +9,7 @@ import { formatTimestamp, formatDuration } from "@/lib/cronFormatter";
 import { CheckCircle2, XCircle, Clock } from "lucide-react";
 import { TaskExecutionSheet } from "@/components/tasks/TaskExecutionSheet";
 import type { TaskExecution } from "@/types/agentTasks";
+import ReactMarkdown from "react-markdown";
 
 export default function AgentTaskHistory() {
   const navigate = useNavigate();
@@ -83,9 +84,9 @@ export default function AgentTaskHistory() {
                   </span>
                 </div>
                 {(execution.normalizedResult?.display.summary || execution.message) && (
-                  <p className="text-sm text-muted-foreground pl-6 truncate max-w-2xl">
-                    {execution.normalizedResult?.display.summary || execution.message}
-                  </p>
+                  <div className="text-sm text-muted-foreground pl-6 truncate max-w-2xl prose prose-sm dark:prose-invert prose-p:inline prose-strong:font-semibold">
+                    <ReactMarkdown>{execution.normalizedResult?.display.summary || execution.message}</ReactMarkdown>
+                  </div>
                 )}
                 {execution.error && (
                   <p className="text-sm text-red-600 dark:text-red-400 pl-6 truncate max-w-2xl">

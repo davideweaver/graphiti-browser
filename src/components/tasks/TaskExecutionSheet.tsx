@@ -91,8 +91,12 @@ export function TaskExecutionSheet({
                 <span className="text-sm font-medium">Executed At</span>
                 <span className="text-sm text-muted-foreground font-mono">
                   {new Date(execution.timestamp).toLocaleString("en-US", {
-                    dateStyle: "full",
-                    timeStyle: "long",
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
                   })}
                 </span>
               </div>

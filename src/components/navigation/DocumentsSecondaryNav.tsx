@@ -50,21 +50,16 @@ export function DocumentsSecondaryNav({
       )
     : rawItems;
 
-  // Build breadcrumbs (excluding "Documents" which is our root)
+  // Build breadcrumbs from the folder path
   const breadcrumbs = currentFolderPath
-    ? currentFolderPath.split("/").filter(Boolean).slice(1) // Skip "Documents"
+    ? currentFolderPath.split("/").filter(Boolean)
     : [];
 
   const handleBackClick = () => {
-    if (breadcrumbs.length === 0) return; // Can't go back from Documents root
+    if (breadcrumbs.length === 0) return; // Can't go back from root
     const allSegments = currentFolderPath.split("/").filter(Boolean);
     const parentPath = allSegments.slice(0, -1).join("/");
-    // Don't allow going back above Documents
-    if (parentPath && !parentPath.startsWith("Documents")) {
-      onFolderChange("Documents");
-    } else {
-      onFolderChange(parentPath || "Documents");
-    }
+    onFolderChange(parentPath || "");
   };
 
   const handleDocumentClick = (documentPath: string) => {
@@ -77,8 +72,8 @@ export function DocumentsSecondaryNav({
   };
 
   const handleBreadcrumbClick = (index: number) => {
-    // Reconstruct path including "Documents" prefix
-    const newPath = "Documents/" + breadcrumbs.slice(0, index + 1).join("/");
+    // Reconstruct path from breadcrumbs
+    const newPath = breadcrumbs.slice(0, index + 1).join("/");
     onFolderChange(newPath);
   };
 
@@ -109,9 +104,9 @@ export function DocumentsSecondaryNav({
           <div className="flex items-center gap-0.5 text-sm text-muted-foreground flex-wrap">
             <span
               className="cursor-pointer hover:text-foreground transition-colors"
-              onClick={() => onFolderChange("Documents")}
+              onClick={() => onFolderChange("")}
             >
-              Documents
+              Root
             </span>
             {breadcrumbs.map((crumb, index) => (
               <div key={index} className="flex items-center">
@@ -140,7 +135,7 @@ export function DocumentsSecondaryNav({
             <ChevronLeft className="h-4 w-4 mr-2" />
             Back to{" "}
             {breadcrumbs.length === 1
-              ? "Documents"
+              ? "Root"
               : breadcrumbs[breadcrumbs.length - 2]}
           </Button>
         </div>

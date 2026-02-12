@@ -2,10 +2,11 @@ import type { TaskExecution } from "@/types/agentTasks";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DollarSign, Clock, Hash, Wrench, ChevronDown, ChevronUp, Copy } from "lucide-react";
+import { DollarSign, Clock, Hash, Wrench, Copy } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { formatDuration } from "@/lib/cronFormatter";
+import ReactMarkdown from "react-markdown";
 
 interface TaskExecutionDisplayProps {
   execution: TaskExecution;
@@ -36,7 +37,9 @@ export function TaskExecutionDisplay({ execution }: TaskExecutionDisplayProps) {
               )}
             </div>
             <div className="flex-1">
-              <p className="text-sm whitespace-pre-wrap">{normalized.display.summary}</p>
+              <div className="text-sm prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-1">
+                <ReactMarkdown>{normalized.display.summary}</ReactMarkdown>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -86,11 +89,11 @@ export function TaskExecutionDisplay({ execution }: TaskExecutionDisplayProps) {
                 <span className="text-xs">Session ID</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-mono">{truncateSessionId(normalized.metadata.sessionId)}</span>
+                <span className="text-sm font-mono break-all">{normalized.metadata.sessionId}</span>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 w-6 p-0"
+                  className="h-6 w-6 p-0 flex-shrink-0"
                   onClick={() => copyToClipboard(normalized.metadata!.sessionId!, "Session ID")}
                 >
                   <Copy className="h-3 w-3" />
@@ -101,27 +104,69 @@ export function TaskExecutionDisplay({ execution }: TaskExecutionDisplayProps) {
         </Card>
       )}
 
-      {/* Tertiary: Details (collapsible) */}
-      {normalized.display.details && (
-        <Card>
-          <CardContent className="pt-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setDetailsExpanded(!detailsExpanded)}
-              className="w-full justify-between"
-            >
-              <span className="text-sm font-medium">Full Details</span>
-              {detailsExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </Button>
-            {detailsExpanded && (
-              <pre className="mt-3 text-xs bg-muted p-3 rounded-md overflow-auto whitespace-pre-wrap">
-                {normalized.display.details}
-              </pre>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      {/* Execution ID */}
+      <Card>
+        <CardContent className="pt-4 pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Hash className="h-4 w-4" />
+              <span className="text-xs">Execution ID</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-mono break-all">{execution.id}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 flex-shrink-0"
+                onClick={() => copyToClipboard(execution.id, "Execution ID")}
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tertiary: Details (expandable) */}
+      {normalized.display.details && (() => {
+        const lines = normalized.display.details.split('\n');
+        const previewLineCount = 7;
+        const hasMore = lines.length > previewLineCount;
+        const displayText = detailsExpanded ? normalized.display.details : lines.slice(0, previewLineCount).join('\n');
+
+        return (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-2">
+                <span className="text-sm font-medium">Full Details</span>
+                <div className="text-xs bg-muted p-3 rounded-md overflow-auto prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-1 prose-ul:my-1 prose-li:my-0">
+                  <ReactMarkdown>{displayText}</ReactMarkdown>
+                </div>
+                {hasMore && !detailsExpanded && (
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={() => setDetailsExpanded(true)}
+                    className="h-auto p-0 text-xs"
+                  >
+                    Show All ({lines.length - previewLineCount} more lines)
+                  </Button>
+                )}
+                {detailsExpanded && hasMore && (
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={() => setDetailsExpanded(false)}
+                    className="h-auto p-0 text-xs"
+                  >
+                    Show Less
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
     </div>
   );
 }
@@ -188,10 +233,6 @@ function formatCost(cost: number): string {
   if (cost < 0.001) return "<$0.001";
   if (cost < 0.01) return `$${cost.toFixed(4)}`;
   return `$${cost.toFixed(3)}`;
-}
-
-function truncateSessionId(id: string): string {
-  return id.length > 12 ? `${id.substring(0, 12)}...` : id;
 }
 
 function copyToClipboard(text: string, label: string) {
