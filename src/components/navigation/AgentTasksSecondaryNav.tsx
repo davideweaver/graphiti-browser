@@ -10,13 +10,13 @@ import {
 import { SecondaryNavContainer } from "@/components/navigation/SecondaryNavContainer";
 import { SecondaryNavToolButton } from "@/components/navigation/SecondaryNavToolButton";
 import { Badge } from "@/components/ui/badge";
-import { Search, Clock, RefreshCw } from "lucide-react";
+import { Search, Clock, RefreshCw, Activity } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { toast } from "sonner";
 
 interface AgentTasksSecondaryNavProps {
   selectedTaskId: string | null;
-  currentView: "history" | "task";
+  currentView: "history" | "task" | "activity";
   onNavigate: (path: string) => void;
   onTaskSelect?: (path: string) => void; // Optional: for user clicks that should close sidebar
 }
@@ -67,6 +67,15 @@ export function AgentTasksSecondaryNav({
     >
       {/* Primary Menu Items */}
       <div className="px-4 pb-4 space-y-1">
+        <SecondaryNavItem
+          isActive={currentView === "activity"}
+          onClick={() => handleNavigation("/agent-tasks/activity")}
+        >
+          <div className="flex items-center gap-2 w-full">
+            <Activity className="h-4 w-4" />
+            <SecondaryNavItemTitle>Task Activity</SecondaryNavItemTitle>
+          </div>
+        </SecondaryNavItem>
         <SecondaryNavItem
           isActive={currentView === "history"}
           onClick={() => handleNavigation("/agent-tasks/history")}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,6 +17,7 @@ import {
 import { ContainerToolButton } from "@/components/container/ContainerToolButton";
 import { ToolsMultiSelect } from "@/components/agent-tasks/ToolsMultiSelect";
 import { agentTasksService } from "@/api/agentTasksService";
+import { llamacppAdminService } from "@/api/llamacppAdminService";
 import type { ScheduledTask, RunAgentProperties } from "@/types/agentTasks";
 import { Pencil, Save, Loader2, X } from "lucide-react";
 
@@ -53,6 +54,19 @@ export function RunAgentConfigForm({ task, onSaved }: RunAgentConfigFormProps) {
   );
   const [newDirectory, setNewDirectory] = useState("");
   const [local, setLocal] = useState(props.local || false);
+  const [localModel, setLocalModel] = useState(props.localModel || "");
+
+  // Fetch available LLM servers from LlamaCPP Admin API
+  const { data: serversData } = useQuery({
+    queryKey: ["llamacpp-servers"],
+    queryFn: () => llamacppAdminService.listServers(),
+    enabled: local, // Only fetch when local LLM is enabled
+  });
+
+  // Filter to only running servers
+  const availableServers = (serversData?.servers || []).filter(
+    (server) => server.status === "running"
+  );
 
   // Validation
   const [promptError, setPromptError] = useState("");
@@ -80,6 +94,7 @@ export function RunAgentConfigForm({ task, onSaved }: RunAgentConfigFormProps) {
         permissions,
         ...(additionalDirectories.length > 0 && { additionalDirectories }),
         local,
+        ...(local && localModel && { localModel }),
       };
 
       return agentTasksService.updateTask(task.id, {
@@ -108,6 +123,7 @@ export function RunAgentConfigForm({ task, onSaved }: RunAgentConfigFormProps) {
     setAdditionalDirectories(props.additionalDirectories || []);
     setNewDirectory("");
     setLocal(props.local || false);
+    setLocalModel(props.localModel || "");
     setPromptError("");
     setIsEditing(false);
   };
@@ -116,8 +132,7 @@ export function RunAgentConfigForm({ task, onSaved }: RunAgentConfigFormProps) {
     // View Mode
     return (
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Configuration</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-end">
           <ContainerToolButton
             onClick={() => setIsEditing(true)}
             size="icon"
@@ -175,6 +190,19 @@ export function RunAgentConfigForm({ task, onSaved }: RunAgentConfigFormProps) {
               <p className="text-sm">{props.local ? "Yes" : "No"}</p>
             </div>
 
+            {props.local && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                  Model Server
+                </h3>
+                <p className="text-sm font-mono">
+                  {props.localModel || (
+                    <span className="text-muted-foreground">Not selected</span>
+                  )}
+                </p>
+              </div>
+            )}
+
             {props.additionalDirectories && props.additionalDirectories.length > 0 && (
               <div className="md:col-span-2">
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">
@@ -201,8 +229,7 @@ export function RunAgentConfigForm({ task, onSaved }: RunAgentConfigFormProps) {
   // Edit Mode
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Configuration</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-end">
         <ContainerToolButton
           onClick={handleSave}
           disabled={updateMutation.isPending}
@@ -360,19 +387,57 @@ export function RunAgentConfigForm({ task, onSaved }: RunAgentConfigFormProps) {
           </div>
 
           {/* Local LLM Switch */}
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="local">Use Local LLM</Label>
-              <p className="text-xs text-muted-foreground">
-                Use local inference server instead of Anthropic API
-              </p>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="local">Use Local LLM</Label>
+                <p className="text-xs text-muted-foreground">
+                  Use local inference server instead of Anthropic API
+                </p>
+              </div>
+              <Switch
+                id="local"
+                checked={local}
+                onCheckedChange={setLocal}
+                disabled={updateMutation.isPending}
+              />
             </div>
-            <Switch
-              id="local"
-              checked={local}
-              onCheckedChange={setLocal}
-              disabled={updateMutation.isPending}
-            />
+
+            {/* Model Selector - Only shown when local is true */}
+            {local && (
+              <div className="space-y-2">
+                <Label htmlFor="localModel">Model Server</Label>
+                <Select
+                  value={localModel}
+                  onValueChange={setLocalModel}
+                  disabled={updateMutation.isPending}
+                >
+                  <SelectTrigger id="localModel">
+                    <SelectValue placeholder="Select a server..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableServers.map((server) => (
+                      <SelectItem key={server.id} value={server.modelName}>
+                        <div className="flex flex-col">
+                          <span className="font-medium text-sm">{server.label}</span>
+                          <span className="text-xs text-muted-foreground font-mono">
+                            {server.modelName}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {availableServers.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    No running servers available. Start a server in System Control.
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Select the local LLM server to use for this task
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}

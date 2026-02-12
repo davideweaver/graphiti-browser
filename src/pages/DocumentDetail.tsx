@@ -3,7 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { documentsService } from "@/api/documentsService";
 import Container from "@/components/container/Container";
 import { ContainerToolButton } from "@/components/container/ContainerToolButton";
-import { Copy, ChevronLeft, FolderOpen, RefreshCw, Trash2, AlertCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Copy, ChevronLeft, FolderOpen, RefreshCw, Trash2, AlertCircle, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { getSearchQuery } from "@/lib/documentsSearchStorage";
 import { setCurrentFolderPath, clearLastDocumentPath } from "@/lib/documentsStorage";
@@ -12,6 +13,7 @@ import { useState } from "react";
 import { MarkdownViewer, ExcalidrawViewer } from "@/components/document-viewers";
 import { getFileType, DocumentFileType } from "@/lib/fileTypeUtils";
 import { isExcalidrawMarkdown, parseExcalidrawMarkdown } from "@/lib/excalidrawParser";
+import { useDocumentChanges } from "@/hooks/use-document-changes";
 
 export default function DocumentDetail() {
   const params = useParams();
@@ -53,6 +55,41 @@ export default function DocumentDetail() {
 
       // Navigate immediately to documents root
       navigate("/documents");
+    },
+  });
+
+  // Real-time document change notifications
+  const { isConnected } = useDocumentChanges({
+    onAdded: (event) => {
+      toast.success(`Document added: ${event.path}`);
+      // Invalidate navigation to show new document
+      queryClient.invalidateQueries({ queryKey: ["documents-nav"] });
+    },
+    onUpdated: (event) => {
+      // If the current document was updated, auto-refresh silently
+      if (event.path === documentPath || event.absolutePath.endsWith(documentPath)) {
+        refetch();
+        // Also invalidate navigation in case filename changed
+        queryClient.invalidateQueries({ queryKey: ["documents-nav"] });
+      } else {
+        // For other documents, just refresh navigation
+        queryClient.invalidateQueries({ queryKey: ["documents-nav"] });
+      }
+    },
+    onRemoved: (event) => {
+      // If the current document was deleted, navigate away
+      if (event.path === documentPath || event.absolutePath.endsWith(documentPath)) {
+        toast.error(`This document was deleted: ${event.path}`, {
+          description: "Redirecting to documents...",
+        });
+        setIsDeleted(true);
+        clearLastDocumentPath();
+        queryClient.invalidateQueries({ queryKey: ["documents-nav"] });
+        setTimeout(() => navigate("/documents"), 1000);
+      } else {
+        toast.error(`Document removed: ${event.path}`);
+        queryClient.invalidateQueries({ queryKey: ["documents-nav"] });
+      }
     },
   });
 
@@ -188,6 +225,12 @@ export default function DocumentDetail() {
               <ChevronLeft className="h-4 w-4 md:mr-2" />
               <span className="hidden md:inline">Back</span>
             </ContainerToolButton>
+          )}
+          {!isConnected && (
+            <Badge variant="secondary" className="flex items-center gap-1.5">
+              <WifiOff className="h-3 w-3" />
+              <span>Offline</span>
+            </Badge>
           )}
           <ContainerToolButton
             size="icon"

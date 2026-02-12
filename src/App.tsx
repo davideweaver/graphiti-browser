@@ -2,6 +2,7 @@ import { RouterProvider } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { GraphitiProvider } from "@/context/GraphitiContext";
 import { DashboardProvider } from "@/context/DashboardContext";
+import { XerroWebSocketProvider } from "@/context/XerroWebSocketContext";
 import { ThemeProvider } from "@/components/theme-provider";
 import Router from "@/layout/Router";
 
@@ -19,12 +20,14 @@ function App() {
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <QueryClientProvider client={queryClient}>
         <GraphitiProvider>
-          <DashboardProvider>
-            <RouterProvider
-              router={Router}
-              future={{ v7_startTransition: true }}
-            />
-          </DashboardProvider>
+          <XerroWebSocketProvider>
+            <DashboardProvider>
+              <RouterProvider
+                router={Router}
+                future={{ v7_startTransition: true }}
+              />
+            </DashboardProvider>
+          </XerroWebSocketProvider>
         </GraphitiProvider>
       </QueryClientProvider>
     </ThemeProvider>

@@ -14,6 +14,7 @@ interface PrimaryNavProps {
   activePrimary: string | null;
   onNavigate: (path: string) => void;
   footer?: React.ReactNode;
+  indicators?: Record<string, React.ReactNode>;
 }
 
 export function PrimaryNav({
@@ -21,6 +22,7 @@ export function PrimaryNav({
   activePrimary,
   onNavigate,
   footer,
+  indicators = {},
 }: PrimaryNavProps) {
   const isMobile = useIsMobile();
 
@@ -36,18 +38,26 @@ export function PrimaryNav({
         <TooltipProvider delayDuration={300}>
           {navigationConfig.map((item) => {
             const isActive = activePrimary === item.key;
+            const indicator = indicators[item.key];
             const button = (
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  "h-14 w-14 rounded-lg transition-colors [&_svg]:!size-5",
-                  isActive ? "bg-muted text-primary" : "hover:bg-accent",
+              <div className="relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "h-14 w-14 rounded-lg transition-colors [&_svg]:!size-5",
+                    isActive ? "bg-muted text-primary" : "hover:bg-accent",
+                  )}
+                  onClick={() => onNavigate(item.defaultPath)}
+                >
+                  <item.icon />
+                </Button>
+                {indicator && (
+                  <div className="absolute top-1 right-1">
+                    {indicator}
+                  </div>
                 )}
-                onClick={() => onNavigate(item.defaultPath)}
-              >
-                <item.icon />
-              </Button>
+              </div>
             );
 
             // Show tooltips only on desktop

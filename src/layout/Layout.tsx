@@ -1,6 +1,7 @@
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { useGraphitiWebSocket } from "@/hooks/use-graphiti-websocket";
+import { useTasksRunning } from "@/hooks/use-tasks-running";
 import { useState, useEffect, useRef } from "react";
 
 // Animation duration for mobile nav gestures (in ms)
@@ -28,6 +29,7 @@ const Layout = () => {
   const navigate = useNavigate();
   const params = useParams();
   const { connectionState, queueSize } = useGraphitiWebSocket();
+  const isTasksRunning = useTasksRunning();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   const [currentFolderPath, setCurrentFolderPath] = useState<string>(() =>
@@ -192,7 +194,8 @@ const Layout = () => {
   const isSystemSection = activePrimary === "system";
 
   // Determine current view for Agent Tasks section
-  const getAgentTasksView = (): "history" | "task" => {
+  const getAgentTasksView = (): "history" | "task" | "activity" => {
+    if (pathname === "/agent-tasks/activity") return "activity";
     if (pathname === "/agent-tasks/history") return "history";
     if (selectedTaskId) return "task";
     return "history"; // Default
@@ -254,6 +257,16 @@ const Layout = () => {
     />
   );
 
+  // Indicators for navigation items
+  const navIndicators = {
+    "agent-tasks": isTasksRunning ? (
+      <div className="relative flex-shrink-0">
+        <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+        <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-green-500 animate-ping opacity-75" />
+      </div>
+    ) : null,
+  };
+
   return (
     <>
       {/* Desktop Layout */}
@@ -264,6 +277,7 @@ const Layout = () => {
           activePrimary={activePrimary}
           onNavigate={handleNavigate}
           footer={footer}
+          indicators={navIndicators}
         />
 
         {/* Secondary Navigation - 380px */}
@@ -320,6 +334,7 @@ const Layout = () => {
                 activePrimary={activePrimary}
                 onNavigate={() => {}}
                 footer={footer}
+                indicators={navIndicators}
               />
               {isDocumentsSection ? (
                 <DocumentsSecondaryNav
@@ -360,6 +375,7 @@ const Layout = () => {
           navigationConfig={navigationConfig}
           onNavigate={handleNavigate}
           footer={footer}
+          indicators={navIndicators}
           secondaryNav={
             isDocumentsSection ? (
               <DocumentsSecondaryNav

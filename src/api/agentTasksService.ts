@@ -5,6 +5,7 @@ import type {
   TaskExecution,
   ToolsResponse,
   AgentExecutionTrace,
+  RunningTasksResponse,
 } from "@/types/agentTasks";
 
 class AgentTasksService {
@@ -376,6 +377,69 @@ class AgentTasksService {
         error instanceof Error
           ? error.message
           : "Failed to fetch trace";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async getRunningTasks(): Promise<RunningTasksResponse> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/scheduled-tasks/running`
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch running tasks: ${response.statusText}`
+        );
+      }
+
+      return await response.json();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch running tasks";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async cancelExecution(executionId: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/scheduled-tasks/executions/${executionId}/cancel`,
+        {
+          method: "POST",
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to cancel execution: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      toast({
+        title: "Execution cancelled",
+        description: "Task execution has been stopped",
+      });
+
+      return result;
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to cancel execution";
       toast({
         title: "Error",
         description: message,

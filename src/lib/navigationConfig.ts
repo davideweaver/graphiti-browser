@@ -66,7 +66,7 @@ export const navigationConfig: PrimaryNavItem[] = [
     key: 'agent-tasks',
     icon: ListChecks,
     label: 'Agent Tasks',
-    defaultPath: '/agent-tasks',
+    defaultPath: '/agent-tasks/activity',
     secondaryItems: []
   },
   {

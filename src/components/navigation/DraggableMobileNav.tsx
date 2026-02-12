@@ -16,6 +16,7 @@ interface DraggableMobileNavProps {
   onNavigate: (path: string) => void;
   footer?: React.ReactNode;
   secondaryNav?: React.ReactNode;
+  indicators?: Record<string, React.ReactNode>;
 }
 
 export function DraggableMobileNav({
@@ -27,6 +28,7 @@ export function DraggableMobileNav({
   onNavigate,
   footer,
   secondaryNav,
+  indicators = {},
 }: DraggableMobileNavProps) {
   const [translateX, setTranslateX] = useState(-100);
   const [isDragging, setIsDragging] = useState(false);
@@ -208,6 +210,7 @@ export function DraggableMobileNav({
             activePrimary={activePrimary}
             onNavigate={handlePrimaryNavigate}
             footer={footer}
+            indicators={indicators}
           />
           {secondaryNav || (
             <SecondaryNav

@@ -16,7 +16,7 @@ import {
   formatRelativeTime,
   formatDuration,
 } from "@/lib/cronFormatter";
-import { CheckCircle2, XCircle, Clock, Play, Trash2, Copy, ChevronDown } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Play, Trash2, Copy, ChevronDown, Power } from "lucide-react";
 import { TaskExecutionSheet } from "@/components/tasks/TaskExecutionSheet";
 import { RunAgentConfigForm } from "@/components/agent-tasks/RunAgentConfigForm";
 import ReactMarkdown from "react-markdown";
@@ -105,6 +105,17 @@ export default function AgentTaskDetail() {
     },
   });
 
+  // Mutation to toggle enabled status
+  const toggleEnabledMutation = useMutation({
+    mutationFn: () => agentTasksService.updateTask(id!, { enabled: !task?.enabled }),
+    onSuccess: () => {
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ["agent-task", id] });
+      queryClient.invalidateQueries({ queryKey: ["agent-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["agent-tasks-nav"] });
+    },
+  });
+
   if (isLoadingTask) {
     return (
       <Container title="Loading...">
@@ -180,6 +191,15 @@ export default function AgentTaskDetail() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+          <ContainerToolButton
+            onClick={() => toggleEnabledMutation.mutate()}
+            disabled={toggleEnabledMutation.isPending}
+            size="icon"
+            variant={task.enabled ? "default" : "secondary"}
+            title={task.enabled ? "Disable Task" : "Enable Task"}
+          >
+            <Power className="h-4 w-4" />
+          </ContainerToolButton>
           <ContainerToolButton
             onClick={() => setDeleteDialogOpen(true)}
             disabled={deleteMutation.isPending}
@@ -280,13 +300,13 @@ export default function AgentTaskDetail() {
         </Card>
 
         {/* Tabs */}
-        <Tabs defaultValue="history">
+        <Tabs defaultValue="config">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="history">
-              History {history ? `(${history.length})` : ''}
-            </TabsTrigger>
             <TabsTrigger value="config">
               Config
+            </TabsTrigger>
+            <TabsTrigger value="history">
+              History {history ? `(${history.length})` : ''}
             </TabsTrigger>
             <TabsTrigger value="scratchpad">
               Scratchpad

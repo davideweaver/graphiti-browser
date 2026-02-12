@@ -74,6 +74,8 @@ export interface RunAgentProperties {
   additionalDirectories?: string[];
   /** Use local LLM server instead of Anthropic API (optional) */
   local?: boolean;
+  /** Local LLM model name (optional, only used when local is true) */
+  localModel?: string;
 }
 
 /**
@@ -145,4 +147,29 @@ export interface AgentExecutionTrace {
     cacheCreationTokens?: number;
     cacheReadTokens?: number;
   };
+}
+
+/**
+ * Running task from /api/v1/scheduled-tasks/running
+ */
+export interface RunningTask {
+  executionId: string;
+  taskId: string;
+  taskName: string;
+  taskType: string;
+  startedAt: string;
+  currentOperation: string;
+  model?: string;
+  isLocal: boolean;
+  elapsedMs: number;
+  toolName?: string;      // Current tool being used
+  toolCallId?: string;    // Tool call ID
+  isToolError?: boolean;  // Whether last tool result was an error
+}
+
+/**
+ * Response from /api/v1/scheduled-tasks/running
+ */
+export interface RunningTasksResponse {
+  running: RunningTask[];
 }

@@ -129,3 +129,47 @@ export type WebSocketEvent =
 // Event handler types
 export type EventHandler<T = unknown> = (event: T) => void;
 export type StateChangeHandler = (state: ConnectionState) => void;
+
+// ============================================================================
+// Xerro-Service WebSocket Events (Socket.IO)
+// Used for real-time agent task status and Obsidian document change notifications
+// ============================================================================
+
+export type AgentStatus = 'started' | 'operation_update' | 'model_update' | 'tool_use' | 'tool_result' | 'completed' | 'cancelled' | 'error';
+export type DocumentChangeType = 'added' | 'modified' | 'removed';
+
+export interface AgentStatusEvent {
+  executionId: string;
+  taskId: string;
+  taskName: string;
+  status: AgentStatus;
+  currentOperation?: string;
+  model?: string;
+  isLocal?: boolean;
+  cwd?: string;
+  toolName?: string;           // Tool name (for tool_use and tool_result)
+  toolCallId?: string;         // Tool call ID (for tool_use and tool_result)
+  toolInput?: string;          // Tool input preview (for tool_use)
+  toolResult?: string;         // Tool result preview (for tool_result)
+  isToolError?: boolean;       // Whether tool result is an error (for tool_result)
+  error?: string;
+  timestamp: string;
+}
+
+export interface DocumentChangeEvent {
+  path: string;
+  absolutePath: string;
+  changeType: DocumentChangeType;
+  timestamp: string;
+}
+
+export interface XerroWebSocketEvents {
+  'events:list': (events: string[]) => void;
+  'scheduled-tasks:agent-status': (data: AgentStatusEvent) => void;
+  'obsidian:document-added': (data: DocumentChangeEvent) => void;
+  'obsidian:document-updated': (data: DocumentChangeEvent) => void;
+  'obsidian:document-removed': (data: DocumentChangeEvent) => void;
+  connect: () => void;
+  disconnect: () => void;
+  connect_error: (error: Error) => void;
+}
