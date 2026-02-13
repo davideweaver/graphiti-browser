@@ -8,7 +8,7 @@ import { Copy, ChevronLeft, FolderOpen, RefreshCw, Trash2, AlertCircle, WifiOff 
 import { toast } from "sonner";
 import { getSearchQuery } from "@/lib/documentsSearchStorage";
 import { setCurrentFolderPath, clearLastDocumentPath } from "@/lib/documentsStorage";
-import DeleteConfirmationDialog from "@/components/dialogs/DeleteConfirmationDialog";
+import DestructiveConfirmationDialog from "@/components/dialogs/DestructiveConfirmationDialog";
 import { useState } from "react";
 import { MarkdownViewer, ExcalidrawViewer } from "@/components/document-viewers";
 import { getFileType, DocumentFileType } from "@/lib/fileTypeUtils";
@@ -326,14 +326,14 @@ export default function DocumentDetail() {
       )}
 
       {/* Delete Confirmation Dialog */}
-      <DeleteConfirmationDialog
+      <DestructiveConfirmationDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        onDelete={handleConfirmDelete}
+        onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
         title="Delete Document"
         description={`Are you sure you want to delete "${fileName}"? This action cannot be undone.`}
-        isDeleting={deleteDocumentMutation.isPending}
+        isLoading={deleteDocumentMutation.isPending}
       />
     </Container>
   );

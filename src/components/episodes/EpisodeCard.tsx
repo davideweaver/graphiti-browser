@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { Episode } from "@/types/graphiti";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import DeleteConfirmationDialog from "@/components/dialogs/DeleteConfirmationDialog";
+import DestructiveConfirmationDialog from "@/components/dialogs/DestructiveConfirmationDialog";
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { parseEpisodeMessages } from "@/lib/utils";
@@ -116,10 +116,10 @@ export function EpisodeCard({
         </CardContent>
       )}
 
-      <DeleteConfirmationDialog
+      <DestructiveConfirmationDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        onDelete={() => onDelete(episode.uuid)}
+        onConfirm={() => onDelete(episode.uuid)}
         onCancel={() => setDeleteDialogOpen(false)}
         title="Delete Episode"
         description="This will permanently delete this episode. This action cannot be undone."

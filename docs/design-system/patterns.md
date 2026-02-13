@@ -245,16 +245,30 @@ Result:
 <span className="hidden md:inline">Back to Entities</span>
 ```
 
-## Delete Confirmation Pattern
+## Destructive Confirmation Pattern
 
-All delete operations should use the `DeleteConfirmationDialog` component for consistency and better UX.
+All destructive operations (delete, cancel, clear, etc.) should use the `DestructiveConfirmationDialog` component for consistency and better UX.
 
-### Full Usage Pattern
+### Component Props
+
+The component accepts these props:
+- `open` - Boolean controlling dialog visibility
+- `onOpenChange` - Callback when dialog open state changes
+- `onConfirm` - Called when user confirms the action
+- `onCancel` - Called when user cancels
+- `title` - Dialog title (e.g., "Delete Item", "Cancel Task")
+- `description` - Detailed description of what will happen
+- `isLoading` - Optional: Shows loading state (default: false)
+- `confirmText` - Optional: Confirm button text (default: "Delete")
+- `confirmLoadingText` - Optional: Loading text (default: "Deleting...")
+- `confirmVariant` - Optional: Button variant (default: "destructive")
+
+### Full Usage Pattern (Delete)
 
 ```tsx
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import DeleteConfirmationDialog from "@/components/dialogs/DeleteConfirmationDialog";
+import DestructiveConfirmationDialog from "@/components/dialogs/DestructiveConfirmationDialog";
 import { ContainerToolButton } from "@/components/container/ContainerToolButton";
 import { Trash2 } from "lucide-react";
 
@@ -313,14 +327,14 @@ function MyComponent() {
       </ContainerToolButton>
 
       {/* Delete confirmation dialog */}
-      <DeleteConfirmationDialog
+      <DestructiveConfirmationDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        onDelete={handleConfirmDelete}
+        onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
         title="Delete Item"
         description={`Are you sure you want to delete "${itemToDelete?.name}"? This action cannot be undone.`}
-        isDeleting={deleteMutation.isPending}
+        isLoading={deleteMutation.isPending}
       />
     </>
   );
@@ -330,63 +344,71 @@ function MyComponent() {
 ### Key Points
 
 **State Management:**
-- Store both the dialog state (`deleteDialogOpen`) and the item to delete (`itemToDelete`)
-- When user clicks delete, set the item and open the dialog
+- Store both the dialog state and the item/context for the action
+- When user triggers action, set the context and open the dialog
 - On confirm: execute the mutation and clean up state on success
 - On cancel: just close the dialog and reset state
 
 **Loading State:**
-- Pass `isDeleting={deleteMutation.isPending}` to the dialog
-- Delete button shows spinner and "Deleting..." text while pending
-- Both buttons are disabled during deletion to prevent multiple clicks
+- Pass `isLoading={mutation.isPending}` to the dialog
+- Button shows spinner and loading text while pending
+- Both buttons are disabled during operation to prevent multiple clicks
 - Dialog closes automatically on success or error
 
 **Description Format:**
-- Always include "This action cannot be undone." for destructive operations
-- Include the item name in the description for context
+- Always include "This action cannot be undone." for irreversible operations
+- Include the item/context name for clarity
 - Use template literals for dynamic descriptions
 
 **Mutation Handling:**
-- Use React Query's `useMutation` for delete operations
+- Use React Query's `useMutation` for operations
 - Handle both `onError` and `onSuccess` to close dialog
 - Invalidate relevant queries on success
-- Navigate away from deleted item's detail page
+- Navigate away from deleted item's detail page if needed
 
 ### Examples in Codebase
 
 **Delete Entity:**
 ```tsx
-<DeleteConfirmationDialog
+<DestructiveConfirmationDialog
   open={deleteDialogOpen}
   onOpenChange={setDeleteDialogOpen}
-  onDelete={handleConfirmDelete}
+  onConfirm={handleConfirmDelete}
   onCancel={handleCancelDelete}
   title="Delete Entity"
   description={`Are you sure you want to delete "${entity?.name}"? This will remove the entity and all its relationships. This action cannot be undone.`}
+  isLoading={deleteMutation.isPending}
 />
 ```
 
-**Delete Session:**
+**Cancel Task Execution:**
 ```tsx
-<DeleteConfirmationDialog
-  open={deleteDialogOpen}
-  onOpenChange={setDeleteDialogOpen}
-  onDelete={handleConfirmDelete}
-  onCancel={handleCancelDelete}
-  title="Delete Session"
-  description={`Are you sure you want to delete this session? This action cannot be undone.`}
+<DestructiveConfirmationDialog
+  open={cancelDialogOpen}
+  onOpenChange={setCancelDialogOpen}
+  onConfirm={handleConfirmCancel}
+  onCancel={() => setCancelDialogOpen(false)}
+  title="Cancel Task Execution"
+  description={`Are you sure you want to cancel "${taskName}"? This action cannot be undone.`}
+  isLoading={cancelMutation.isPending}
+  confirmText="Cancel Task"
+  confirmLoadingText="Cancelling..."
+  confirmVariant="destructive"
 />
 ```
 
-**Delete Graph:**
+**Clear Scratchpad:**
 ```tsx
-<DeleteConfirmationDialog
-  open={deleteDialogOpen}
-  onOpenChange={setDeleteDialogOpen}
-  onDelete={handleConfirmDelete}
-  onCancel={handleCancelDelete}
-  title="Delete Graph"
-  description={`Are you sure you want to delete "${graphToDelete?.id}"? All entities, facts, and episodes in this graph will be permanently removed. This action cannot be undone.`}
+<DestructiveConfirmationDialog
+  open={clearDialogOpen}
+  onOpenChange={setClearDialogOpen}
+  onConfirm={handleConfirmClear}
+  onCancel={() => setClearDialogOpen(false)}
+  title="Clear Scratchpad"
+  description="Are you sure you want to clear the scratchpad? This action cannot be undone and all scratchpad data will be permanently deleted."
+  isLoading={clearMutation.isPending}
+  confirmText="Clear"
+  confirmLoadingText="Clearing..."
 />
 ```
 

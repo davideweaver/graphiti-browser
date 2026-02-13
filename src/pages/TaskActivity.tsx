@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import Container from "@/components/container/Container";
+import { ContainerToolButton } from "@/components/container/ContainerToolButton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import DestructiveConfirmationDialog from "@/components/dialogs/DestructiveConfirmationDialog";
 import { agentTasksService } from "@/api/agentTasksService";
 import {
   Activity,
@@ -18,6 +20,7 @@ import {
   Ban,
   Settings,
   X,
+  Trash2,
 } from "lucide-react";
 import type { RunningTask, TaskExecution } from "@/types/agentTasks";
 import { useAgentStatus } from "@/hooks/use-agent-status";
@@ -42,7 +45,7 @@ function RunningTaskCard({
   isFinished?: boolean;
   wasCancelled?: boolean;
   onViewHistory?: () => void;
-  onCancel?: (executionId: string) => void;
+  onCancel?: (executionId: string, taskName: string) => void;
 }) {
   const navigate = useNavigate();
   const [clientElapsed, setClientElapsed] = useState(task.elapsedMs);
@@ -85,7 +88,7 @@ function RunningTaskCard({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onCancel(task.executionId);
+              onCancel(task.executionId, task.taskName);
             }}
             className="absolute top-2 right-2 h-9 w-9 text-gray-400 hover:text-gray-300 hover:bg-white/20 transition-colors z-10 rounded-md flex items-center justify-center"
             title="Cancel"
@@ -249,6 +252,12 @@ export default function TaskActivity() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedExecution, setSelectedExecution] =
     useState<TaskExecution | null>(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [executionToCancel, setExecutionToCancel] = useState<{
+    executionId: string;
+    taskName: string;
+  } | null>(null);
+  const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // Listen for real-time task configuration updates
@@ -429,13 +438,49 @@ export default function TaskActivity() {
     mutationFn: (executionId: string) =>
       agentTasksService.cancelExecution(executionId),
     onSuccess: () => {
-      // Invalidate running tasks query to refresh the list
-      queryClient.invalidateQueries({ queryKey: ["running-tasks"] });
+      // Close the confirmation dialog
+      // Note: WebSocket will handle updating the task state automatically
+      setCancelDialogOpen(false);
+      setExecutionToCancel(null);
     },
   });
 
-  const handleCancelTask = (executionId: string) => {
-    cancelMutation.mutate(executionId);
+  // Clear all history mutation
+  const clearAllMutation = useMutation({
+    mutationFn: () => agentTasksService.clearAllHistory(),
+    onSuccess: () => {
+      // Invalidate queries to refresh UI
+      queryClient.invalidateQueries({ queryKey: ["agent-task-history"] });
+      setClearAllDialogOpen(false);
+    },
+  });
+
+  const handleCancelClick = (executionId: string, taskName: string) => {
+    setExecutionToCancel({ executionId, taskName });
+    setCancelDialogOpen(true);
+  };
+
+  const handleConfirmCancel = () => {
+    if (executionToCancel) {
+      cancelMutation.mutate(executionToCancel.executionId);
+    }
+  };
+
+  const handleCancelDialog = () => {
+    setCancelDialogOpen(false);
+    setExecutionToCancel(null);
+  };
+
+  const handleClearAllClick = () => {
+    setClearAllDialogOpen(true);
+  };
+
+  const handleConfirmClearAll = () => {
+    clearAllMutation.mutate();
+  };
+
+  const handleCancelClearAll = () => {
+    setClearAllDialogOpen(false);
   };
 
   // Filter out tasks older than 1 minute
@@ -480,12 +525,23 @@ export default function TaskActivity() {
       title="Task Activity"
       description="Real-time monitoring of executing tasks"
       tools={
-        !isConnected && (
-          <Badge variant="secondary" className="flex items-center gap-1.5">
-            <WifiOff className="h-3 w-3" />
-            <span>Polling</span>
-          </Badge>
-        )
+        <div className="flex items-center gap-2">
+          {!isConnected && (
+            <Badge variant="secondary" className="flex items-center gap-1.5">
+              <WifiOff className="h-3 w-3" />
+              <span>Polling</span>
+            </Badge>
+          )}
+          <ContainerToolButton
+            onClick={handleClearAllClick}
+            disabled={clearAllMutation.isPending}
+            size="sm"
+            variant="destructive"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Clear All
+          </ContainerToolButton>
+        </div>
       }
     >
       {allDisplayedTasks.length === 0 ? (
@@ -506,7 +562,7 @@ export default function TaskActivity() {
               key={task.executionId}
               task={task}
               isFinished={false}
-              onCancel={handleCancelTask}
+              onCancel={handleCancelClick}
             />
           ))}
           {displayedFinished.map((task) => (
@@ -536,6 +592,38 @@ export default function TaskActivity() {
         execution={selectedExecution}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
+      />
+
+      {/* Cancel Confirmation Dialog */}
+      <DestructiveConfirmationDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        onConfirm={handleConfirmCancel}
+        onCancel={handleCancelDialog}
+        title="Cancel Task Execution"
+        description={
+          executionToCancel
+            ? `Are you sure you want to cancel "${executionToCancel.taskName}"? This action cannot be undone.`
+            : ""
+        }
+        isLoading={cancelMutation.isPending}
+        confirmText="Cancel Task"
+        confirmLoadingText="Cancelling..."
+        confirmVariant="destructive"
+      />
+
+      {/* Clear All History Confirmation Dialog */}
+      <DestructiveConfirmationDialog
+        open={clearAllDialogOpen}
+        onOpenChange={setClearAllDialogOpen}
+        onConfirm={handleConfirmClearAll}
+        onCancel={handleCancelClearAll}
+        title="Clear All History"
+        description="Are you sure you want to clear all execution history for all tasks? This action cannot be undone and all execution records will be permanently deleted."
+        isLoading={clearAllMutation.isPending}
+        confirmText="Clear All"
+        confirmLoadingText="Clearing..."
+        confirmVariant="destructive"
       />
     </Container>
   );

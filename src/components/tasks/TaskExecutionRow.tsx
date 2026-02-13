@@ -1,7 +1,9 @@
 import { formatTimestamp, formatDuration } from "@/lib/cronFormatter";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle, X } from "lucide-react";
 import type { TaskExecution } from "@/types/agentTasks";
 import ReactMarkdown from "react-markdown";
+import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface TaskExecutionRowProps {
   execution: TaskExecution;
@@ -9,6 +11,7 @@ interface TaskExecutionRowProps {
   showTaskName?: boolean;
   onTaskNameClick?: () => void;
   showDuration?: boolean;
+  onDelete?: (executionId: string) => void;
 }
 
 export function TaskExecutionRow({
@@ -17,7 +20,10 @@ export function TaskExecutionRow({
   showTaskName = false,
   onTaskNameClick,
   showDuration = true,
+  onDelete,
 }: TaskExecutionRowProps) {
+  const isMobile = useIsMobile();
+
   const renderExecutionStatus = () => {
     if (execution.success) {
       return (
@@ -37,9 +43,22 @@ export function TaskExecutionRow({
 
   return (
     <div
-      className="flex items-start justify-between border-b pb-4 last:border-0 last:pb-0 cursor-pointer hover:bg-muted/30 -mx-2 px-2 py-2 rounded-md transition-colors"
+      className="group flex items-start justify-between border-b pb-4 last:border-0 last:pb-0 cursor-pointer hover:bg-muted/30 -mx-2 px-2 py-2 rounded-md transition-colors relative"
       onClick={onClick}
     >
+      {/* Delete Button (always visible on mobile, appears on hover on desktop) */}
+      {onDelete && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(execution.id);
+          }}
+          className={`absolute top-1 right-1 h-9 w-9 text-gray-400 hover:text-gray-300 hover:bg-white/20 transition-colors rounded-md flex items-center justify-center ${isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+          title="Delete"
+        >
+          <X className="h-6 w-6" strokeWidth={2.5} />
+        </button>
+      )}
       <div className="flex-1 space-y-1">
         <div className="flex items-center gap-3">
           {renderExecutionStatus()}

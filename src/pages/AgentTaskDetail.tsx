@@ -8,14 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import DeleteConfirmationDialog from "@/components/dialogs/DeleteConfirmationDialog";
+import DestructiveConfirmationDialog from "@/components/dialogs/DestructiveConfirmationDialog";
 import { agentTasksService } from "@/api/agentTasksService";
 import {
   formatCronExpression,
   formatTimestamp,
   formatRelativeTime,
 } from "@/lib/cronFormatter";
-import { CheckCircle2, XCircle, Clock, Play, Trash2, Copy, ChevronDown, Power } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Play, Trash2, Copy, ChevronDown, Power, Loader2 } from "lucide-react";
 import { TaskExecutionSheet } from "@/components/tasks/TaskExecutionSheet";
 import { TaskExecutionRow } from "@/components/tasks/TaskExecutionRow";
 import { RunAgentConfigForm } from "@/components/agent-tasks/RunAgentConfigForm";
@@ -41,6 +41,10 @@ export default function AgentTaskDetail() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clearScratchpadDialogOpen, setClearScratchpadDialogOpen] = useState(false);
+  const [clearHistoryDialogOpen, setClearHistoryDialogOpen] = useState(false);
+  const [deleteExecutionDialogOpen, setDeleteExecutionDialogOpen] = useState(false);
+  const [executionToDelete, setExecutionToDelete] = useState<string | null>(null);
+  const [isDelayingRedirect, setIsDelayingRedirect] = useState(false);
 
   // Listen for real-time task configuration updates
   useTaskConfigUpdates();
@@ -114,6 +118,27 @@ export default function AgentTaskDetail() {
     },
   });
 
+  // Mutation to clear task history
+  const clearHistoryMutation = useMutation({
+    mutationFn: () => agentTasksService.clearTaskHistory(id!),
+    onSuccess: () => {
+      // Invalidate history query to refresh data
+      queryClient.invalidateQueries({ queryKey: ["agent-task-history", id] });
+      setClearHistoryDialogOpen(false);
+    },
+  });
+
+  // Mutation to delete individual execution
+  const deleteExecutionMutation = useMutation({
+    mutationFn: (executionId: string) => agentTasksService.deleteExecution(executionId),
+    onSuccess: () => {
+      // Invalidate history query to refresh data
+      queryClient.invalidateQueries({ queryKey: ["agent-task-history", id] });
+      setDeleteExecutionDialogOpen(false);
+      setExecutionToDelete(null);
+    },
+  });
+
   // Mutation to toggle enabled status
   const toggleEnabledMutation = useMutation({
     mutationFn: () => agentTasksService.updateTask(id!, { enabled: !task?.enabled }),
@@ -124,6 +149,18 @@ export default function AgentTaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["agent-tasks-nav"] });
     },
   });
+
+  // Helper function to trigger task and navigate after delay
+  const handleRunTask = (withTrace: boolean) => {
+    setIsDelayingRedirect(true);
+    triggerMutation.mutate({ withTrace });
+
+    // Wait 3 seconds before navigating
+    setTimeout(() => {
+      setIsDelayingRedirect(false);
+      navigate("/agent-tasks/activity");
+    }, 3000);
+  };
 
   if (isLoadingTask) {
     return (
@@ -156,24 +193,23 @@ export default function AgentTaskDetail() {
           {/* Combo Button for Run */}
           <div className="flex items-center">
             <ContainerToolButton
-              onClick={() => {
-                // Trigger the task
-                triggerMutation.mutate({ withTrace: false });
-                // Navigate immediately (don't wait for task to complete)
-                navigate("/agent-tasks/activity");
-              }}
-              disabled={triggerMutation.isPending || !task.enabled}
+              onClick={() => handleRunTask(false)}
+              disabled={triggerMutation.isPending || isDelayingRedirect || !task.enabled}
               size="sm"
               variant="primary"
               className="rounded-r-none border-r-0"
             >
-              <Play className="h-4 w-4 mr-2" />
-              {triggerMutation.isPending ? "Running..." : "Run"}
+              {triggerMutation.isPending || isDelayingRedirect ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Play className="h-4 w-4 mr-2" />
+              )}
+              {triggerMutation.isPending || isDelayingRedirect ? "Running..." : "Run"}
             </ContainerToolButton>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <ContainerToolButton
-                  disabled={triggerMutation.isPending || !task.enabled}
+                  disabled={triggerMutation.isPending || isDelayingRedirect || !task.enabled}
                   size="sm"
                   variant="primary"
                   className="rounded-l-none px-2"
@@ -182,12 +218,7 @@ export default function AgentTaskDetail() {
                 </ContainerToolButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => {
-                  // Trigger the task with tracing
-                  triggerMutation.mutate({ withTrace: true });
-                  // Navigate immediately (don't wait for task to complete)
-                  navigate("/agent-tasks/activity");
-                }}>
+                <DropdownMenuItem onClick={() => handleRunTask(true)}>
                   Run with Tracing
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -327,17 +358,34 @@ export default function AgentTaskDetail() {
                 <Skeleton className="h-16 w-full" />
               </div>
             ) : history && history.length > 0 ? (
-              <div className="space-y-2">
-                {history.map((execution, index) => (
-                  <TaskExecutionRow
-                    key={index}
-                    execution={execution}
-                    onClick={() => {
-                      setSelectedExecution(execution);
-                      setSheetOpen(true);
-                    }}
-                  />
-                ))}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  {history.map((execution, index) => (
+                    <TaskExecutionRow
+                      key={index}
+                      execution={execution}
+                      onClick={() => {
+                        setSelectedExecution(execution);
+                        setSheetOpen(true);
+                      }}
+                      onDelete={(executionId) => {
+                        setExecutionToDelete(executionId);
+                        setDeleteExecutionDialogOpen(true);
+                      }}
+                    />
+                  ))}
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => setClearHistoryDialogOpen(true)}
+                    disabled={clearHistoryMutation.isPending}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Clear History
+                  </Button>
+                </div>
               </div>
             ) : (
               <Card>
@@ -578,10 +626,10 @@ export default function AgentTaskDetail() {
       />
 
       {/* Delete Confirmation Dialog */}
-      <DeleteConfirmationDialog
+      <DestructiveConfirmationDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        onDelete={() => {
+        onConfirm={() => {
           deleteMutation.mutate();
           setDeleteDialogOpen(false);
         }}
@@ -591,16 +639,51 @@ export default function AgentTaskDetail() {
       />
 
       {/* Clear Scratchpad Confirmation Dialog */}
-      <DeleteConfirmationDialog
+      <DestructiveConfirmationDialog
         open={clearScratchpadDialogOpen}
         onOpenChange={setClearScratchpadDialogOpen}
-        onDelete={() => {
+        onConfirm={() => {
           clearScratchpadMutation.mutate();
           setClearScratchpadDialogOpen(false);
         }}
         onCancel={() => setClearScratchpadDialogOpen(false)}
         title="Clear Scratchpad"
         description="Are you sure you want to clear the scratchpad? This action cannot be undone and all scratchpad data will be permanently deleted."
+      />
+
+      {/* Clear History Confirmation Dialog */}
+      <DestructiveConfirmationDialog
+        open={clearHistoryDialogOpen}
+        onOpenChange={setClearHistoryDialogOpen}
+        onConfirm={() => clearHistoryMutation.mutate()}
+        onCancel={() => setClearHistoryDialogOpen(false)}
+        title="Clear Task History"
+        description={`Are you sure you want to clear all execution history for "${task?.name}"? This action cannot be undone and all execution records will be permanently deleted.`}
+        isLoading={clearHistoryMutation.isPending}
+        confirmText="Clear History"
+        confirmLoadingText="Clearing..."
+        confirmVariant="destructive"
+      />
+
+      {/* Delete Execution Confirmation Dialog */}
+      <DestructiveConfirmationDialog
+        open={deleteExecutionDialogOpen}
+        onOpenChange={setDeleteExecutionDialogOpen}
+        onConfirm={() => {
+          if (executionToDelete) {
+            deleteExecutionMutation.mutate(executionToDelete);
+          }
+        }}
+        onCancel={() => {
+          setDeleteExecutionDialogOpen(false);
+          setExecutionToDelete(null);
+        }}
+        title="Delete Execution"
+        description="Are you sure you want to delete this execution from history? This action cannot be undone."
+        isLoading={deleteExecutionMutation.isPending}
+        confirmText="Delete"
+        confirmLoadingText="Deleting..."
+        confirmVariant="destructive"
       />
     </Container>
   );

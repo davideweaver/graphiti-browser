@@ -14,7 +14,7 @@ import { ChatMessage } from "@/components/episodes/ChatMessage";
 import { TimelineBar } from "@/components/episodes/TimelineBar";
 import { NodeDetailSheet } from "@/components/shared/NodeDetailSheet";
 import { format, differenceInMinutes } from "date-fns";
-import DeleteConfirmationDialog from "@/components/dialogs/DeleteConfirmationDialog";
+import DestructiveConfirmationDialog from "@/components/dialogs/DestructiveConfirmationDialog";
 
 export default function SessionDetail() {
   const { sessionId } = useParams<{
@@ -334,10 +334,10 @@ export default function SessionDetail() {
       />
 
       {/* Delete Session Confirmation Dialog */}
-      <DeleteConfirmationDialog
+      <DestructiveConfirmationDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        onDelete={handleConfirmDelete}
+        onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
         title="Delete Session"
         description={`Are you sure you want to delete this session? This will permanently delete ${sessionData?.episode_count || 0} episode${sessionData?.episode_count !== 1 ? "s" : ""} from this session. This action cannot be undone.`}

@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import DeleteConfirmationDialog from "@/components/dialogs/DeleteConfirmationDialog";
+import DestructiveConfirmationDialog from "@/components/dialogs/DestructiveConfirmationDialog";
 import { ChevronLeft, Info, Edit, Trash2 } from "lucide-react";
 import { FactCard } from "@/components/search/FactCard";
 import { NodeDetailSheet } from "@/components/shared/NodeDetailSheet";
@@ -392,7 +392,7 @@ export default function EntityDetail() {
                     key={fact.uuid}
                     fact={fact}
                     onEdit={handleEditFact}
-                    onDelete={handleDeleteFact}
+                    onConfirm={handleDeleteFact}
                   />
                 ))}
               </div>
@@ -492,20 +492,20 @@ export default function EntityDetail() {
       </Dialog>
 
       {/* Delete Fact Confirmation Dialog */}
-      <DeleteConfirmationDialog
+      <DestructiveConfirmationDialog
         open={deleteFactDialogOpen}
         onOpenChange={setDeleteFactDialogOpen}
-        onDelete={handleConfirmFactDelete}
+        onConfirm={handleConfirmFactDelete}
         onCancel={handleCancelFactDelete}
         title="Delete Fact"
         description={`Are you sure you want to delete this fact?\n\n${selectedFact?.fact || ''}\n\nThis action cannot be undone.`}
       />
 
       {/* Delete Entity Confirmation Dialog */}
-      <DeleteConfirmationDialog
+      <DestructiveConfirmationDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        onDelete={handleConfirmDelete}
+        onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
         title="Delete Entity"
         description={`Are you sure you want to delete "${entity?.name}"? This will permanently remove the entity and all of its relationships from the knowledge graph. This action cannot be undone.`}

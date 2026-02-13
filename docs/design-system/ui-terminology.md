@@ -94,11 +94,11 @@ See [Data Presentation](data-presentation.md) for card patterns.
 
 ### Dialogs
 
-- `DeleteConfirmationDialog` - Reusable delete confirmation
+- `DestructiveConfirmationDialog` - Reusable confirmation for destructive actions (delete, cancel, clear, etc.)
 - `GraphManagementDialog` - Graph CRUD operations
 - `UserProfileMenu` - User settings dropdown
 
-See [Patterns](patterns.md#delete-confirmation-pattern) for dialog patterns.
+See [Patterns](patterns.md#destructive-confirmation-pattern) for dialog patterns.
 
 ## State Naming Conventions
 

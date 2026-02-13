@@ -17,7 +17,7 @@ import { SessionRow } from "@/components/episodes/SessionRow";
 import { ProjectTimelineBar } from "@/components/episodes/ProjectTimelineBar";
 import { NodeDetailSheet } from "@/components/shared/NodeDetailSheet";
 import { format } from "date-fns";
-import DeleteConfirmationDialog from "@/components/dialogs/DeleteConfirmationDialog";
+import DestructiveConfirmationDialog from "@/components/dialogs/DestructiveConfirmationDialog";
 
 export default function ProjectDetail() {
   const { projectName: encodedProjectName } = useParams<{ projectName: string }>();
@@ -384,10 +384,10 @@ export default function ProjectDetail() {
       />
 
       {/* Delete Project Confirmation Dialog */}
-      <DeleteConfirmationDialog
+      <DestructiveConfirmationDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        onDelete={handleConfirmDelete}
+        onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
         title="Delete Project"
         description={`Are you sure you want to delete the project "${projectName}"? This will permanently delete ${projectData?.session_count || 0} session${projectData?.session_count !== 1 ? 's' : ''}, ${projectData?.episode_count || 0} episode${projectData?.episode_count !== 1 ? 's' : ''}, and all associated facts and relationships. This action cannot be undone.`}

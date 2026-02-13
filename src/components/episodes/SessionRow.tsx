@@ -5,7 +5,7 @@ import { TimelineBar } from "./TimelineBar";
 import { format, differenceInMinutes } from "date-fns";
 import { Info, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import DeleteConfirmationDialog from "@/components/dialogs/DeleteConfirmationDialog";
+import DestructiveConfirmationDialog from "@/components/dialogs/DestructiveConfirmationDialog";
 import { NodeDetailSheet } from "@/components/shared/NodeDetailSheet";
 import { graphitiService } from "@/api/graphitiService";
 import { useGraphiti } from "@/context/GraphitiContext";
@@ -190,10 +190,10 @@ export function SessionRow({
     />
 
     {/* Delete Confirmation Dialog */}
-    <DeleteConfirmationDialog
+    <DestructiveConfirmationDialog
       open={deleteDialogOpen}
       onOpenChange={setDeleteDialogOpen}
-      onDelete={handleConfirmDelete}
+      onConfirm={handleConfirmDelete}
       onCancel={handleCancelDelete}
       title="Delete Session"
       description={`Are you sure you want to delete this session${session.project_name ? ` from ${session.project_name}` : ""}? This action cannot be undone.`}

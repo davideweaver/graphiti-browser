@@ -98,7 +98,7 @@ This project follows a comprehensive design system documented in `docs/design-sy
 **Quick References:**
 - Container component: See [Layout Guide](docs/design-system/layout.md#container-component)
 - Tool buttons: See [Patterns Guide](docs/design-system/patterns.md#tool-button-hierarchy)
-- Delete confirmations: See [Patterns Guide](docs/design-system/patterns.md#delete-confirmation-pattern)
+- Destructive confirmations: See [Patterns Guide](docs/design-system/patterns.md#destructive-confirmation-pattern)
 - Color system: See [Foundations](docs/design-system/foundations.md#color-system)
 - Responsive breakpoints: See [Layout Guide](docs/design-system/layout.md#responsive-patterns)
 
@@ -148,7 +148,7 @@ src/
 ├── components/       # Reusable UI components
 │   ├── ui/          # ShadCN UI component library (complete)
 │   ├── container/   # Container, ContainerTable, ContainerToolButton, ContainerToolToggle
-│   ├── dialogs/     # DeleteConfirmationDialog
+│   ├── dialogs/     # DestructiveConfirmationDialog
 │   ├── navigation/  # PrimaryNav, SecondaryNav, SecondaryNavItem, specific nav implementations
 │   ├── sidebar/     # UserProfileMenu, GraphManagementDialog
 │   ├── search/      # FactCard for search results

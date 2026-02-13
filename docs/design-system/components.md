@@ -445,9 +445,9 @@ const [open, setOpen] = useState(false);
 </Dialog>
 ```
 
-## DeleteConfirmationDialog
+## DestructiveConfirmationDialog
 
-Reusable component for delete confirmations with consistent styling and behavior.
+Reusable component for destructive action confirmations (delete, cancel, clear, etc.) with consistent styling and configurable behavior.
 
 ### Full Component Code
 
@@ -461,23 +461,32 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onDelete: () => void;
+  onConfirm: () => void;
   onCancel: () => void;
   title: string;
   description: string;
+  isLoading?: boolean;
+  confirmText?: string;
+  confirmLoadingText?: string;
+  confirmVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
 };
 
-const DeleteConfirmationDialog: React.FC<Props> = ({
+const DestructiveConfirmationDialog: React.FC<Props> = ({
   open,
   onOpenChange,
-  onDelete,
+  onConfirm,
   onCancel,
   title,
   description,
+  isLoading = false,
+  confirmText = "Delete",
+  confirmLoadingText = "Deleting...",
+  confirmVariant = "destructive",
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -487,11 +496,12 @@ const DeleteConfirmationDialog: React.FC<Props> = ({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <div className="flex gap-2 justify-end mt-4">
-          <Button variant="outline" onClick={onCancel}>
+          <Button variant="outline" onClick={onCancel} disabled={isLoading}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={onDelete}>
-            Delete
+          <Button variant={confirmVariant} onClick={onConfirm} disabled={isLoading}>
+            {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isLoading ? confirmLoadingText : confirmText}
           </Button>
         </div>
       </DialogContent>
@@ -499,12 +509,12 @@ const DeleteConfirmationDialog: React.FC<Props> = ({
   );
 };
 
-export default DeleteConfirmationDialog;
+export default DestructiveConfirmationDialog;
 ```
 
 ### Usage Pattern
 
-See [patterns.md](./patterns.md#delete-confirmation-pattern) for complete usage pattern with state management.
+See [patterns.md](./patterns.md#destructive-confirmation-pattern) for complete usage pattern with state management and examples for delete, cancel, and clear operations.
 
 ## Sheet (Slide-over)
 

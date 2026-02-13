@@ -52,7 +52,7 @@ The design system includes three custom components not part of ShadCN:
 
 - **Container** - Main page layout component ([layout.md](./layout.md#container-component))
 - **ContainerToolButton** - Specialized toolbar buttons ([components.md](./components.md#containertoolbutton))
-- **DeleteConfirmationDialog** - Reusable delete confirmation ([patterns.md](./patterns.md#delete-confirmation-pattern))
+- **DestructiveConfirmationDialog** - Reusable confirmation for destructive actions ([patterns.md](./patterns.md#destructive-confirmation-pattern))
 
 Copy the full component code from the respective documentation files.
 

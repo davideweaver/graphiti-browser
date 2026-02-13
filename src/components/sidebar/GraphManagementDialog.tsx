@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { getPinnedGraphs, pinGraph, unpinGraph, isGraphPinned } from "@/lib/graphStorage";
-import DeleteConfirmationDialog from "@/components/dialogs/DeleteConfirmationDialog";
+import DestructiveConfirmationDialog from "@/components/dialogs/DestructiveConfirmationDialog";
 
 type Props = {
   open: boolean;
@@ -312,10 +312,10 @@ export const GraphManagementDialog: React.FC<Props> = ({
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <DeleteConfirmationDialog
+      <DestructiveConfirmationDialog
         open={deleteConfirmGraph !== null}
         onOpenChange={(open) => !open && setDeleteConfirmGraph(null)}
-        onDelete={handleDeleteGraph}
+        onConfirm={handleDeleteGraph}
         onCancel={handleCancelDelete}
         title="Delete Graph"
         description={`Are you sure you want to delete "${deleteConfirmGraph}"? This will permanently delete all entities, episodes, and facts in this graph. This action cannot be undone.`}

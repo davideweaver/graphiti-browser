@@ -448,6 +448,119 @@ class AgentTasksService {
       throw error;
     }
   }
+
+  async deleteExecution(executionId: string): Promise<{ success: boolean; id: string }> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/scheduled-tasks/executions/${executionId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to delete execution: ${response.statusText}`
+        );
+      }
+
+      const result = await response.json();
+
+      toast({
+        title: "Execution deleted",
+        description: "The execution has been removed from history",
+      });
+
+      return result;
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to delete execution";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async clearTaskHistory(taskId: string): Promise<{ success: boolean; id: string; wasEmpty: boolean }> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/scheduled-tasks/${taskId}/history`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to clear task history: ${response.statusText}`
+        );
+      }
+
+      const result = await response.json();
+
+      toast({
+        title: "History cleared",
+        description: result.wasEmpty
+          ? "History was already empty"
+          : "All execution history has been cleared",
+      });
+
+      return result;
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to clear task history";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async clearAllHistory(): Promise<{ success: boolean; cleared: number }> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/scheduled-tasks/executions`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to clear all history: ${response.statusText}`
+        );
+      }
+
+      const result = await response.json();
+
+      toast({
+        title: "All history cleared",
+        description: `Cleared ${result.cleared} execution${result.cleared !== 1 ? 's' : ''} from history`,
+      });
+
+      return result;
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to clear all history";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
 }
 
 export const agentTasksService = new AgentTasksService();
