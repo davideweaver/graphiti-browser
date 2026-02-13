@@ -163,9 +163,23 @@ export interface DocumentChangeEvent {
   timestamp: string;
 }
 
+export interface TaskConfigEvent {
+  taskId: string;
+  taskName: string;
+  taskType: string;
+  schedule?: string;
+  runAt?: string;
+  enabled: boolean;
+  properties?: Record<string, unknown>;
+  timestamp: string;
+}
+
 export interface XerroWebSocketEvents {
   'events:list': (events: string[]) => void;
   'scheduled-tasks:agent-status': (data: AgentStatusEvent) => void;
+  'scheduled-tasks:task-created': (data: TaskConfigEvent) => void;
+  'scheduled-tasks:task-updated': (data: TaskConfigEvent) => void;
+  'scheduled-tasks:task-deleted': (data: TaskConfigEvent) => void;
   'obsidian:document-added': (data: DocumentChangeEvent) => void;
   'obsidian:document-updated': (data: DocumentChangeEvent) => void;
   'obsidian:document-removed': (data: DocumentChangeEvent) => void;

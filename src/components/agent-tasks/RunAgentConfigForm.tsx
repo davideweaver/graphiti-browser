@@ -24,9 +24,10 @@ import { Pencil, Save, Loader2, X } from "lucide-react";
 interface RunAgentConfigFormProps {
   task: ScheduledTask;
   onSaved?: () => void;
+  buttonPosition?: "top" | "bottom";
 }
 
-export function RunAgentConfigForm({ task, onSaved }: RunAgentConfigFormProps) {
+export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top" }: RunAgentConfigFormProps) {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
 
@@ -131,17 +132,20 @@ export function RunAgentConfigForm({ task, onSaved }: RunAgentConfigFormProps) {
   if (!isEditing) {
     // View Mode
     return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-end">
-          <ContainerToolButton
-            onClick={() => setIsEditing(true)}
-            size="icon"
-            variant="ghost"
-          >
-            <Pencil className="h-4 w-4" />
-          </ContainerToolButton>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <div className="space-y-4">
+        <Card>
+          {buttonPosition === "top" && (
+            <CardHeader className="flex flex-row items-center justify-end">
+              <ContainerToolButton
+                onClick={() => setIsEditing(true)}
+                size="icon"
+                variant="ghost"
+              >
+                <Pencil className="h-4 w-4" />
+              </ContainerToolButton>
+            </CardHeader>
+          )}
+          <CardContent className={buttonPosition === "top" ? "space-y-4" : "pt-6 space-y-4"}>
           <div>
             <h3 className="text-sm font-medium text-muted-foreground mb-1">
               Prompt
@@ -223,27 +227,42 @@ export function RunAgentConfigForm({ task, onSaved }: RunAgentConfigFormProps) {
           </div>
         </CardContent>
       </Card>
+      {buttonPosition === "bottom" && (
+        <div className="flex justify-end">
+          <Button
+            onClick={() => setIsEditing(true)}
+            variant="outline"
+            size="sm"
+          >
+            <Pencil className="h-4 w-4 mr-2" />
+            Edit Configuration
+          </Button>
+        </div>
+      )}
+    </div>
     );
   }
 
   // Edit Mode
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-end">
-        <ContainerToolButton
-          onClick={handleSave}
-          disabled={updateMutation.isPending}
-          size="icon"
-          variant="primary"
-        >
-          {updateMutation.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4" />
-          )}
-        </ContainerToolButton>
-      </CardHeader>
-      <CardContent>
+      {buttonPosition === "top" && (
+        <CardHeader className="flex flex-row items-center justify-end">
+          <ContainerToolButton
+            onClick={handleSave}
+            disabled={updateMutation.isPending}
+            size="icon"
+            variant="primary"
+          >
+            {updateMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+          </ContainerToolButton>
+        </CardHeader>
+      )}
+      <CardContent className={buttonPosition === "top" ? "" : "pt-6"}>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -441,6 +460,30 @@ export function RunAgentConfigForm({ task, onSaved }: RunAgentConfigFormProps) {
           </div>
 
           {/* Action Buttons */}
+          {buttonPosition === "top" && (
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancel}
+                disabled={updateMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </div>
+          )}
+        </form>
+        {buttonPosition === "bottom" && (
           <div className="flex justify-end gap-3 pt-4">
             <Button
               type="button"
@@ -450,7 +493,10 @@ export function RunAgentConfigForm({ task, onSaved }: RunAgentConfigFormProps) {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={updateMutation.isPending}>
+            <Button
+              onClick={handleSave}
+              disabled={updateMutation.isPending}
+            >
               {updateMutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -461,7 +507,7 @@ export function RunAgentConfigForm({ task, onSaved }: RunAgentConfigFormProps) {
               )}
             </Button>
           </div>
-        </form>
+        )}
       </CardContent>
     </Card>
   );

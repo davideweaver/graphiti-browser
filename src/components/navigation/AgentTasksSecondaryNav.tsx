@@ -12,6 +12,7 @@ import { SecondaryNavToolButton } from "@/components/navigation/SecondaryNavTool
 import { Badge } from "@/components/ui/badge";
 import { Search, Clock, RefreshCw, Activity } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useTaskConfigUpdates } from "@/hooks/use-task-config-updates";
 import { toast } from "sonner";
 
 interface AgentTasksSecondaryNavProps {
@@ -29,6 +30,9 @@ export function AgentTasksSecondaryNav({
 }: AgentTasksSecondaryNavProps) {
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 300);
+
+  // Listen for real-time task configuration updates
+  useTaskConfigUpdates();
 
   // Fetch all tasks
   const { data, isLoading, refetch } = useQuery({

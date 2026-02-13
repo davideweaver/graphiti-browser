@@ -5,11 +5,10 @@ import Container from "@/components/container/Container";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { agentTasksService } from "@/api/agentTasksService";
-import { formatTimestamp, formatDuration } from "@/lib/cronFormatter";
-import { CheckCircle2, XCircle, Clock } from "lucide-react";
 import { TaskExecutionSheet } from "@/components/tasks/TaskExecutionSheet";
+import { TaskExecutionRow } from "@/components/tasks/TaskExecutionRow";
+import { useTaskConfigUpdates } from "@/hooks/use-task-config-updates";
 import type { TaskExecution } from "@/types/agentTasks";
-import ReactMarkdown from "react-markdown";
 
 export default function AgentTaskHistory() {
   const navigate = useNavigate();
@@ -17,27 +16,13 @@ export default function AgentTaskHistory() {
     useState<TaskExecution | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
+  // Listen for real-time task configuration updates
+  useTaskConfigUpdates();
+
   const { data: recentRuns, isLoading } = useQuery({
     queryKey: ["agent-task-history"],
     queryFn: () => agentTasksService.getRecentRuns(50),
   });
-
-  const renderExecutionStatus = (execution: TaskExecution) => {
-    if (execution.success) {
-      return (
-        <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-          <CheckCircle2 className="h-4 w-4" />
-          <span className="text-sm font-medium">Success</span>
-        </div>
-      );
-    }
-    return (
-      <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
-        <XCircle className="h-4 w-4" />
-        <span className="text-sm font-medium">Failed</span>
-      </div>
-    );
-  };
 
   if (isLoading) {
     return (
@@ -59,46 +44,16 @@ export default function AgentTaskHistory() {
       <div className="space-y-2">
         {recentRuns && recentRuns.length > 0 ? (
           recentRuns.map((execution, index) => (
-            <div
+            <TaskExecutionRow
               key={index}
-              className="flex items-start justify-between border-b pb-4 last:border-0 last:pb-0 cursor-pointer hover:bg-muted/30 -mx-2 px-2 py-2 rounded-md transition-colors"
+              execution={execution}
               onClick={() => {
                 setSelectedExecution(execution);
                 setSheetOpen(true);
               }}
-            >
-              <div className="flex-1 space-y-1">
-                <div className="flex items-center gap-3">
-                  {renderExecutionStatus(execution)}
-                  <button
-                    className="text-sm font-medium hover:underline text-left"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/agent-tasks/${execution.taskId}`);
-                    }}
-                  >
-                    {execution.taskName}
-                  </button>
-                  <span className="text-sm text-muted-foreground">
-                    {formatTimestamp(execution.timestamp)}
-                  </span>
-                </div>
-                {(execution.normalizedResult?.display.summary || execution.message) && (
-                  <div className="text-sm text-muted-foreground pl-6 truncate max-w-2xl prose prose-sm dark:prose-invert prose-p:inline prose-strong:font-semibold">
-                    <ReactMarkdown>{execution.normalizedResult?.display.summary || execution.message}</ReactMarkdown>
-                  </div>
-                )}
-                {execution.error && (
-                  <p className="text-sm text-red-600 dark:text-red-400 pl-6 truncate max-w-2xl">
-                    {execution.error}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                <span className="text-xs">{formatDuration(execution.durationMs)}</span>
-              </div>
-            </div>
+              showTaskName={true}
+              onTaskNameClick={() => navigate(`/agent-tasks/${execution.taskId}`)}
+            />
           ))
         ) : (
           <Card>

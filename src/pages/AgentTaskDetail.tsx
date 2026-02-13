@@ -14,12 +14,13 @@ import {
   formatCronExpression,
   formatTimestamp,
   formatRelativeTime,
-  formatDuration,
 } from "@/lib/cronFormatter";
 import { CheckCircle2, XCircle, Clock, Play, Trash2, Copy, ChevronDown, Power } from "lucide-react";
 import { TaskExecutionSheet } from "@/components/tasks/TaskExecutionSheet";
+import { TaskExecutionRow } from "@/components/tasks/TaskExecutionRow";
 import { RunAgentConfigForm } from "@/components/agent-tasks/RunAgentConfigForm";
-import ReactMarkdown from "react-markdown";
+import { useTaskConfigUpdates } from "@/hooks/use-task-config-updates";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import type { TaskExecution } from "@/types/agentTasks";
 import {
@@ -33,11 +34,15 @@ export default function AgentTaskDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [selectedExecution, setSelectedExecution] =
     useState<TaskExecution | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clearScratchpadDialogOpen, setClearScratchpadDialogOpen] = useState(false);
+
+  // Listen for real-time task configuration updates
+  useTaskConfigUpdates();
 
   const { data: task, isLoading: isLoadingTask } = useQuery({
     queryKey: ["agent-task", id],
@@ -66,8 +71,8 @@ export default function AgentTaskDetail() {
   // Mutation to trigger task execution
   const triggerMutation = useMutation({
     mutationFn: ({ withTrace }: { withTrace: boolean }) => agentTasksService.triggerTask(id!, withTrace),
-    onSuccess: (execution) => {
-      // Invalidate queries to refresh data
+    onSuccess: () => {
+      // Invalidate queries in the background to refresh data
       queryClient.invalidateQueries({ queryKey: ["agent-task-history", id] });
       queryClient.invalidateQueries({
         queryKey: ["agent-task-scratchpad", id],
@@ -75,10 +80,10 @@ export default function AgentTaskDetail() {
       queryClient.invalidateQueries({
         queryKey: ["agent-task-trace", id],
       });
-
-      // Show the execution result in the sheet
-      setSelectedExecution(execution);
-      setSheetOpen(true);
+    },
+    onError: (error) => {
+      console.error("Failed to trigger task:", error);
+      toast.error("Failed to trigger task");
     },
   });
 
@@ -139,23 +144,6 @@ export default function AgentTaskDetail() {
     );
   }
 
-  const renderExecutionStatus = (execution: TaskExecution) => {
-    if (execution.success) {
-      return (
-        <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-          <CheckCircle2 className="h-4 w-4" />
-          <span className="text-sm font-medium">Success</span>
-        </div>
-      );
-    }
-    return (
-      <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
-        <XCircle className="h-4 w-4" />
-        <span className="text-sm font-medium">Failed</span>
-      </div>
-    );
-  };
-
   return (
     <Container
       title={task.name}
@@ -164,7 +152,12 @@ export default function AgentTaskDetail() {
           {/* Combo Button for Run */}
           <div className="flex items-center">
             <ContainerToolButton
-              onClick={() => triggerMutation.mutate({ withTrace: false })}
+              onClick={() => {
+                // Trigger the task
+                triggerMutation.mutate({ withTrace: false });
+                // Navigate immediately (don't wait for task to complete)
+                navigate("/agent-tasks/activity");
+              }}
               disabled={triggerMutation.isPending || !task.enabled}
               size="sm"
               variant="primary"
@@ -185,7 +178,12 @@ export default function AgentTaskDetail() {
                 </ContainerToolButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => triggerMutation.mutate({ withTrace: true })}>
+                <DropdownMenuItem onClick={() => {
+                  // Trigger the task with tracing
+                  triggerMutation.mutate({ withTrace: true });
+                  // Navigate immediately (don't wait for task to complete)
+                  navigate("/agent-tasks/activity");
+                }}>
                   Run with Tracing
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -303,16 +301,16 @@ export default function AgentTaskDetail() {
         <Tabs defaultValue="config">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="config">
-              Config
+              {isMobile ? "Config" : "Config"}
             </TabsTrigger>
             <TabsTrigger value="history">
-              History {history ? `(${history.length})` : ''}
+              {isMobile ? "Runs" : "History"} {history ? `(${history.length})` : ''}
             </TabsTrigger>
             <TabsTrigger value="scratchpad">
-              Scratchpad
+              {isMobile ? "Scratch" : "Scratchpad"}
             </TabsTrigger>
             <TabsTrigger value="trace">
-              Last Trace
+              {isMobile ? "Trace" : "Last Trace"}
             </TabsTrigger>
           </TabsList>
 
@@ -327,37 +325,14 @@ export default function AgentTaskDetail() {
             ) : history && history.length > 0 ? (
               <div className="space-y-2">
                 {history.map((execution, index) => (
-                  <div
+                  <TaskExecutionRow
                     key={index}
-                    className="flex items-start justify-between border-b pb-4 last:border-0 last:pb-0 cursor-pointer hover:bg-muted/30 -mx-2 px-2 py-2 rounded-md transition-colors"
+                    execution={execution}
                     onClick={() => {
                       setSelectedExecution(execution);
                       setSheetOpen(true);
                     }}
-                  >
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-3">
-                        {renderExecutionStatus(execution)}
-                        <span className="text-sm text-muted-foreground">
-                          {formatTimestamp(execution.timestamp)}
-                        </span>
-                      </div>
-                      {(execution.normalizedResult?.display.summary || execution.message) && (
-                        <div className="text-sm text-muted-foreground pl-6 truncate max-w-2xl prose prose-sm dark:prose-invert prose-p:inline prose-strong:font-semibold">
-                          <ReactMarkdown>{execution.normalizedResult?.display.summary || execution.message}</ReactMarkdown>
-                        </div>
-                      )}
-                      {execution.error && (
-                        <p className="text-sm text-red-600 dark:text-red-400 pl-6 truncate max-w-2xl">
-                          {execution.error}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Clock className="h-4 w-4" />
-                      <span className="text-xs">{formatDuration(execution.durationMs)}</span>
-                    </div>
-                  </div>
+                  />
                 ))}
               </div>
             ) : (
@@ -380,6 +355,7 @@ export default function AgentTaskDetail() {
                   queryClient.invalidateQueries({ queryKey: ["agent-task", id] });
                   queryClient.invalidateQueries({ queryKey: ["agent-tasks"] });
                 }}
+                buttonPosition="bottom"
               />
             ) : (
               <div className="space-y-2">
@@ -411,23 +387,26 @@ export default function AgentTaskDetail() {
                 <Skeleton className="h-16 w-full" />
               </div>
             ) : scratchpad && !scratchpad.isEmpty && scratchpad.content ? (
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-end pb-3">
-                  <ContainerToolButton
+              <div className="space-y-4">
+                <Card>
+                  <CardContent className="pt-6">
+                    <pre className="text-xs overflow-auto whitespace-pre-wrap break-words">
+                      {JSON.stringify(scratchpad.content, null, 2)}
+                    </pre>
+                  </CardContent>
+                </Card>
+                <div className="flex justify-end">
+                  <Button
                     onClick={() => setClearScratchpadDialogOpen(true)}
                     disabled={clearScratchpadMutation.isPending}
-                    size="icon"
-                    variant="ghost"
+                    variant="outline"
+                    size="sm"
                   >
-                    <Trash2 className="h-4 w-4" />
-                  </ContainerToolButton>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <pre className="text-xs overflow-auto whitespace-pre-wrap break-words">
-                    {JSON.stringify(scratchpad.content, null, 2)}
-                  </pre>
-                </CardContent>
-              </Card>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Clear Scratchpad
+                  </Button>
+                </div>
+              </div>
             ) : (
               <Card>
                 <CardContent className="p-12 text-center">

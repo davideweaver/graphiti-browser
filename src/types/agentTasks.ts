@@ -52,6 +52,10 @@ export interface TaskExecution {
   data?: Record<string, unknown>;
   /** Normalized result in standard format for frontend consumption */
   normalizedResult?: NormalizedTaskResult;
+  /** Model name used for execution (e.g., "claude-sonnet-4-5", "GLM-4.7-Flash-Q4_K_M") */
+  model?: string;
+  /** Whether a local model was used */
+  isLocal?: boolean;
 }
 
 export interface ScheduledTaskListResponse {

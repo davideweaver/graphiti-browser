@@ -1,11 +1,14 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
-import type { AgentStatusEvent, DocumentChangeEvent } from '@/types/websocket';
+import type { AgentStatusEvent, DocumentChangeEvent, TaskConfigEvent } from '@/types/websocket';
 
 interface XerroWebSocketContextValue {
   isConnected: boolean;
   socket: Socket | null;
   subscribeToAgentStatus: (callback: (event: AgentStatusEvent) => void) => () => void;
+  subscribeToTaskCreated: (callback: (event: TaskConfigEvent) => void) => () => void;
+  subscribeToTaskUpdated: (callback: (event: TaskConfigEvent) => void) => () => void;
+  subscribeToTaskDeleted: (callback: (event: TaskConfigEvent) => void) => () => void;
   subscribeToDocumentAdded: (callback: (event: DocumentChangeEvent) => void) => () => void;
   subscribeToDocumentUpdated: (callback: (event: DocumentChangeEvent) => void) => () => void;
   subscribeToDocumentRemoved: (callback: (event: DocumentChangeEvent) => void) => () => void;
@@ -19,6 +22,9 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
 
   // Subscription callbacks
   const agentStatusCallbacksRef = useRef<Set<(event: AgentStatusEvent) => void>>(new Set());
+  const taskCreatedCallbacksRef = useRef<Set<(event: TaskConfigEvent) => void>>(new Set());
+  const taskUpdatedCallbacksRef = useRef<Set<(event: TaskConfigEvent) => void>>(new Set());
+  const taskDeletedCallbacksRef = useRef<Set<(event: TaskConfigEvent) => void>>(new Set());
   const documentAddedCallbacksRef = useRef<Set<(event: DocumentChangeEvent) => void>>(new Set());
   const documentUpdatedCallbacksRef = useRef<Set<(event: DocumentChangeEvent) => void>>(new Set());
   const documentRemovedCallbacksRef = useRef<Set<(event: DocumentChangeEvent) => void>>(new Set());
@@ -67,6 +73,40 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
           callback(data);
         } catch (error) {
           console.error('[Xerro WebSocket] Error in agent status callback:', error);
+        }
+      });
+    });
+
+    // Task configuration events - notify all subscribers
+    socket.on('scheduled-tasks:task-created', (data: TaskConfigEvent) => {
+      console.log('[Xerro WebSocket] Task created:', data.taskName);
+      taskCreatedCallbacksRef.current.forEach(callback => {
+        try {
+          callback(data);
+        } catch (error) {
+          console.error('[Xerro WebSocket] Error in task created callback:', error);
+        }
+      });
+    });
+
+    socket.on('scheduled-tasks:task-updated', (data: TaskConfigEvent) => {
+      console.log('[Xerro WebSocket] Task updated:', data.taskName);
+      taskUpdatedCallbacksRef.current.forEach(callback => {
+        try {
+          callback(data);
+        } catch (error) {
+          console.error('[Xerro WebSocket] Error in task updated callback:', error);
+        }
+      });
+    });
+
+    socket.on('scheduled-tasks:task-deleted', (data: TaskConfigEvent) => {
+      console.log('[Xerro WebSocket] Task deleted:', data.taskName);
+      taskDeletedCallbacksRef.current.forEach(callback => {
+        try {
+          callback(data);
+        } catch (error) {
+          console.error('[Xerro WebSocket] Error in task deleted callback:', error);
         }
       });
     });
@@ -121,6 +161,30 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
     };
   }, []);
 
+  // Subscribe to task created events
+  const subscribeToTaskCreated = useCallback((callback: (event: TaskConfigEvent) => void) => {
+    taskCreatedCallbacksRef.current.add(callback);
+    return () => {
+      taskCreatedCallbacksRef.current.delete(callback);
+    };
+  }, []);
+
+  // Subscribe to task updated events
+  const subscribeToTaskUpdated = useCallback((callback: (event: TaskConfigEvent) => void) => {
+    taskUpdatedCallbacksRef.current.add(callback);
+    return () => {
+      taskUpdatedCallbacksRef.current.delete(callback);
+    };
+  }, []);
+
+  // Subscribe to task deleted events
+  const subscribeToTaskDeleted = useCallback((callback: (event: TaskConfigEvent) => void) => {
+    taskDeletedCallbacksRef.current.add(callback);
+    return () => {
+      taskDeletedCallbacksRef.current.delete(callback);
+    };
+  }, []);
+
   // Subscribe to document added events
   const subscribeToDocumentAdded = useCallback((callback: (event: DocumentChangeEvent) => void) => {
     documentAddedCallbacksRef.current.add(callback);
@@ -149,6 +213,9 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
     isConnected,
     socket: socketRef.current,
     subscribeToAgentStatus,
+    subscribeToTaskCreated,
+    subscribeToTaskUpdated,
+    subscribeToTaskDeleted,
     subscribeToDocumentAdded,
     subscribeToDocumentUpdated,
     subscribeToDocumentRemoved,

@@ -2,7 +2,7 @@ import type { TaskExecution } from "@/types/agentTasks";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DollarSign, Clock, Hash, Wrench, Copy } from "lucide-react";
+import { DollarSign, Clock, Hash, Wrench, Copy, Cpu } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { formatDuration } from "@/lib/cronFormatter";
@@ -77,6 +77,28 @@ export function TaskExecutionDisplay({ execution }: TaskExecutionDisplayProps) {
             />
           )}
         </div>
+      )}
+
+      {/* Model (if available) */}
+      {execution.model && (
+        <Card>
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Cpu className="h-4 w-4" />
+                <span className="text-xs">Model</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-mono">{execution.model}</span>
+                {execution.isLocal !== undefined && (
+                  <Badge variant={execution.isLocal ? "secondary" : "default"} className="text-xs">
+                    {execution.isLocal ? "Local" : "API"}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Session ID (if available) */}

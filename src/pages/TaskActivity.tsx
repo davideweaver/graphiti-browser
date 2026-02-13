@@ -1,14 +1,27 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import Container from "@/components/container/Container";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { agentTasksService } from "@/api/agentTasksService";
-import { Activity, Zap, CheckCircle2, ArrowRight, WifiOff, Wrench, XCircle, Ban } from "lucide-react";
+import {
+  Activity,
+  Zap,
+  CheckCircle2,
+  ArrowRight,
+  WifiOff,
+  Wrench,
+  XCircle,
+  Ban,
+  Settings,
+  X,
+} from "lucide-react";
 import type { RunningTask, TaskExecution } from "@/types/agentTasks";
 import { useAgentStatus } from "@/hooks/use-agent-status";
+import { useTaskConfigUpdates } from "@/hooks/use-task-config-updates";
 import type { AgentStatusEvent } from "@/types/websocket";
 import { TaskExecutionSheet } from "@/components/tasks/TaskExecutionSheet";
 
@@ -23,7 +36,7 @@ function RunningTaskCard({
   isFinished,
   wasCancelled,
   onViewHistory,
-  onCancel
+  onCancel,
 }: {
   task: RunningTask & { summary?: string };
   isFinished?: boolean;
@@ -31,6 +44,7 @@ function RunningTaskCard({
   onViewHistory?: () => void;
   onCancel?: (executionId: string) => void;
 }) {
+  const navigate = useNavigate();
   const [clientElapsed, setClientElapsed] = useState(task.elapsedMs);
 
   // Update elapsed time every second on the client (only if not finished)
@@ -64,8 +78,21 @@ function RunningTaskCard({
   };
 
   return (
-    <Card className={isFinished ? "opacity-75" : ""}>
+    <Card className={isFinished ? "opacity-75" : "relative"}>
       <CardContent className="p-4">
+        {/* Cancel Button (top-right, only for running tasks) */}
+        {!isFinished && onCancel && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onCancel(task.executionId);
+            }}
+            className="absolute top-2 right-2 h-9 w-9 text-gray-400 hover:text-gray-300 hover:bg-white/20 transition-colors z-10 rounded-md flex items-center justify-center"
+            title="Cancel"
+          >
+            <X className="h-6 w-6" strokeWidth={2.5} />
+          </button>
+        )}
         <div className="space-y-3">
           {/* Header: Task Name + Status Indicator */}
           <div className="flex items-start gap-3">
@@ -83,11 +110,16 @@ function RunningTaskCard({
                 <div className="absolute inset-0 w-3 h-3 rounded-full bg-green-500 animate-ping opacity-75" />
               </div>
             )}
-            <div className="flex-1 min-w-0">
-              <h3 className="text-base font-semibold truncate">{task.taskName}</h3>
+            <div className="flex-1 min-w-0 -mt-[5px]">
+              <h3 className="text-base font-semibold truncate">
+                {task.taskName}
+              </h3>
               {isFinished && (
-                <Badge variant="outline" className={`text-xs mt-1 ${wasCancelled ? 'border-orange-600 text-orange-600 dark:border-orange-400 dark:text-orange-400' : ''}`}>
-                  {wasCancelled ? 'Cancelled' : 'Completed'}
+                <Badge
+                  variant="outline"
+                  className={`text-xs mt-1 ${wasCancelled ? "border-orange-600 text-orange-600 dark:border-orange-400 dark:text-orange-400" : ""}`}
+                >
+                  {wasCancelled ? "Cancelled" : "Completed"}
                 </Badge>
               )}
             </div>
@@ -115,13 +147,20 @@ function RunningTaskCard({
               {task.toolName && (
                 <div className="pl-6">
                   <div className="flex items-start gap-2">
-                    <Wrench className={`h-4 w-4 flex-shrink-0 mt-0.5 ${task.isToolError ? 'text-red-500' : 'text-blue-500'}`} />
+                    <Wrench
+                      className={`h-4 w-4 flex-shrink-0 mt-0.5 ${task.isToolError ? "text-red-500" : "text-blue-500"}`}
+                    />
                     <div className="flex-1">
                       <p className="text-sm font-medium text-muted-foreground mb-0.5">
                         Tool Activity
                       </p>
                       <div className="flex items-center gap-2">
-                        <Badge variant={task.isToolError ? "destructive" : "secondary"} className="text-xs">
+                        <Badge
+                          variant={
+                            task.isToolError ? "destructive" : "secondary"
+                          }
+                          className="text-xs"
+                        >
                           {task.toolName}
                         </Badge>
                         {task.isToolError && (
@@ -138,9 +177,7 @@ function RunningTaskCard({
           {/* Execution Summary (only for completed tasks) */}
           {isFinished && task.summary && (
             <div className="pl-6">
-              <p className="text-sm break-words">
-                {task.summary}
-              </p>
+              <p className="text-sm break-words">{task.summary}</p>
             </div>
           )}
 
@@ -148,65 +185,52 @@ function RunningTaskCard({
           <div className="pl-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
             {/* Elapsed/Duration Time */}
             <div className="flex items-center gap-1.5">
-              <span className="font-medium">{isFinished ? "Duration:" : "Elapsed:"}</span>
-              <span className="font-mono">{formatElapsedTime(clientElapsed)}</span>
+              <span className="font-medium">
+                {isFinished ? "Duration:" : "Elapsed:"}
+              </span>
+              <span className="font-mono">
+                {formatElapsedTime(clientElapsed)}
+              </span>
             </div>
 
-            {/* Model Badge */}
+            {/* Model */}
             {task.model && (
-              <Badge
-                variant={task.isLocal ? "secondary" : "default"}
-                className="flex items-center gap-1.5"
-              >
-                {task.isLocal ? (
-                  <>
-                    <Zap className="h-3 w-3" />
-                    <span className="truncate max-w-[180px]" title={task.model}>
-                      {task.model}
-                    </span>
-                  </>
-                ) : (
-                  <span className="truncate max-w-[180px]" title={task.model}>
-                    {task.model}
-                  </span>
-                )}
-              </Badge>
+              <div className="flex items-center gap-1.5">
+                <span className="font-medium">Model:</span>
+                {task.isLocal && <Zap className="h-3 w-3" />}
+                <span className="truncate max-w-[180px]" title={task.model}>
+                  {task.model}
+                </span>
+              </div>
             )}
 
             {/* Task Type */}
-            <span className="text-xs">
-              <span className="font-medium">Type:</span> {task.taskType}
-            </span>
-
-            {/* Cancel Button (only for running tasks) */}
-            {!isFinished && onCancel && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCancel(task.executionId);
-                }}
-                className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
-              >
-                <XCircle className="h-3.5 w-3.5 mr-1" />
-                Cancel
-              </Button>
-            )}
+            <div className="flex items-center gap-1.5">
+              <span className="font-medium">Type:</span>
+              <span>{task.taskType}</span>
+            </div>
           </div>
 
-          {/* View History Link (only for completed tasks) */}
+          {/* Action Links (only for completed tasks) */}
           {isFinished && onViewHistory && (
-            <div className="pl-6 pt-2">
+            <div className="pl-6 pt-2 flex items-center gap-4">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onViewHistory();
                 }}
-                className="text-sm text-primary hover:underline flex items-center gap-1.5 transition-colors"
+                className="text-sm text-primary hover:underline transition-colors"
               >
-                View execution history
-                <ArrowRight className="h-3 w-3" />
+                View Execution
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/agent-tasks/${task.taskId}`);
+                }}
+                className="text-sm text-primary hover:underline transition-colors"
+              >
+                View Task Detail
               </button>
             </div>
           )}
@@ -217,12 +241,18 @@ function RunningTaskCard({
 }
 
 export default function TaskActivity() {
-  const [runningTasks, setRunningTasks] = useState<Map<string, RunningTask>>(new Map());
+  const [runningTasks, setRunningTasks] = useState<Map<string, RunningTask>>(
+    new Map(),
+  );
   const [recentlyFinished, setRecentlyFinished] = useState<FinishedTask[]>([]);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [selectedExecution, setSelectedExecution] = useState<TaskExecution | null>(null);
+  const [selectedExecution, setSelectedExecution] =
+    useState<TaskExecution | null>(null);
   const queryClient = useQueryClient();
+
+  // Listen for real-time task configuration updates
+  useTaskConfigUpdates();
 
   // WebSocket connection for real-time updates
   const { isConnected } = useAgentStatus((event: AgentStatusEvent) => {
@@ -230,29 +260,38 @@ export default function TaskActivity() {
       const updated = new Map(prev);
 
       // If task completed, cancelled, or errored, move to finished list
-      if (event.status === 'completed' || event.status === 'cancelled' || event.status === 'error') {
+      if (
+        event.status === "completed" ||
+        event.status === "cancelled" ||
+        event.status === "error"
+      ) {
         const existingTask = updated.get(event.executionId);
         if (existingTask) {
           // Fetch the latest execution to get the summary (skip for cancelled tasks)
-          if (event.status !== 'cancelled') {
-            agentTasksService.getTaskHistory(event.taskId, 1)
+          if (event.status !== "cancelled") {
+            agentTasksService
+              .getTaskHistory(event.taskId, 1)
               .then((executions) => {
                 if (executions.length > 0) {
                   const latestExecution = executions[0];
-                  const summary = latestExecution.normalizedResult?.display?.summary;
+                  const summary =
+                    latestExecution.normalizedResult?.display?.summary;
 
                   // Add to finished list with summary
                   const finishedTask: FinishedTask = {
                     ...existingTask,
-                    currentOperation: event.currentOperation || existingTask.currentOperation,
+                    currentOperation:
+                      event.currentOperation || existingTask.currentOperation,
                     model: event.model || existingTask.model,
                     finishedAt: Date.now(),
                     summary: summary,
-                    wasCancelled: event.status === 'cancelled',
+                    wasCancelled: event.status === "cancelled",
                   };
 
                   setRecentlyFinished((prevFinished) => {
-                    const existingIds = new Set(prevFinished.map((t) => t.executionId));
+                    const existingIds = new Set(
+                      prevFinished.map((t) => t.executionId),
+                    );
                     if (!existingIds.has(event.executionId)) {
                       return [...prevFinished, finishedTask];
                     }
@@ -265,14 +304,17 @@ export default function TaskActivity() {
                 // Still add to finished list without summary
                 const finishedTask: FinishedTask = {
                   ...existingTask,
-                  currentOperation: event.currentOperation || existingTask.currentOperation,
+                  currentOperation:
+                    event.currentOperation || existingTask.currentOperation,
                   model: event.model || existingTask.model,
                   finishedAt: Date.now(),
-                  wasCancelled: event.status === 'cancelled',
+                  wasCancelled: event.status === "cancelled",
                 };
 
                 setRecentlyFinished((prevFinished) => {
-                  const existingIds = new Set(prevFinished.map((t) => t.executionId));
+                  const existingIds = new Set(
+                    prevFinished.map((t) => t.executionId),
+                  );
                   if (!existingIds.has(event.executionId)) {
                     return [...prevFinished, finishedTask];
                   }
@@ -283,14 +325,17 @@ export default function TaskActivity() {
             // For cancelled tasks, add immediately without fetching summary
             const finishedTask: FinishedTask = {
               ...existingTask,
-              currentOperation: event.currentOperation || existingTask.currentOperation,
+              currentOperation:
+                event.currentOperation || existingTask.currentOperation,
               model: event.model || existingTask.model,
               finishedAt: Date.now(),
               wasCancelled: true,
             };
 
             setRecentlyFinished((prevFinished) => {
-              const existingIds = new Set(prevFinished.map((t) => t.executionId));
+              const existingIds = new Set(
+                prevFinished.map((t) => t.executionId),
+              );
               if (!existingIds.has(event.executionId)) {
                 return [...prevFinished, finishedTask];
               }
@@ -304,19 +349,28 @@ export default function TaskActivity() {
       } else {
         // Update or add running task
         const existing = updated.get(event.executionId);
-        const startTime = existing?.startedAt ? new Date(existing.startedAt).getTime() : Date.now();
+        const startTime = existing?.startedAt
+          ? new Date(existing.startedAt).getTime()
+          : Date.now();
 
         updated.set(event.executionId, {
           executionId: event.executionId,
           taskId: event.taskId,
           taskName: event.taskName,
-          taskType: existing?.taskType || 'run-agent',
+          taskType: existing?.taskType || "run-agent",
           startedAt: existing?.startedAt || event.timestamp,
-          currentOperation: event.currentOperation || existing?.currentOperation || 'Starting...',
+          currentOperation:
+            event.currentOperation ||
+            existing?.currentOperation ||
+            "Starting...",
           model: event.model || existing?.model,
           isLocal: event.isLocal ?? existing?.isLocal ?? false,
           elapsedMs: Date.now() - startTime,
-          toolName: event.toolName || (event.status === 'tool_use' || event.status === 'tool_result' ? existing?.toolName : undefined),
+          toolName:
+            event.toolName ||
+            (event.status === "tool_use" || event.status === "tool_result"
+              ? existing?.toolName
+              : undefined),
           toolCallId: event.toolCallId,
           isToolError: event.isToolError,
         });
@@ -372,7 +426,8 @@ export default function TaskActivity() {
 
   // Cancel execution mutation
   const cancelMutation = useMutation({
-    mutationFn: (executionId: string) => agentTasksService.cancelExecution(executionId),
+    mutationFn: (executionId: string) =>
+      agentTasksService.cancelExecution(executionId),
     onSuccess: () => {
       // Invalidate running tasks query to refresh the list
       queryClient.invalidateQueries({ queryKey: ["running-tasks"] });
@@ -396,7 +451,7 @@ export default function TaskActivity() {
         prev.filter((task) => {
           const age = Date.now() - task.finishedAt;
           return age < 60000;
-        })
+        }),
       );
     }, 5000);
 
@@ -436,9 +491,12 @@ export default function TaskActivity() {
       {allDisplayedTasks.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <Activity className="h-12 w-12 text-muted-foreground/50 mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No tasks currently executing</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            No tasks currently executing
+          </h3>
           <p className="text-sm text-muted-foreground max-w-md">
-            When scheduled tasks are running, they'll appear here with real-time status updates.
+            When scheduled tasks are running, they'll appear here with real-time
+            status updates.
           </p>
         </div>
       ) : (
@@ -459,7 +517,10 @@ export default function TaskActivity() {
               wasCancelled={task.wasCancelled}
               onViewHistory={async () => {
                 // Fetch the latest execution for this task
-                const history = await agentTasksService.getTaskHistory(task.taskId, 1);
+                const history = await agentTasksService.getTaskHistory(
+                  task.taskId,
+                  1,
+                );
                 if (history.length > 0) {
                   setSelectedExecution(history[0]);
                   setSheetOpen(true);
