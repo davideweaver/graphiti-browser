@@ -8,6 +8,7 @@ import { agentTasksService } from "@/api/agentTasksService";
 import { TaskExecutionSheet } from "@/components/tasks/TaskExecutionSheet";
 import { TaskExecutionRow } from "@/components/tasks/TaskExecutionRow";
 import { useTaskConfigUpdates } from "@/hooks/use-task-config-updates";
+import { useAgentCompletionUpdates } from "@/hooks/use-agent-completion-updates";
 import type { TaskExecution } from "@/types/agentTasks";
 
 export default function AgentTaskHistory() {
@@ -18,6 +19,9 @@ export default function AgentTaskHistory() {
 
   // Listen for real-time task configuration updates
   useTaskConfigUpdates();
+
+  // Listen for agent completion events to refresh history
+  useAgentCompletionUpdates();
 
   const { data: recentRuns, isLoading } = useQuery({
     queryKey: ["agent-task-history"],

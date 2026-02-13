@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useXerroWebSocketContext } from '@/context/XerroWebSocketContext';
-import { toast } from 'sonner';
 
 /**
  * Hook to listen for real-time task configuration updates via WebSocket
@@ -9,7 +8,7 @@ import { toast } from 'sonner';
  *
  * Features:
  * - Invalidates React Query caches for task-related queries
- * - Shows toast notifications for task changes
+ * - Refetches history, scratchpad, and traces on task updates
  * - Handles task created/updated/deleted events
  */
 export function useTaskConfigUpdates() {
@@ -25,9 +24,6 @@ export function useTaskConfigUpdates() {
       // Invalidate all task-related queries
       queryClient.invalidateQueries({ queryKey: ['agent-tasks'] });
       queryClient.invalidateQueries({ queryKey: ['agent-tasks-nav'] });
-
-      // Show toast notification
-      toast.success(`Task created: ${event.taskName}`);
     });
 
     // Subscribe to task updated events
@@ -39,9 +35,8 @@ export function useTaskConfigUpdates() {
       queryClient.invalidateQueries({ queryKey: ['agent-tasks-nav'] });
       queryClient.invalidateQueries({ queryKey: ['agent-task', event.taskId] });
       queryClient.invalidateQueries({ queryKey: ['agent-task-history', event.taskId] });
-
-      // Show toast notification
-      toast.info(`Task updated: ${event.taskName}`);
+      queryClient.invalidateQueries({ queryKey: ['agent-task-scratchpad', event.taskId] });
+      queryClient.invalidateQueries({ queryKey: ['agent-task-trace', event.taskId] });
     });
 
     // Subscribe to task deleted events
@@ -52,9 +47,6 @@ export function useTaskConfigUpdates() {
       queryClient.invalidateQueries({ queryKey: ['agent-tasks'] });
       queryClient.invalidateQueries({ queryKey: ['agent-tasks-nav'] });
       queryClient.invalidateQueries({ queryKey: ['agent-task', event.taskId] });
-
-      // Show toast notification
-      toast.warning(`Task deleted: ${event.taskName}`);
     });
 
     // Cleanup subscriptions on unmount

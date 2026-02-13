@@ -20,6 +20,7 @@ import { TaskExecutionSheet } from "@/components/tasks/TaskExecutionSheet";
 import { TaskExecutionRow } from "@/components/tasks/TaskExecutionRow";
 import { RunAgentConfigForm } from "@/components/agent-tasks/RunAgentConfigForm";
 import { useTaskConfigUpdates } from "@/hooks/use-task-config-updates";
+import { useAgentCompletionUpdates } from "@/hooks/use-agent-completion-updates";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import type { TaskExecution } from "@/types/agentTasks";
@@ -43,6 +44,9 @@ export default function AgentTaskDetail() {
 
   // Listen for real-time task configuration updates
   useTaskConfigUpdates();
+
+  // Listen for agent completion events to refresh history, scratchpad, and traces
+  useAgentCompletionUpdates();
 
   const { data: task, isLoading: isLoadingTask } = useQuery({
     queryKey: ["agent-task", id],
