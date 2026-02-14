@@ -14,7 +14,7 @@ export function useTasksRunning(): boolean {
     setRunningTaskIds((prev) => {
       const updated = new Set(prev);
 
-      if (event.status === 'completed' || event.status === 'error') {
+      if (event.status === 'completed' || event.status === 'cancelled' || event.status === 'error') {
         // Task finished - remove from set
         updated.delete(event.executionId);
       } else {
