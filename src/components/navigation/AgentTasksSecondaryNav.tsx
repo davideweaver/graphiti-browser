@@ -128,6 +128,7 @@ export function AgentTasksSecondaryNav({
                   key={task.id}
                   isActive={isActive}
                   onClick={() => handleNavigation(`/agent-tasks/${task.id}`)}
+                  className={!task.enabled ? "opacity-50" : ""}
                 >
                   <div className="flex flex-col items-start w-full gap-1">
                     <div className="flex items-start gap-2 w-full">
