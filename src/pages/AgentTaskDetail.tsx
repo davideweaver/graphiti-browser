@@ -15,7 +15,7 @@ import {
   formatTimestamp,
   formatRelativeTime,
 } from "@/lib/cronFormatter";
-import { CheckCircle2, XCircle, Clock, Play, Trash2, Copy, ChevronDown, Power, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Play, Trash2, Copy, Power, Loader2 } from "lucide-react";
 import { TaskExecutionSheet } from "@/components/tasks/TaskExecutionSheet";
 import { TaskExecutionRow } from "@/components/tasks/TaskExecutionRow";
 import { RunAgentConfigForm } from "@/components/agent-tasks/RunAgentConfigForm";
@@ -24,12 +24,6 @@ import { useAgentCompletionUpdates } from "@/hooks/use-agent-completion-updates"
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import type { TaskExecution } from "@/types/agentTasks";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 export default function AgentTaskDetail() {
   const { id } = useParams<{ id: string }>();
@@ -76,9 +70,9 @@ export default function AgentTaskDetail() {
     enabled: !!id,
   });
 
-  // Mutation to trigger task execution
+  // Mutation to trigger task execution (tracing is always enabled)
   const triggerMutation = useMutation({
-    mutationFn: ({ withTrace }: { withTrace: boolean }) => agentTasksService.triggerTask(id!, withTrace),
+    mutationFn: () => agentTasksService.triggerTask(id!, true),
     onSuccess: () => {
       // Invalidate queries in the background to refresh data
       queryClient.invalidateQueries({ queryKey: ["agent-task-history", id] });
@@ -151,9 +145,9 @@ export default function AgentTaskDetail() {
   });
 
   // Helper function to trigger task and navigate after delay
-  const handleRunTask = (withTrace: boolean) => {
+  const handleRunTask = () => {
     setIsDelayingRedirect(true);
-    triggerMutation.mutate({ withTrace });
+    triggerMutation.mutate();
 
     // Wait 3 seconds before navigating
     setTimeout(() => {
@@ -190,40 +184,19 @@ export default function AgentTaskDetail() {
       title={task.name}
       tools={
         <div className="flex items-center gap-2">
-          {/* Combo Button for Run */}
-          <div className="flex items-center">
-            <ContainerToolButton
-              onClick={() => handleRunTask(false)}
-              disabled={triggerMutation.isPending || isDelayingRedirect || !task.enabled}
-              size="sm"
-              variant="primary"
-              className="rounded-r-none border-r-0"
-            >
-              {triggerMutation.isPending || isDelayingRedirect ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Play className="h-4 w-4 mr-2" />
-              )}
-              {triggerMutation.isPending || isDelayingRedirect ? "Running..." : "Run"}
-            </ContainerToolButton>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <ContainerToolButton
-                  disabled={triggerMutation.isPending || isDelayingRedirect || !task.enabled}
-                  size="sm"
-                  variant="primary"
-                  className="rounded-l-none px-2"
-                >
-                  <ChevronDown className="h-4 w-4" />
-                </ContainerToolButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleRunTask(true)}>
-                  Run with Tracing
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <ContainerToolButton
+            onClick={handleRunTask}
+            disabled={triggerMutation.isPending || isDelayingRedirect || !task.enabled}
+            size="sm"
+            variant="primary"
+          >
+            {triggerMutation.isPending || isDelayingRedirect ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Play className="h-4 w-4 mr-2" />
+            )}
+            {triggerMutation.isPending || isDelayingRedirect ? "Running..." : "Run"}
+          </ContainerToolButton>
           <ContainerToolButton
             onClick={() => toggleEnabledMutation.mutate()}
             disabled={toggleEnabledMutation.isPending}
@@ -609,7 +582,7 @@ export default function AgentTaskDetail() {
               <Card>
                 <CardContent className="p-12 text-center">
                   <p className="text-sm text-muted-foreground">
-                    No trace data available. Run the task with "Run with Tracing" to collect trace data.
+                    No trace data available. Trace data is collected automatically on each run.
                   </p>
                 </CardContent>
               </Card>

@@ -386,6 +386,38 @@ class AgentTasksService {
     }
   }
 
+  async getExecutionTrace(executionId: string): Promise<AgentExecutionTrace | null> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/scheduled-tasks/executions/${executionId}/trace`
+      );
+
+      if (!response.ok) {
+        // If 404, return null (no trace data)
+        if (response.status === 404) {
+          return null;
+        }
+        throw new Error(
+          `Failed to fetch execution trace: ${response.statusText}`
+        );
+      }
+
+      const data = await response.json();
+      return data.trace || null;
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch execution trace";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
   async getRunningTasks(): Promise<RunningTasksResponse> {
     try {
       const response = await fetch(
