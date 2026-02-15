@@ -132,6 +132,10 @@ const Router = createBrowserRouter(
         path="/system/logs/router"
         lazy={lazyImportComponent(() => import("@/pages/RouterLogs"))}
       />
+      <Route
+        path="/system/logs/server/:serverId"
+        lazy={lazyImportComponent(() => import("@/pages/ServerLogs"))}
+      />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Route>

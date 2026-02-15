@@ -28,6 +28,7 @@ export interface ServerInfo {
   lastStarted?: string;
   lastStopped?: string;
   createdAt: string;
+  uptime?: number;
 }
 
 export interface ModelInfo {
@@ -102,6 +103,7 @@ export interface LogResponse {
 }
 
 export interface LogQueryParams {
-  type?: "stdout" | "stderr" | "both";
-  lines?: number;
+  level?: string;
+  limit?: number;
+  since?: string;
 }

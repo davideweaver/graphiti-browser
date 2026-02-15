@@ -99,12 +99,7 @@ export default function LlamacppModels() {
               models.map((model) => (
                 <tr key={model.filename} className="border-b hover:bg-accent/50">
                   <td className="py-3 px-4">
-                    <div>
-                      <div className="font-medium">{model.filename}</div>
-                      <div className="text-sm text-muted-foreground truncate max-w-md">
-                        {model.path}
-                      </div>
-                    </div>
+                    <div className="font-medium">{model.filename}</div>
                   </td>
                   <td className="py-3 px-4 text-muted-foreground">
                     {model.formattedSize}

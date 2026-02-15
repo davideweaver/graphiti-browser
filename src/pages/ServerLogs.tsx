@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { llamacppAdminService } from "@/api/llamacppAdminService";
 import Container from "@/components/container/Container";
 import { ContainerToolButton } from "@/components/container/ContainerToolButton";
@@ -16,34 +16,29 @@ interface ParsedLogEntry {
   statusCode?: number;
 }
 
-type LogType = "http" | "error";
+type LogType = "stdout" | "stderr";
 
-export default function RouterLogs() {
+export default function ServerLogs() {
   const navigate = useNavigate();
+  const { serverId } = useParams<{ serverId: string }>();
   const [isPaused, setIsPaused] = useState(false);
-  const [logType, setLogType] = useState<LogType>("http");
+  const [logType, setLogType] = useState<LogType>("stdout");
   const limit = 100;
 
-  // Poll for router logs
-  const { data: routerLogs, isLoading } = useQuery({
-    queryKey: ["router-logs", limit],
-    queryFn: () => llamacppAdminService.getRouterLogs({ limit }),
+  // Poll for server logs
+  const { data: serverLogs, isLoading } = useQuery({
+    queryKey: ["server-logs", serverId, limit],
+    queryFn: () => llamacppAdminService.getServerLogs(serverId!, { limit }),
     refetchInterval: isPaused ? false : 3000, // 3 seconds
     refetchIntervalInBackground: false,
     retry: false,
+    enabled: !!serverId,
   });
 
   // Strip ANSI color codes from log lines
   const stripAnsiCodes = (text: string): string => {
     // eslint-disable-next-line no-control-regex
     return text.replace(/\x1b\[[0-9;]*m/g, '');
-  };
-
-  // Extract HTTP status code from router log line (after ANSI codes are stripped)
-  const extractStatusCode = (line: string): number | undefined => {
-    // Match pattern: "200 POST" at the start of the line
-    const match = line.match(/^(\d{3})\s+(GET|POST|PUT|DELETE|PATCH)/);
-    return match ? parseInt(match[1], 10) : undefined;
   };
 
   // Try to extract timestamp from log line (common formats)
@@ -71,7 +66,7 @@ export default function RouterLogs() {
   ): ParsedLogEntry[] => {
     const entries: ParsedLogEntry[] = [];
 
-    if (type === "http" && stdout) {
+    if (type === "stdout" && stdout) {
       const lines = stdout.split('\n').filter(line => line.trim());
       lines.forEach(line => {
         const cleanedLine = stripAnsiCodes(line);
@@ -80,12 +75,11 @@ export default function RouterLogs() {
           level: "info",
           message: cleanedLine,
           raw: line,
-          statusCode: extractStatusCode(cleanedLine)
         });
       });
     }
 
-    if (type === "error" && stderr) {
+    if (type === "stderr" && stderr) {
       const lines = stderr.split('\n').filter(line => line.trim());
       lines.forEach(line => {
         const cleanedLine = stripAnsiCodes(line);
@@ -101,23 +95,7 @@ export default function RouterLogs() {
     return entries.reverse(); // Most recent first
   };
 
-  const logs = parseLogs(routerLogs?.stdout, routerLogs?.stderr, logType);
-
-  const getStatusColorClass = (statusCode?: number): string => {
-    if (!statusCode) return "";
-
-    if (statusCode >= 200 && statusCode < 300) {
-      return "text-green-600 dark:text-green-400"; // Success
-    } else if (statusCode >= 300 && statusCode < 400) {
-      return "text-blue-600 dark:text-blue-400"; // Redirect
-    } else if (statusCode >= 400 && statusCode < 500) {
-      return "text-yellow-600 dark:text-yellow-400"; // Client error
-    } else if (statusCode >= 500) {
-      return "text-red-600 dark:text-red-400"; // Server error
-    }
-
-    return "";
-  };
+  const logs = parseLogs(serverLogs?.stdout, serverLogs?.stderr, logType);
 
   const getLogLevelColorClass = (level: string): string => {
     switch (level) {
@@ -137,8 +115,8 @@ export default function RouterLogs() {
 
   return (
     <Container
-      title="Router Logs"
-      description="Llamacpp router logs and events"
+      title={`Server Logs: ${serverId}`}
+      description="Llamacpp server logs and events"
       icon={ScrollText}
       content="fixedWithScroll"
       tools={
@@ -167,8 +145,8 @@ export default function RouterLogs() {
         <div className="flex items-center justify-between mb-4 flex-shrink-0">
           <Tabs value={logType} onValueChange={(value) => setLogType(value as LogType)}>
             <TabsList>
-              <TabsTrigger value="http">Activity</TabsTrigger>
-              <TabsTrigger value="error">System</TabsTrigger>
+              <TabsTrigger value="stdout">Activity</TabsTrigger>
+              <TabsTrigger value="stderr">System</TabsTrigger>
             </TabsList>
           </Tabs>
 
@@ -202,11 +180,7 @@ export default function RouterLogs() {
                         </div>
                       )}
                       <div
-                        className={`flex-1 text-sm break-words font-mono ${
-                          logType === "http"
-                            ? getStatusColorClass(log.statusCode)
-                            : getLogLevelColorClass(log.level)
-                        }`}
+                        className={`flex-1 text-sm break-words font-mono ${getLogLevelColorClass(log.level)}`}
                       >
                         {log.message}
                       </div>

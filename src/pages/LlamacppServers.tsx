@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { llamacppAdminService } from "@/api/llamacppAdminService";
 import Container from "@/components/container/Container";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Server, Play, Square, RefreshCw } from "lucide-react";
+import { Server, Play, Square, RefreshCw, FileText } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +21,7 @@ import {
 type FilterStatus = "all" | "running" | "stopped";
 
 export default function LlamacppServers() {
+  const navigate = useNavigate();
   const [filter, setFilter] = useState<FilterStatus>("all");
   const [controllingServer, setControllingServer] = useState<string | null>(
     null
@@ -67,12 +69,6 @@ export default function LlamacppServers() {
     return true;
   });
 
-  const formatUptime = (seconds?: number): string => {
-    if (!seconds) return "—";
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return `${hours}h ${minutes}m`;
-  };
 
   return (
     <>
@@ -116,7 +112,6 @@ export default function LlamacppServers() {
                 <th className="text-left py-3 px-4 font-medium">Status</th>
                 <th className="text-left py-3 px-4 font-medium">Model</th>
                 <th className="text-left py-3 px-4 font-medium">Port</th>
-                <th className="text-left py-3 px-4 font-medium">Uptime</th>
                 <th className="text-right py-3 px-4 font-medium">Actions</th>
               </tr>
             </thead>
@@ -136,9 +131,6 @@ export default function LlamacppServers() {
                     <td className="py-3 px-4">
                       <Skeleton className="h-4 w-16" />
                     </td>
-                    <td className="py-3 px-4">
-                      <Skeleton className="h-4 w-16" />
-                    </td>
                     <td className="py-3 px-4 text-right">
                       <Skeleton className="h-8 w-24 ml-auto" />
                     </td>
@@ -147,7 +139,7 @@ export default function LlamacppServers() {
               ) : filteredServers.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={5}
                     className="py-8 text-center text-muted-foreground"
                   >
                     No servers found
@@ -157,13 +149,8 @@ export default function LlamacppServers() {
                 filteredServers.map((server) => (
                   <tr key={server.id} className="border-b hover:bg-accent/50">
                     <td className="py-3 px-4">
-                      <div>
-                        <div className="font-medium">{server.id}</div>
-                        {server.host && (
-                          <div className="text-sm text-muted-foreground">
-                            {server.host}
-                          </div>
-                        )}
+                      <div className="font-medium">
+                        {server.alias || server.id}
                       </div>
                     </td>
                     <td className="py-3 px-4">
@@ -187,11 +174,18 @@ export default function LlamacppServers() {
                     <td className="py-3 px-4 text-muted-foreground">
                       {server.port}
                     </td>
-                    <td className="py-3 px-4 text-muted-foreground">
-                      {formatUptime(server.uptime)}
-                    </td>
                     <td className="py-3 px-4">
                       <div className="flex gap-2 justify-end">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            navigate(`/system/logs/server/${server.id}`)
+                          }
+                          title="View Logs"
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
                         {server.status === "running" ? (
                           <>
                             <Button
@@ -222,7 +216,7 @@ export default function LlamacppServers() {
                               }
                               disabled={controllingServer === server.id}
                             >
-                              <Square className="h-4 w-4" />
+                              <Square className="h-4 w-4" fill="currentColor" />
                             </Button>
                           </>
                         ) : (
@@ -237,7 +231,7 @@ export default function LlamacppServers() {
                             }
                             disabled={controllingServer === server.id}
                           >
-                            <Play className="h-4 w-4" />
+                            <Play className="h-4 w-4" fill="currentColor" />
                           </Button>
                         )}
                       </div>
