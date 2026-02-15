@@ -69,6 +69,10 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top" }: Ru
     (server) => server.status === "running"
   );
 
+  // Split servers into aliased and non-aliased groups
+  const aliasedServers = availableServers.filter((server) => server.alias);
+  const nonAliasedServers = availableServers.filter((server) => !server.alias);
+
   // Validation
   const [promptError, setPromptError] = useState("");
 
@@ -435,16 +439,33 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top" }: Ru
                     <SelectValue placeholder="Select a server..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableServers.map((server) => (
-                      <SelectItem key={server.id} value={server.modelName}>
-                        <div className="flex flex-col">
-                          <span className="font-medium text-sm">{server.label}</span>
-                          <span className="text-xs text-muted-foreground font-mono">
-                            {server.modelName}
-                          </span>
+                    {aliasedServers.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                          Alias
                         </div>
-                      </SelectItem>
-                    ))}
+                        {aliasedServers.map((server) => (
+                          <SelectItem key={server.id} value={server.alias!}>
+                            {server.alias}
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                    {nonAliasedServers.length > 0 && (
+                      <>
+                        {aliasedServers.length > 0 && (
+                          <div className="h-px bg-border my-1" />
+                        )}
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                          Models
+                        </div>
+                        {nonAliasedServers.map((server) => (
+                          <SelectItem key={server.id} value={server.modelName}>
+                            {server.modelName}
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
                 {availableServers.length === 0 && (
@@ -453,8 +474,13 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top" }: Ru
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Select the local LLM server to use for this task
+                  Select the local LLM server to use for this task. Servers with aliases are recommended for stable task configurations.
                 </p>
+                {nonAliasedServers.length > 0 && (
+                  <p className="text-xs text-amber-600 dark:text-amber-500">
+                    Tip: Configure aliases for your servers using: <code className="font-mono text-xs">llamacpp server config &lt;id&gt; --alias &lt;name&gt;</code>
+                  </p>
+                )}
               </div>
             )}
           </div>

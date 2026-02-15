@@ -21,6 +21,7 @@ export interface ServerInfo {
   verbose?: boolean;
   customFlags?: string[];
   label: string;
+  alias?: string;
   plistPath: string;
   stdoutPath: string;
   stderrPath: string;

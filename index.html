@@ -4,10 +4,47 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>graphiti-browser</title>
+    <script>
+      // Prevent flash of unstyled content by applying theme immediately
+      (function() {
+        const theme = localStorage.getItem('theme') ||
+                     (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.classList.add(theme);
+        // Set background color immediately to prevent white flash
+        document.documentElement.style.backgroundColor =
+          theme === 'dark' ? 'hsl(228, 10.64%, 9.22%)' : 'hsl(0, 0%, 100%)';
+      })();
+    </script>
+    <style>
+      /* Loading spinner styles */
+      .app-loader {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 48px;
+        height: 48px;
+        border: 3px solid transparent;
+        border-top-color: hsl(217.2, 91.2%, 59.8%); /* primary color */
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to { transform: translate(-50%, -50%) rotate(360deg); }
+      }
+      /* Hide loader once React mounts */
+      #root:not(:empty) + .app-loader {
+        display: none;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <div class="app-loader"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
