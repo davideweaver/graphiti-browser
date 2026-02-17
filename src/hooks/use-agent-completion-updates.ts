@@ -12,7 +12,8 @@ import { useXerroWebSocketContext } from '@/context/XerroWebSocketContext';
  * - Error tasks - failed execution
  *
  * It invalidates React Query caches for:
- * - Task execution history
+ * - Global task execution history (used by /agent-tasks/history page)
+ * - Task-specific execution history (used by /agent-tasks/:id page)
  * - Task scratchpad
  * - Task traces
  */
@@ -30,7 +31,10 @@ export function useAgentCompletionUpdates() {
       ) {
         console.log('[Agent Completion] Task finished:', event.taskName, event.status);
 
-        // Invalidate history, scratchpad, and traces for this task
+        // Invalidate global history query (used by /agent-tasks/history page)
+        queryClient.invalidateQueries({ queryKey: ['agent-task-history'] });
+
+        // Invalidate task-specific queries (used by /agent-tasks/:id page)
         queryClient.invalidateQueries({ queryKey: ['agent-task-history', event.taskId] });
         queryClient.invalidateQueries({ queryKey: ['agent-task-scratchpad', event.taskId] });
         queryClient.invalidateQueries({ queryKey: ['agent-task-trace', event.taskId] });
