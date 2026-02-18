@@ -1,7 +1,6 @@
 import * as React from "react";
 import * as TogglePrimitive from "@radix-ui/react-toggle";
 import { cva, type VariantProps } from "class-variance-authority";
-import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const containerToolToggleVariants = cva(
@@ -37,7 +36,6 @@ const ContainerToolToggle = React.forwardRef<
     className={cn(containerToolToggleVariants({ variant, size, className }))}
     {...props}
   >
-    <Check className={cn("h-4 w-4 mr-1.5 transition-opacity", pressed ? "opacity-100" : "opacity-30")} />
     {children}
   </TogglePrimitive.Root>
 ));

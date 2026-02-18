@@ -2,12 +2,14 @@ import type { ReactNode } from "react";
 
 interface SecondaryNavContainerProps {
   title: string;
+  mobileTitle?: string;
   tools?: ReactNode;
   children: ReactNode;
 }
 
 export function SecondaryNavContainer({
   title,
+  mobileTitle,
   tools,
   children,
 }: SecondaryNavContainerProps) {
@@ -16,7 +18,8 @@ export function SecondaryNavContainer({
       {/* Header */}
       <div className="pt-4 md:pt-8 px-6 flex items-center justify-between mb-4">
         <h2 className="font-bold" style={{ fontSize: 28 }}>
-          {title}
+          <span className="md:hidden">{mobileTitle || title}</span>
+          <span className="hidden md:inline">{title}</span>
         </h2>
         {tools && <div className="flex items-center gap-1">{tools}</div>}
       </div>

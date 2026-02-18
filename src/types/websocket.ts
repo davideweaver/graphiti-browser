@@ -163,6 +163,18 @@ export interface DocumentChangeEvent {
   timestamp: string;
 }
 
+export interface BookmarkChangeEvent {
+  path: string;
+  changeType: 'added' | 'removed';
+  bookmark?: {
+    path: string;
+    created: string;
+    tags: string[];
+    note: string;
+  };
+  timestamp: string;
+}
+
 export interface TaskConfigEvent {
   taskId: string;
   taskName: string;
@@ -183,6 +195,7 @@ export interface XerroWebSocketEvents {
   'obsidian:document-added': (data: DocumentChangeEvent) => void;
   'obsidian:document-updated': (data: DocumentChangeEvent) => void;
   'obsidian:document-removed': (data: DocumentChangeEvent) => void;
+  'obsidian:bookmark-changed': (data: BookmarkChangeEvent) => void;
   connect: () => void;
   disconnect: () => void;
   connect_error: (error: Error) => void;

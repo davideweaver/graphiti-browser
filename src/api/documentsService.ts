@@ -7,6 +7,10 @@ import type {
   DocumentItem,
   DocumentSearchResponse,
   DocumentSearchRequest,
+  BookmarkListResponse,
+  BookmarkRequest,
+  BookmarkDeleteResponse,
+  Bookmark,
 } from "@/types/documents";
 
 class DocumentsService {
@@ -149,6 +153,36 @@ class DocumentsService {
     const params = new URLSearchParams({ path });
     return this.fetch<void>(
       `/api/v1/obsidian/documents?${params}`,
+      {
+        method: "DELETE",
+      }
+    );
+  }
+
+  async listBookmarks(tags?: string[]): Promise<BookmarkListResponse> {
+    const params = new URLSearchParams();
+    if (tags && tags.length > 0) {
+      params.append("tags", tags.join(","));
+    }
+    return this.fetch<BookmarkListResponse>(
+      `/api/v1/obsidian/bookmarks${params.toString() ? `?${params}` : ""}`
+    );
+  }
+
+  async addBookmark(request: BookmarkRequest): Promise<Bookmark> {
+    return this.fetch<Bookmark>(
+      "/api/v1/obsidian/bookmarks",
+      {
+        method: "POST",
+        body: JSON.stringify(request),
+      }
+    );
+  }
+
+  async removeBookmark(path: string): Promise<BookmarkDeleteResponse> {
+    const params = new URLSearchParams({ path });
+    return this.fetch<BookmarkDeleteResponse>(
+      `/api/v1/obsidian/bookmarks?${params}`,
       {
         method: "DELETE",
       }

@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 import { useXerroWebSocketContext } from '@/context/XerroWebSocketContext';
-import type { DocumentChangeEvent } from '@/types/websocket';
+import type { DocumentChangeEvent, BookmarkChangeEvent } from '@/types/websocket';
 
 interface UseDocumentChangesOptions {
   onAdded?: (event: DocumentChangeEvent) => void;
   onUpdated?: (event: DocumentChangeEvent) => void;
   onRemoved?: (event: DocumentChangeEvent) => void;
+  onBookmarkChanged?: (event: BookmarkChangeEvent) => void;
 }
 
 /**
@@ -37,9 +38,10 @@ export function useDocumentChanges(options: UseDocumentChangesOptions = {}) {
     subscribeToDocumentAdded,
     subscribeToDocumentUpdated,
     subscribeToDocumentRemoved,
+    subscribeToBookmarkChanged,
   } = useXerroWebSocketContext();
 
-  const { onAdded, onUpdated, onRemoved } = options;
+  const { onAdded, onUpdated, onRemoved, onBookmarkChanged } = options;
 
   useEffect(() => {
     if (!onAdded) return;
@@ -58,6 +60,12 @@ export function useDocumentChanges(options: UseDocumentChangesOptions = {}) {
     const unsubscribe = subscribeToDocumentRemoved(onRemoved);
     return unsubscribe;
   }, [onRemoved, subscribeToDocumentRemoved]);
+
+  useEffect(() => {
+    if (!onBookmarkChanged) return;
+    const unsubscribe = subscribeToBookmarkChanged(onBookmarkChanged);
+    return unsubscribe;
+  }, [onBookmarkChanged, subscribeToBookmarkChanged]);
 
   return { isConnected };
 }

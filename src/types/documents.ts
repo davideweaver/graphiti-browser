@@ -62,3 +62,26 @@ export interface DocumentSearchRequest {
   query: string;
   limit?: number;
 }
+
+export interface Bookmark {
+  path: string;
+  created: string; // ISO timestamp
+  tags: string[];
+  note: string;
+}
+
+export interface BookmarkListResponse {
+  bookmarks: Bookmark[];
+  total: number;
+}
+
+export interface BookmarkRequest {
+  path: string;
+  tags?: string[];
+  note?: string;
+}
+
+export interface BookmarkDeleteResponse {
+  success: boolean;
+  existed: boolean;
+}

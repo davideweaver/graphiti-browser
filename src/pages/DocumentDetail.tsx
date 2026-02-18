@@ -3,13 +3,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import { documentsService } from "@/api/documentsService";
 import Container from "@/components/container/Container";
 import { ContainerToolButton } from "@/components/container/ContainerToolButton";
+import { ContainerToolToggle } from "@/components/container/ContainerToolToggle";
 import { Badge } from "@/components/ui/badge";
-import { Copy, ChevronLeft, FolderOpen, RefreshCw, Trash2, AlertCircle, WifiOff } from "lucide-react";
+import { Copy, ChevronLeft, FolderOpen, RefreshCw, Trash2, AlertCircle, WifiOff, Bookmark } from "lucide-react";
 import { toast } from "sonner";
 import { getSearchQuery } from "@/lib/documentsSearchStorage";
 import { setCurrentFolderPath, clearLastDocumentPath } from "@/lib/documentsStorage";
 import DestructiveConfirmationDialog from "@/components/dialogs/DestructiveConfirmationDialog";
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { MarkdownViewer, ExcalidrawViewer } from "@/components/document-viewers";
 import { getFileType, DocumentFileType } from "@/lib/fileTypeUtils";
 import { isExcalidrawMarkdown, parseExcalidrawMarkdown } from "@/lib/excalidrawParser";
@@ -22,6 +23,17 @@ export default function DocumentDetail() {
   const documentPath = params["*"] || "";
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
+
+
+  // Check if document is bookmarked
+  const { data: bookmarksData } = useQuery({
+    queryKey: ["bookmarks"],
+    queryFn: () => documentsService.listBookmarks(),
+  });
+
+  const isBookmarked = bookmarksData?.bookmarks.some(
+    (bookmark) => bookmark.path === documentPath
+  ) || false;
 
   // Delete mutation (defined early so we can use isPending in query)
   const deleteDocumentMutation = useMutation({
@@ -58,38 +70,22 @@ export default function DocumentDetail() {
     },
   });
 
-  // Real-time document change notifications
-  const { isConnected } = useDocumentChanges({
-    onAdded: (event) => {
-      toast.success(`Document added: ${event.path}`);
-      // Invalidate navigation to show new document
-      queryClient.invalidateQueries({ queryKey: ["documents-nav"] });
-    },
-    onUpdated: (event) => {
-      // If the current document was updated, auto-refresh silently
-      if (event.path === documentPath || event.absolutePath.endsWith(documentPath)) {
-        refetch();
-        // Also invalidate navigation in case filename changed
-        queryClient.invalidateQueries({ queryKey: ["documents-nav"] });
+  // Bookmark mutation
+  const toggleBookmarkMutation = useMutation({
+    mutationFn: async () => {
+      if (isBookmarked) {
+        return documentsService.removeBookmark(documentPath);
       } else {
-        // For other documents, just refresh navigation
-        queryClient.invalidateQueries({ queryKey: ["documents-nav"] });
+        return documentsService.addBookmark({ path: documentPath });
       }
     },
-    onRemoved: (event) => {
-      // If the current document was deleted, navigate away
-      if (event.path === documentPath || event.absolutePath.endsWith(documentPath)) {
-        toast.error(`This document was deleted: ${event.path}`, {
-          description: "Redirecting to documents...",
-        });
-        setIsDeleted(true);
-        clearLastDocumentPath();
-        queryClient.invalidateQueries({ queryKey: ["documents-nav"] });
-        setTimeout(() => navigate("/documents"), 1000);
-      } else {
-        toast.error(`Document removed: ${event.path}`);
-        queryClient.invalidateQueries({ queryKey: ["documents-nav"] });
-      }
+    onSuccess: () => {
+      // Note: Query invalidation and toast notification are both handled by WebSocket event handler
+      // This prevents duplicate toasts and unnecessary query refetches
+    },
+    onError: (error) => {
+      console.error("Failed to toggle bookmark:", error);
+      toast.error("Failed to update bookmark");
     },
   });
 
@@ -102,6 +98,55 @@ export default function DocumentDetail() {
     queryKey: ["document", documentPath],
     queryFn: () => documentsService.getDocument(documentPath),
     enabled: !!documentPath && !deleteDocumentMutation.isPending && !isDeleted,
+  });
+
+  // Memoize callbacks to prevent re-subscriptions
+  // Note: These must come AFTER the useQuery hook so refetch is available
+  const handleDocumentAdded = useCallback((event) => {
+    toast.success(`Document added: ${event.path}`);
+    queryClient.invalidateQueries({ queryKey: ["documents-nav"] });
+  }, [queryClient]);
+
+  const handleDocumentUpdated = useCallback((event) => {
+    if (event.path === documentPath || event.absolutePath.endsWith(documentPath)) {
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ["documents-nav"] });
+    } else {
+      queryClient.invalidateQueries({ queryKey: ["documents-nav"] });
+    }
+  }, [documentPath, refetch, queryClient]);
+
+  const handleDocumentRemoved = useCallback((event) => {
+    if (event.path === documentPath || event.absolutePath.endsWith(documentPath)) {
+      toast.error(`This document was deleted: ${event.path}`, {
+        description: "Redirecting to documents...",
+      });
+      setIsDeleted(true);
+      clearLastDocumentPath();
+      queryClient.invalidateQueries({ queryKey: ["documents-nav"] });
+      setTimeout(() => navigate("/documents"), 1000);
+    } else {
+      toast.error(`Document removed: ${event.path}`);
+      queryClient.invalidateQueries({ queryKey: ["documents-nav"] });
+    }
+  }, [documentPath, navigate, queryClient]);
+
+  const handleBookmarkChanged = useCallback((event) => {
+    queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+
+    if (event.path === documentPath) {
+      const message = event.changeType === 'added' ? "Bookmark added" : "Bookmark removed";
+      // Use toast ID to prevent duplicates - sonner will deduplicate toasts with the same ID
+      toast.success(message, { id: `bookmark-${event.path}-${event.changeType}` });
+    }
+  }, [documentPath, queryClient]);
+
+  // Real-time document change notifications
+  const { isConnected } = useDocumentChanges({
+    onAdded: handleDocumentAdded,
+    onUpdated: handleDocumentUpdated,
+    onRemoved: handleDocumentRemoved,
+    onBookmarkChanged: handleBookmarkChanged,
   });
 
   // Check if we came from search
@@ -185,6 +230,10 @@ export default function DocumentDetail() {
     setDeleteDialogOpen(false);
   };
 
+  const handleToggleBookmark = () => {
+    toggleBookmarkMutation.mutate();
+  };
+
   // Extract filename and clean up extension
   const pathSegments = documentPath.split("/");
   const rawFileName = pathSegments[pathSegments.length - 1];
@@ -232,6 +281,17 @@ export default function DocumentDetail() {
               <span>Offline</span>
             </Badge>
           )}
+          <ContainerToolToggle
+            pressed={isBookmarked}
+            onPressedChange={handleToggleBookmark}
+            disabled={!documentPath || toggleBookmarkMutation.isPending}
+            aria-label="Toggle bookmark"
+          >
+            <Bookmark
+              className="h-4 w-4"
+              fill={isBookmarked ? "currentColor" : "none"}
+            />
+          </ContainerToolToggle>
           <ContainerToolButton
             size="icon"
             onClick={handleRefresh}

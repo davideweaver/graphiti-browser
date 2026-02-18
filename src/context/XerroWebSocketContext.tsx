@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
-import type { AgentStatusEvent, DocumentChangeEvent, TaskConfigEvent } from '@/types/websocket';
+import type { AgentStatusEvent, DocumentChangeEvent, TaskConfigEvent, BookmarkChangeEvent } from '@/types/websocket';
 
 interface XerroWebSocketContextValue {
   isConnected: boolean;
@@ -12,6 +12,7 @@ interface XerroWebSocketContextValue {
   subscribeToDocumentAdded: (callback: (event: DocumentChangeEvent) => void) => () => void;
   subscribeToDocumentUpdated: (callback: (event: DocumentChangeEvent) => void) => () => void;
   subscribeToDocumentRemoved: (callback: (event: DocumentChangeEvent) => void) => () => void;
+  subscribeToBookmarkChanged: (callback: (event: BookmarkChangeEvent) => void) => () => void;
 }
 
 const XerroWebSocketContext = createContext<XerroWebSocketContextValue | undefined>(undefined);
@@ -28,6 +29,10 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
   const documentAddedCallbacksRef = useRef<Set<(event: DocumentChangeEvent) => void>>(new Set());
   const documentUpdatedCallbacksRef = useRef<Set<(event: DocumentChangeEvent) => void>>(new Set());
   const documentRemovedCallbacksRef = useRef<Set<(event: DocumentChangeEvent) => void>>(new Set());
+  const bookmarkChangedCallbacksRef = useRef<Set<(event: BookmarkChangeEvent) => void>>(new Set());
+
+  // Track last processed bookmark event to prevent duplicate processing
+  const lastBookmarkEventTimestampRef = useRef<string>('');
 
   useEffect(() => {
     const url = import.meta.env.VITE_XERRO_SERVICE_URL || 'http://localhost:9205';
@@ -145,6 +150,26 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
       });
     });
 
+    // Bookmark events - notify all subscribers (deduplicated)
+    socket.on('obsidian:bookmark-changed', (data: BookmarkChangeEvent) => {
+      console.log('[Xerro WebSocket] Bookmark changed:', data.path, data.changeType);
+
+      // Deduplicate at the WebSocket level before calling any callbacks
+      if (data.timestamp === lastBookmarkEventTimestampRef.current) {
+        return;
+      }
+
+      lastBookmarkEventTimestampRef.current = data.timestamp;
+
+      bookmarkChangedCallbacksRef.current.forEach(callback => {
+        try {
+          callback(data);
+        } catch (error) {
+          console.error('[Xerro WebSocket] Error in bookmark changed callback:', error);
+        }
+      });
+    });
+
     // Cleanup on unmount
     return () => {
       socket.close();
@@ -209,6 +234,14 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
     };
   }, []);
 
+  // Subscribe to bookmark changed events
+  const subscribeToBookmarkChanged = useCallback((callback: (event: BookmarkChangeEvent) => void) => {
+    bookmarkChangedCallbacksRef.current.add(callback);
+    return () => {
+      bookmarkChangedCallbacksRef.current.delete(callback);
+    };
+  }, []);
+
   const value: XerroWebSocketContextValue = {
     isConnected,
     socket: socketRef.current,
@@ -219,6 +252,7 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
     subscribeToDocumentAdded,
     subscribeToDocumentUpdated,
     subscribeToDocumentRemoved,
+    subscribeToBookmarkChanged,
   };
 
   return (
