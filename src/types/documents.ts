@@ -14,6 +14,7 @@ export interface DocumentListResponse {
 
 export interface DocumentViewResponse {
   path: string;
+  absolutePath: string; // Absolute filesystem path on the server
   content: string; // Markdown content
   frontmatter: Record<string, any>;
   created: string;

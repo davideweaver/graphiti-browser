@@ -5,12 +5,18 @@ import Container from "@/components/container/Container";
 import { ContainerToolButton } from "@/components/container/ContainerToolButton";
 import { ContainerToolToggle } from "@/components/container/ContainerToolToggle";
 import { Badge } from "@/components/ui/badge";
-import { Copy, ChevronLeft, FolderOpen, RefreshCw, Trash2, AlertCircle, WifiOff, Bookmark } from "lucide-react";
+import { Copy, ChevronLeft, FolderOpen, RefreshCw, Trash2, AlertCircle, WifiOff, Bookmark, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { getSearchQuery } from "@/lib/documentsSearchStorage";
 import { setCurrentFolderPath, clearLastDocumentPath } from "@/lib/documentsStorage";
 import DestructiveConfirmationDialog from "@/components/dialogs/DestructiveConfirmationDialog";
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { MarkdownViewer, ExcalidrawViewer } from "@/components/document-viewers";
 import { getFileType, DocumentFileType } from "@/lib/fileTypeUtils";
 import { isExcalidrawMarkdown, parseExcalidrawMarkdown } from "@/lib/excalidrawParser";
@@ -185,6 +191,24 @@ export default function DocumentDetail() {
     }
   };
 
+  const handleCopyAbsolutePath = () => {
+    if (document?.absolutePath) {
+      navigator.clipboard.writeText(document.absolutePath);
+      toast.success("Absolute path copied to clipboard");
+    } else {
+      toast.error("Absolute path not available", {
+        description: "Try refreshing the document",
+      });
+    }
+  };
+
+  const handleCopyRelativePath = () => {
+    if (documentPath) {
+      navigator.clipboard.writeText(documentPath);
+      toast.success("Relative path copied to clipboard");
+    }
+  };
+
   const handleExcalidrawError = (error: Error) => {
     toast.error("Failed to load Excalidraw diagram", {
       description: error.message,
@@ -306,13 +330,28 @@ export default function DocumentDetail() {
           >
             <FolderOpen className="h-4 w-4" />
           </ContainerToolButton>
-          <ContainerToolButton
-            size="icon"
-            onClick={handleCopyContent}
-            disabled={!document}
-          >
-            <Copy className="h-4 w-4" />
-          </ContainerToolButton>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <ContainerToolButton size="sm" disabled={!document}>
+                <Copy className="h-4 w-4" />
+                <ChevronDown className="h-3 w-3 ml-1" />
+              </ContainerToolButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleCopyContent}>
+                <Copy className="h-4 w-4 mr-2" />
+                Copy content
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleCopyAbsolutePath}>
+                <Copy className="h-4 w-4 mr-2" />
+                Copy absolute path
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleCopyRelativePath}>
+                <Copy className="h-4 w-4 mr-2" />
+                Copy relative path
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <ContainerToolButton
             size="icon"
             onClick={handleOpenDeleteDialog}
