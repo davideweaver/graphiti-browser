@@ -2,6 +2,11 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { graphitiService } from "@/api/graphitiService";
+import { todosService } from "@/api/todosService";
+import type { Todo, CreateTodoInput, UpdateTodoInput } from "@/types/todos";
+import { TodoRow } from "@/components/todos/TodoRow";
+import { TodoEditSheet } from "@/components/todos/TodoEditSheet";
+import { CreateTodoDialog } from "@/components/todos/CreateTodoDialog";
 import { useGraphiti } from "@/context/GraphitiContext";
 import Container from "@/components/container/Container";
 import { ContainerToolButton } from "@/components/container/ContainerToolButton";
@@ -11,7 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { Info, Trash2, Loader2, AlertTriangle } from "lucide-react";
+import { Info, Trash2, Loader2, AlertTriangle, Plus } from "lucide-react";
 import { FactCard } from "@/components/search/FactCard";
 import { SessionRow } from "@/components/episodes/SessionRow";
 import { ProjectTimelineBar } from "@/components/episodes/ProjectTimelineBar";
@@ -20,21 +25,31 @@ import { format } from "date-fns";
 import DestructiveConfirmationDialog from "@/components/dialogs/DestructiveConfirmationDialog";
 
 export default function ProjectDetail() {
-  const { projectName: encodedProjectName } = useParams<{ projectName: string }>();
+  const { projectName: encodedProjectName } = useParams<{
+    projectName: string;
+  }>();
   const { groupId } = useGraphiti();
   const navigate = useNavigate();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // Decode the project name from URL
-  const projectName = encodedProjectName ? decodeURIComponent(encodedProjectName) : "";
+  const projectName = encodedProjectName
+    ? decodeURIComponent(encodedProjectName)
+    : "";
 
   // Fetch project metadata by listing projects with name filter
   const { data: projectData, isLoading: isLoadingProject } = useQuery({
     queryKey: ["project-metadata", groupId, projectName],
     queryFn: async () => {
-      const result = await graphitiService.listProjects(groupId, 1, undefined, projectName);
+      const result = await graphitiService.listProjects(
+        groupId,
+        1,
+        undefined,
+        projectName,
+      );
       return result.projects[0] || null;
     },
     enabled: !!projectName,
@@ -43,14 +58,16 @@ export default function ProjectDetail() {
   // Fetch sessions for this project
   const { data: sessionsData, isLoading: isLoadingSessions } = useQuery({
     queryKey: ["project-sessions", groupId, projectName],
-    queryFn: () => graphitiService.getProjectSessions(groupId, projectName, 100),
+    queryFn: () =>
+      graphitiService.getProjectSessions(groupId, projectName, 100),
     enabled: !!projectName,
   });
 
   // Fetch entities for this project
   const { data: entitiesData, isLoading: isLoadingEntities } = useQuery({
     queryKey: ["project-entities", groupId, projectName],
-    queryFn: () => graphitiService.getProjectEntities(groupId, projectName, 100),
+    queryFn: () =>
+      graphitiService.getProjectEntities(groupId, projectName, 100),
     enabled: !!projectName,
   });
 
@@ -61,15 +78,58 @@ export default function ProjectDetail() {
     enabled: !!projectName,
   });
 
+  // Fetch todos for this project
+  const { data: todosData, isLoading: isLoadingTodos } = useQuery({
+    queryKey: ["project-todos", projectName],
+    queryFn: () => todosService.listTodos({ projectName, limit: 200 }),
+    enabled: !!projectName,
+  });
+
+  const createTodoMutation = useMutation({
+    mutationFn: (input: CreateTodoInput) => todosService.createTodo(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-todos", projectName] });
+      setCreateOpen(false);
+    },
+  });
+
+  const toggleTodoMutation = useMutation({
+    mutationFn: ({ id, completed }: { id: string; completed: boolean }) =>
+      todosService.updateTodo(id, { completed }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["project-todos", projectName] }),
+  });
+
+  const deleteTodoMutation = useMutation({
+    mutationFn: (id: string) => todosService.deleteTodo(id),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["project-todos", projectName] }),
+  });
+
+  const [editTodo, setEditTodo] = useState<Todo | null>(null);
+
+  const handleTodoSave = async (id: string, input: UpdateTodoInput) => {
+    await todosService.updateTodo(id, input);
+    queryClient.invalidateQueries({ queryKey: ["project-todos", projectName] });
+  };
+
   // Mutation for deleting project
   const deleteProjectMutation = useMutation({
     mutationFn: () => graphitiService.deleteProject(projectName, groupId),
     onSuccess: () => {
       // Remove queries from cache before navigation to prevent 404 errors
-      queryClient.removeQueries({ queryKey: ["project-metadata", groupId, projectName] });
-      queryClient.removeQueries({ queryKey: ["project-sessions", groupId, projectName] });
-      queryClient.removeQueries({ queryKey: ["project-entities", groupId, projectName] });
-      queryClient.removeQueries({ queryKey: ["project-facts", groupId, projectName] });
+      queryClient.removeQueries({
+        queryKey: ["project-metadata", groupId, projectName],
+      });
+      queryClient.removeQueries({
+        queryKey: ["project-sessions", groupId, projectName],
+      });
+      queryClient.removeQueries({
+        queryKey: ["project-entities", groupId, projectName],
+      });
+      queryClient.removeQueries({
+        queryKey: ["project-facts", groupId, projectName],
+      });
 
       // Invalidate projects list to refresh
       queryClient.invalidateQueries({ queryKey: ["projects", groupId] });
@@ -91,14 +151,16 @@ export default function ProjectDetail() {
     setDeleteDialogOpen(false);
   };
 
-  const [deletedSessionIds, setDeletedSessionIds] = useState<Set<string>>(new Set());
+  const [deletedSessionIds, setDeletedSessionIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   const handleSessionDeleted = (sessionId: string) => {
     setDeletedSessionIds((prev) => new Set([...prev, sessionId]));
   };
 
   const sessions = (sessionsData?.sessions || []).filter(
-    (s) => !deletedSessionIds.has(s.session_id)
+    (s) => !deletedSessionIds.has(s.session_id),
   );
   const entities = entitiesData?.entities || [];
   const facts = factsData?.facts || [];
@@ -135,12 +197,16 @@ export default function ProjectDetail() {
 
   if (!projectData) {
     return (
-      <Container title="Project Not Found" description="The project could not be found">
+      <Container
+        title="Project Not Found"
+        description="The project could not be found"
+      >
         <Card>
           <CardContent className="p-12 text-center">
             <h3 className="text-lg font-semibold mb-2">Project not found</h3>
             <p className="text-muted-foreground mb-4">
-              The project you're looking for doesn't exist or couldn't be loaded.
+              The project you're looking for doesn't exist or couldn't be
+              loaded.
             </p>
             <Button onClick={() => navigate("/projects")}>
               Back to Projects
@@ -157,6 +223,13 @@ export default function ProjectDetail() {
       description={projectData.project_path || undefined}
       tools={
         <div className="flex gap-2">
+          <ContainerToolButton
+            size="sm"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Todo
+          </ContainerToolButton>
           <ContainerToolButton size="sm" onClick={() => setSheetOpen(true)}>
             <Info className="h-4 w-4 mr-2" />
             Info
@@ -179,22 +252,32 @@ export default function ProjectDetail() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
                 <div className="text-muted-foreground">Episodes</div>
-                <div className="text-2xl font-semibold">{projectData.episode_count}</div>
+                <div className="text-2xl font-semibold">
+                  {projectData.episode_count}
+                </div>
               </div>
               <div>
                 <div className="text-muted-foreground">Sessions</div>
-                <div className="text-2xl font-semibold">{projectData.session_count}</div>
+                <div className="text-2xl font-semibold">
+                  {projectData.session_count}
+                </div>
               </div>
               <div>
                 <div className="text-muted-foreground">First Episode</div>
                 <div className="font-medium">
-                  {format(new Date(projectData.first_episode_date), "MMM d, yyyy")}
+                  {format(
+                    new Date(projectData.first_episode_date),
+                    "MMM d, yyyy",
+                  )}
                 </div>
               </div>
               <div>
                 <div className="text-muted-foreground">Last Episode</div>
                 <div className="font-medium">
-                  {format(new Date(projectData.last_episode_date), "MMM d, yyyy")}
+                  {format(
+                    new Date(projectData.last_episode_date),
+                    "MMM d, yyyy",
+                  )}
                 </div>
               </div>
             </div>
@@ -211,18 +294,54 @@ export default function ProjectDetail() {
         </Card>
 
         {/* Tabs */}
-        <Tabs defaultValue="sessions">
-          <TabsList className="grid w-full grid-cols-3">
+        <Tabs defaultValue="todos">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="todos">
+              Todos ({todosData?.todos.length ?? 0})
+            </TabsTrigger>
             <TabsTrigger value="sessions">
               Sessions ({sessions.length})
             </TabsTrigger>
             <TabsTrigger value="entities">
               Relationships ({entities.length})
             </TabsTrigger>
-            <TabsTrigger value="facts">
-              Facts ({facts.length})
-            </TabsTrigger>
+            <TabsTrigger value="facts">Facts ({facts.length})</TabsTrigger>
           </TabsList>
+
+          {/* Todos Tab */}
+          <TabsContent value="todos" className="mt-6">
+            {isLoadingTodos && (
+              <div className="space-y-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full rounded-lg" />
+                ))}
+              </div>
+            )}
+
+            {!isLoadingTodos && (todosData?.todos.length ?? 0) === 0 && (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <p className="text-muted-foreground">
+                    No todos for this project
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {!isLoadingTodos && (todosData?.todos.length ?? 0) > 0 && (
+              <div className="space-y-0.5">
+                {todosData!.todos.map((todo: Todo) => (
+                  <TodoRow
+                    key={todo.id}
+                    todo={todo}
+                    onToggle={(id, completed) => toggleTodoMutation.mutate({ id, completed })}
+                    onDelete={(id) => deleteTodoMutation.mutate(id)}
+                    onOpen={setEditTodo}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
 
           {/* Sessions Tab */}
           <TabsContent value="sessions" className="mt-6">
@@ -258,7 +377,9 @@ export default function ProjectDetail() {
                         session={session}
                         showProject={false}
                         onSessionClick={(sessionId) =>
-                          navigate(`/project/${encodeURIComponent(projectName)}/sessions/${encodeURIComponent(sessionId)}`)
+                          navigate(
+                            `/project/${encodeURIComponent(projectName)}/sessions/${encodeURIComponent(sessionId)}`,
+                          )
                         }
                         onSessionDeleted={handleSessionDeleted}
                       />
@@ -272,7 +393,11 @@ export default function ProjectDetail() {
                   <div className="mt-6 text-center">
                     <Button
                       variant="outline"
-                      onClick={() => navigate(`/project/${encodeURIComponent(projectName)}/sessions`)}
+                      onClick={() =>
+                        navigate(
+                          `/project/${encodeURIComponent(projectName)}/sessions`,
+                        )
+                      }
                     >
                       View All Sessions
                     </Button>
@@ -310,7 +435,10 @@ export default function ProjectDetail() {
             {!isLoadingEntities && entities.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {entities.map((entity) => {
-                  const entityType = entity.labels.find((label) => label !== "Entity") || entity.entity_type || "Unknown";
+                  const entityType =
+                    entity.labels.find((label) => label !== "Entity") ||
+                    entity.entity_type ||
+                    "Unknown";
                   return (
                     <Card
                       key={entity.uuid}
@@ -375,6 +503,23 @@ export default function ProjectDetail() {
         </Tabs>
       </div>
 
+      {/* Create Todo Dialog */}
+      <CreateTodoDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onSubmit={(input) => createTodoMutation.mutate(input)}
+        isSubmitting={createTodoMutation.isPending}
+        defaultProjectName={projectName}
+        projectNameDisabled
+      />
+
+      {/* Todo Edit Sheet */}
+      <TodoEditSheet
+        todo={editTodo}
+        onClose={() => setEditTodo(null)}
+        onSave={handleTodoSave}
+      />
+
       {/* NodeDetailSheet for graph navigation */}
       <NodeDetailSheet
         nodeType="project"
@@ -390,7 +535,7 @@ export default function ProjectDetail() {
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
         title="Delete Project"
-        description={`Are you sure you want to delete the project "${projectName}"? This will permanently delete ${projectData?.session_count || 0} session${projectData?.session_count !== 1 ? 's' : ''}, ${projectData?.episode_count || 0} episode${projectData?.episode_count !== 1 ? 's' : ''}, and all associated facts and relationships. This action cannot be undone.`}
+        description={`Are you sure you want to delete the project "${projectName}"? This will permanently delete ${projectData?.session_count || 0} session${projectData?.session_count !== 1 ? "s" : ""}, ${projectData?.episode_count || 0} episode${projectData?.episode_count !== 1 ? "s" : ""}, and all associated facts and relationships. This action cannot be undone.`}
       />
     </Container>
   );

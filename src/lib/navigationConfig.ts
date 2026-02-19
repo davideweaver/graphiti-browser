@@ -8,7 +8,8 @@ import {
   Clock,
   Plus,
   FileText,
-  ListChecks,
+  Bot,
+  ListTodo,
   Settings
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -22,6 +23,7 @@ export interface SecondaryNavItem {
 export interface PrimaryNavItem {
   key: string;
   icon: LucideIcon;
+  iconClassName?: string;
   label: string;
   defaultPath: string;
   secondaryItems: SecondaryNavItem[];
@@ -63,8 +65,16 @@ export const navigationConfig: PrimaryNavItem[] = [
     ]
   },
   {
+    key: 'todos',
+    icon: ListTodo,
+    label: 'Todos',
+    defaultPath: '/todos',
+    secondaryItems: []
+  },
+  {
     key: 'agent-tasks',
-    icon: ListChecks,
+    icon: Bot,
+    iconClassName: '[&_svg]:!size-6',
     label: 'Agent Tasks',
     defaultPath: '/agent-tasks/activity',
     secondaryItems: []
@@ -72,6 +82,7 @@ export const navigationConfig: PrimaryNavItem[] = [
   {
     key: 'system',
     icon: Settings,
+    iconClassName: '[&_svg]:!size-6',
     label: 'System',
     defaultPath: '/system',
     secondaryItems: []
@@ -85,6 +96,8 @@ export function getActivePrimary(pathname: string): string | null {
   if (pathname.startsWith('/documents')) return 'documents';
   // Memory routes
   if (pathname.startsWith('/memory')) return 'memory';
+  // Todos routes
+  if (pathname.startsWith('/todos')) return 'todos';
   // Agent Tasks routes
   if (pathname.startsWith('/agent-tasks')) return 'agent-tasks';
   // System routes

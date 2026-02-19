@@ -45,7 +45,8 @@ export function PrimaryNav({
                   variant="ghost"
                   size="icon"
                   className={cn(
-                    "h-14 w-14 rounded-lg transition-colors [&_svg]:!size-5",
+                    "h-14 w-14 rounded-lg transition-colors",
+                    item.iconClassName ?? "[&_svg]:!size-5",
                     isActive ? "bg-muted text-primary" : "hover:bg-accent",
                   )}
                   onClick={() => onNavigate(item.defaultPath)}
@@ -53,9 +54,7 @@ export function PrimaryNav({
                   <item.icon />
                 </Button>
                 {indicator && (
-                  <div className="absolute top-1 right-1">
-                    {indicator}
-                  </div>
+                  <div className="absolute top-1 right-1">{indicator}</div>
                 )}
               </div>
             );

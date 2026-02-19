@@ -88,7 +88,8 @@
       "WebFetch(domain:docs.excalidraw.com)",
       "Bash(npm uninstall:*)",
       "Bash(pm2 list:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(md5:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

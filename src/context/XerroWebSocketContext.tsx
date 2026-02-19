@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
-import type { AgentStatusEvent, DocumentChangeEvent, TaskConfigEvent, BookmarkChangeEvent } from '@/types/websocket';
+import type { AgentStatusEvent, DocumentChangeEvent, TaskConfigEvent, BookmarkChangeEvent, TodoChangeEvent } from '@/types/websocket';
 
 interface XerroWebSocketContextValue {
   isConnected: boolean;
@@ -13,6 +13,9 @@ interface XerroWebSocketContextValue {
   subscribeToDocumentUpdated: (callback: (event: DocumentChangeEvent) => void) => () => void;
   subscribeToDocumentRemoved: (callback: (event: DocumentChangeEvent) => void) => () => void;
   subscribeToBookmarkChanged: (callback: (event: BookmarkChangeEvent) => void) => () => void;
+  subscribeToTodoCreated: (callback: (event: TodoChangeEvent) => void) => () => void;
+  subscribeToTodoUpdated: (callback: (event: TodoChangeEvent) => void) => () => void;
+  subscribeToTodoDeleted: (callback: (event: TodoChangeEvent) => void) => () => void;
 }
 
 const XerroWebSocketContext = createContext<XerroWebSocketContextValue | undefined>(undefined);
@@ -30,6 +33,9 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
   const documentUpdatedCallbacksRef = useRef<Set<(event: DocumentChangeEvent) => void>>(new Set());
   const documentRemovedCallbacksRef = useRef<Set<(event: DocumentChangeEvent) => void>>(new Set());
   const bookmarkChangedCallbacksRef = useRef<Set<(event: BookmarkChangeEvent) => void>>(new Set());
+  const todoCreatedCallbacksRef = useRef<Set<(event: TodoChangeEvent) => void>>(new Set());
+  const todoUpdatedCallbacksRef = useRef<Set<(event: TodoChangeEvent) => void>>(new Set());
+  const todoDeletedCallbacksRef = useRef<Set<(event: TodoChangeEvent) => void>>(new Set());
 
   // Track last processed bookmark event to prevent duplicate processing
   const lastBookmarkEventTimestampRef = useRef<string>('');
@@ -170,6 +176,40 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
       });
     });
 
+    // Todo events - notify all subscribers
+    socket.on('todos:todo-created', (data: TodoChangeEvent) => {
+      console.log('[Xerro WebSocket] Todo created:', data.id);
+      todoCreatedCallbacksRef.current.forEach(callback => {
+        try {
+          callback(data);
+        } catch (error) {
+          console.error('[Xerro WebSocket] Error in todo created callback:', error);
+        }
+      });
+    });
+
+    socket.on('todos:todo-updated', (data: TodoChangeEvent) => {
+      console.log('[Xerro WebSocket] Todo updated:', data.id);
+      todoUpdatedCallbacksRef.current.forEach(callback => {
+        try {
+          callback(data);
+        } catch (error) {
+          console.error('[Xerro WebSocket] Error in todo updated callback:', error);
+        }
+      });
+    });
+
+    socket.on('todos:todo-deleted', (data: TodoChangeEvent) => {
+      console.log('[Xerro WebSocket] Todo deleted:', data.id);
+      todoDeletedCallbacksRef.current.forEach(callback => {
+        try {
+          callback(data);
+        } catch (error) {
+          console.error('[Xerro WebSocket] Error in todo deleted callback:', error);
+        }
+      });
+    });
+
     // Cleanup on unmount
     return () => {
       socket.close();
@@ -242,6 +282,30 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
     };
   }, []);
 
+  // Subscribe to todo created events
+  const subscribeToTodoCreated = useCallback((callback: (event: TodoChangeEvent) => void) => {
+    todoCreatedCallbacksRef.current.add(callback);
+    return () => {
+      todoCreatedCallbacksRef.current.delete(callback);
+    };
+  }, []);
+
+  // Subscribe to todo updated events
+  const subscribeToTodoUpdated = useCallback((callback: (event: TodoChangeEvent) => void) => {
+    todoUpdatedCallbacksRef.current.add(callback);
+    return () => {
+      todoUpdatedCallbacksRef.current.delete(callback);
+    };
+  }, []);
+
+  // Subscribe to todo deleted events
+  const subscribeToTodoDeleted = useCallback((callback: (event: TodoChangeEvent) => void) => {
+    todoDeletedCallbacksRef.current.add(callback);
+    return () => {
+      todoDeletedCallbacksRef.current.delete(callback);
+    };
+  }, []);
+
   const value: XerroWebSocketContextValue = {
     isConnected,
     socket: socketRef.current,
@@ -253,6 +317,9 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
     subscribeToDocumentUpdated,
     subscribeToDocumentRemoved,
     subscribeToBookmarkChanged,
+    subscribeToTodoCreated,
+    subscribeToTodoUpdated,
+    subscribeToTodoDeleted,
   };
 
   return (

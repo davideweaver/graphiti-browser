@@ -11,6 +11,7 @@ import { SecondaryNav } from "@/components/navigation/SecondaryNav";
 import { ProjectsSecondaryNav } from "@/components/navigation/ProjectsSecondaryNav";
 import { DocumentsSecondaryNav } from "@/components/navigation/DocumentsSecondaryNav";
 import { AgentTasksSecondaryNav } from "@/components/navigation/AgentTasksSecondaryNav";
+import { TodosSecondaryNav } from "@/components/navigation/TodosSecondaryNav";
 import { SystemSecondaryNav } from "@/components/navigation/SystemSecondaryNav";
 import { MobileNavTrigger } from "@/components/navigation/MobileNavTrigger";
 import { DraggableMobileNav } from "@/components/navigation/DraggableMobileNav";
@@ -190,6 +191,9 @@ const Layout = () => {
   const selectedTaskId = params.id || null;
   const isAgentTasksSection = activePrimary === "agent-tasks";
 
+  // Todos section flag
+  const isTodosSection = activePrimary === "todos";
+
   // System section flag
   const isSystemSection = activePrimary === "system";
 
@@ -299,6 +303,8 @@ const Layout = () => {
             currentView={agentTasksView}
             onNavigate={handleNavigate}
           />
+        ) : isTodosSection ? (
+          <TodosSecondaryNav onNavigate={handleNavigate} />
         ) : isSystemSection ? (
           <SystemSecondaryNav onNavigate={handleNavigate} />
         ) : (
@@ -354,6 +360,8 @@ const Layout = () => {
                   currentView={agentTasksView}
                   onNavigate={() => {}}
                 />
+              ) : isTodosSection ? (
+                <TodosSecondaryNav onNavigate={() => {}} />
               ) : isSystemSection ? (
                 <SystemSecondaryNav onNavigate={() => {}} />
               ) : (
@@ -397,6 +405,11 @@ const Layout = () => {
                 currentView={agentTasksView}
                 onNavigate={handleNavigate}
                 onTaskSelect={handleMobileNavigate}
+              />
+            ) : isTodosSection ? (
+              <TodosSecondaryNav
+                onNavigate={handleNavigate}
+                onTodoSelect={handleMobileNavigate}
               />
             ) : isSystemSection ? (
               <SystemSecondaryNav

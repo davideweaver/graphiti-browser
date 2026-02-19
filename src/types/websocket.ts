@@ -186,6 +186,11 @@ export interface TaskConfigEvent {
   timestamp: string;
 }
 
+export interface TodoChangeEvent {
+  id: string;
+  timestamp: string;
+}
+
 export interface XerroWebSocketEvents {
   'events:list': (events: string[]) => void;
   'scheduled-tasks:agent-status': (data: AgentStatusEvent) => void;
@@ -196,6 +201,9 @@ export interface XerroWebSocketEvents {
   'obsidian:document-updated': (data: DocumentChangeEvent) => void;
   'obsidian:document-removed': (data: DocumentChangeEvent) => void;
   'obsidian:bookmark-changed': (data: BookmarkChangeEvent) => void;
+  'todos:todo-created': (data: TodoChangeEvent) => void;
+  'todos:todo-updated': (data: TodoChangeEvent) => void;
+  'todos:todo-deleted': (data: TodoChangeEvent) => void;
   connect: () => void;
   disconnect: () => void;
   connect_error: (error: Error) => void;

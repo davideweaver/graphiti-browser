@@ -85,6 +85,12 @@ const Router = createBrowserRouter(
         lazy={lazyImportComponent(() => import("@/pages/ProcessingResults"))}
       />
 
+      {/* Todos route */}
+      <Route
+        path="/todos"
+        lazy={lazyImportComponent(() => import("@/pages/Todos"))}
+      />
+
       {/* Agent Tasks routes */}
       <Route
         path="/agent-tasks"

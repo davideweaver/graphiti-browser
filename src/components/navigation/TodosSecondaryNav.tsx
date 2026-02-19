@@ -1,0 +1,140 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
+import { todosService } from "@/api/todosService";
+import { Input } from "@/components/ui/input";
+import { SecondaryNavItem } from "@/components/navigation/SecondaryNavItem";
+import { SecondaryNavItemTitle } from "@/components/navigation/SecondaryNavItemContent";
+import { SecondaryNavContainer } from "@/components/navigation/SecondaryNavContainer";
+import { Search, CalendarDays, List, Folder } from "lucide-react";
+import { useDebounce } from "@/hooks/use-debounce";
+
+interface TodosSecondaryNavProps {
+  onNavigate: (path: string) => void;
+  onTodoSelect?: (path: string) => void;
+}
+
+export function TodosSecondaryNav({
+  onNavigate,
+  onTodoSelect,
+}: TodosSecondaryNavProps) {
+  const [searchParams] = useSearchParams();
+  const [searchInput, setSearchInput] = useState(
+    () => searchParams.get("search") || ""
+  );
+  const debouncedSearch = useDebounce(searchInput, 300);
+  const currentFilter = searchParams.get("filter") || "today";
+
+  const { data: projectsData, isLoading: projectsLoading } = useQuery({
+    queryKey: ["todos-projects"],
+    queryFn: () => todosService.getProjects(),
+  });
+
+  const projects = projectsData?.projects || [];
+
+  const buildPath = (filter: string, search?: string) => {
+    const params = new URLSearchParams();
+    params.set("filter", filter);
+    if (search) params.set("search", search);
+    return `/todos?${params.toString()}`;
+  };
+
+  const handleNavigate = (filter: string) => {
+    const path = buildPath(filter, debouncedSearch || undefined);
+    if (onTodoSelect) {
+      onTodoSelect(path);
+    } else {
+      onNavigate(path);
+    }
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    // Update URL with new search, preserving current filter
+    const path = buildPath(currentFilter, value || undefined);
+    onNavigate(path);
+  };
+
+  return (
+    <SecondaryNavContainer title="Todos">
+      {/* Search */}
+      <div className="px-6 pb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search todos..."
+            className="pl-9"
+            value={searchInput}
+            onChange={(e) => handleSearchChange(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* Static Filter Items */}
+      <div className="px-4 pb-2 space-y-1">
+        <SecondaryNavItem
+          isActive={currentFilter === "today"}
+          onClick={() => handleNavigate("today")}
+        >
+          <div className="flex items-center gap-2 w-full">
+            <CalendarDays className="h-4 w-4 flex-shrink-0" />
+            <SecondaryNavItemTitle>Today</SecondaryNavItemTitle>
+          </div>
+        </SecondaryNavItem>
+        <SecondaryNavItem
+          isActive={currentFilter === "all"}
+          onClick={() => handleNavigate("all")}
+        >
+          <div className="flex items-center gap-2 w-full">
+            <List className="h-4 w-4 flex-shrink-0" />
+            <SecondaryNavItemTitle>All</SecondaryNavItemTitle>
+          </div>
+        </SecondaryNavItem>
+      </div>
+
+      {/* Projects Section */}
+      <div className="px-4 pb-4">
+        <div className="px-3 py-2">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Projects
+          </span>
+        </div>
+
+        {projectsLoading ? (
+          <div className="space-y-1">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-10 bg-accent/50 rounded-lg animate-pulse"
+              />
+            ))}
+          </div>
+        ) : projects.length === 0 ? (
+          <div className="text-xs text-muted-foreground text-center py-4 px-3">
+            No projects yet
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {projects.map((project) => {
+              const filterKey = `project:${project}`;
+              return (
+                <SecondaryNavItem
+                  key={project}
+                  isActive={currentFilter === filterKey}
+                  onClick={() => handleNavigate(filterKey)}
+                >
+                  <div className="flex items-center gap-2 w-full">
+                    <Folder className="h-4 w-4 flex-shrink-0" />
+                    <SecondaryNavItemTitle className="truncate">
+                      {project}
+                    </SecondaryNavItemTitle>
+                  </div>
+                </SecondaryNavItem>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </SecondaryNavContainer>
+  );
+}

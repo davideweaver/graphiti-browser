@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { agentTasksService } from "@/api/agentTasksService";
 import { Input } from "@/components/ui/input";
@@ -9,8 +9,9 @@ import {
 } from "@/components/navigation/SecondaryNavItemContent";
 import { SecondaryNavContainer } from "@/components/navigation/SecondaryNavContainer";
 import { SecondaryNavToolButton } from "@/components/navigation/SecondaryNavToolButton";
+import { SecondaryNavToolToggle } from "@/components/navigation/SecondaryNavToolToggle";
 import { Badge } from "@/components/ui/badge";
-import { Search, Clock, RefreshCw, Activity } from "lucide-react";
+import { Search, Clock, RefreshCw, Activity, Bot, BotOff } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useTaskConfigUpdates } from "@/hooks/use-task-config-updates";
 import { toast } from "sonner";
@@ -22,6 +23,8 @@ interface AgentTasksSecondaryNavProps {
   onTaskSelect?: (path: string) => void; // Optional: for user clicks that should close sidebar
 }
 
+const STORAGE_KEY = "agent-tasks-show-disabled";
+
 export function AgentTasksSecondaryNav({
   selectedTaskId,
   currentView,
@@ -30,6 +33,17 @@ export function AgentTasksSecondaryNav({
 }: AgentTasksSecondaryNavProps) {
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 300);
+
+  // Initialize showDisabled from localStorage
+  const [showDisabled, setShowDisabled] = useState<boolean>(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : false;
+  });
+
+  // Persist showDisabled to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(showDisabled));
+  }, [showDisabled]);
 
   // Listen for real-time task configuration updates
   useTaskConfigUpdates();
@@ -42,10 +56,14 @@ export function AgentTasksSecondaryNav({
 
   const tasks = data?.tasks || [];
 
-  // Filter by search
-  const filteredTasks = tasks.filter((task) =>
-    task.name.toLowerCase().includes(debouncedSearch.toLowerCase()),
-  );
+  // Filter by search and enabled status
+  const filteredTasks = tasks.filter((task) => {
+    const matchesSearch = task.name
+      .toLowerCase()
+      .includes(debouncedSearch.toLowerCase());
+    const matchesEnabled = showDisabled || task.enabled;
+    return matchesSearch && matchesEnabled;
+  });
 
   const handleNavigation = (path: string) => {
     if (onTaskSelect) {
@@ -64,9 +82,18 @@ export function AgentTasksSecondaryNav({
     <SecondaryNavContainer
       title="Agent Tasks"
       tools={
-        <SecondaryNavToolButton onClick={handleRefresh}>
-          <RefreshCw size={20} />
-        </SecondaryNavToolButton>
+        <>
+          <SecondaryNavToolToggle
+            pressed={showDisabled}
+            onPressedChange={setShowDisabled}
+            title={showDisabled ? "Hide disabled tasks" : "Show disabled tasks"}
+          >
+            {showDisabled ? <BotOff size={22} /> : <Bot size={22} />}
+          </SecondaryNavToolToggle>
+          <SecondaryNavToolButton onClick={handleRefresh}>
+            <RefreshCw size={20} />
+          </SecondaryNavToolButton>
+        </>
       }
     >
       {/* Primary Menu Items */}
