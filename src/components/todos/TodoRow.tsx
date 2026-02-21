@@ -1,8 +1,8 @@
+import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Todo } from "@/types/todos";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Trash2 } from "lucide-react";
+import { CalendarDays, Trash2, FolderOpen } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format, parseISO } from "date-fns";
 
@@ -55,7 +55,7 @@ export function formatScheduledDate(dateStr: string): string {
 interface TodoRowProps {
   todo: Todo;
   onToggle: (id: string, completed: boolean) => void;
-  onDelete?: (id: string) => void;
+  onDelete?: () => void;
   onOpen?: (todo: Todo) => void;
   showProject?: boolean;
 }
@@ -68,24 +68,37 @@ export function TodoRow({
   showProject = false,
 }: TodoRowProps) {
   const isMobile = useIsMobile();
+  const [optimisticCompleted, setOptimisticCompleted] = useState(todo.completed);
+
+  // Sync with server state when it changes
+  useEffect(() => {
+    setOptimisticCompleted(todo.completed);
+  }, [todo.completed]);
+
+  const handleToggle = (checked: boolean) => {
+    // Update optimistic state immediately
+    setOptimisticCompleted(checked);
+    // Call the parent's toggle handler
+    onToggle(todo.id, checked);
+  };
 
   return (
     <div
-      className={`group flex items-start gap-3 px-4 py-3 rounded-lg hover:bg-accent/30 transition-colors ${onOpen ? "cursor-pointer" : ""}`}
+      className={`group flex items-start gap-3 px-4 py-3 rounded-lg hover:bg-accent/30 transition-colors ${isMobile ? "-mx-4" : ""} ${onOpen ? "cursor-pointer" : ""}`}
       onClick={() => onOpen?.(todo)}
     >
       <div onClick={(e) => e.stopPropagation()}>
         <Checkbox
           id={`todo-${todo.id}`}
-          checked={todo.completed}
-          onCheckedChange={(checked) => onToggle(todo.id, checked as boolean)}
+          checked={optimisticCompleted}
+          onCheckedChange={(checked) => handleToggle(checked as boolean)}
           className="mt-1 h-5 w-5 shrink-0 border-white/50 data-[state=checked]:bg-white data-[state=checked]:border-white data-[state=checked]:text-gray-900"
         />
       </div>
       <div className="flex-1 min-w-0">
         <span
           className={`text-base font-semibold leading-snug block mt-[3px] ${
-            todo.completed
+            optimisticCompleted
               ? "line-through text-muted-foreground"
               : "text-foreground"
           }`}
@@ -97,11 +110,12 @@ export function TodoRow({
             <ReactMarkdown components={mdComponents}>{todo.body}</ReactMarkdown>
           </div>
         )}
-        <div className="flex flex-wrap items-center gap-2 mt-1">
+        <div className="flex flex-wrap items-center gap-3 mt-1">
           {showProject && todo.projectName && (
-            <Badge variant="secondary" className="text-sm">
+            <span className="flex items-center gap-1 text-sm text-muted-foreground">
+              <FolderOpen className="h-3.5 w-3.5" />
               {todo.projectName}
-            </Badge>
+            </span>
           )}
           {todo.scheduledDate && (
             <span className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -114,7 +128,7 @@ export function TodoRow({
       {onDelete && (
         <div onClick={(e) => e.stopPropagation()}>
           <button
-            onClick={() => onDelete(todo.id)}
+            onClick={onDelete}
             className={`shrink-0 h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all ${
               isMobile ? "" : "opacity-0 group-hover:opacity-100"
             }`}

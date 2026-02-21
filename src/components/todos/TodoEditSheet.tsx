@@ -9,11 +9,10 @@ import TaskItem from "@tiptap/extension-task-item";
 import { Markdown } from "tiptap-markdown";
 
 import type { Todo, UpdateTodoInput } from "@/types/todos";
-import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader } from "@/components/ui/sheet";
 import { formatScheduledDate } from "@/components/todos/TodoRow";
 import {
-  CalendarDays, Check, Loader2,
+  CalendarDays, Check, Loader2, FolderOpen,
   Bold, Italic, Underline as UnderlineIcon,
   List, ListOrdered, ListChecks, Code2,
   Undo2, Redo2, ClipboardPaste,
@@ -438,7 +437,10 @@ export function TodoEditSheet({ todo, onClose, onSave }: TodoEditSheetProps) {
                     </span>
                   )}
                   {todo.projectName && (
-                    <Badge variant="secondary" className="text-xs">{todo.projectName}</Badge>
+                    <span className="flex items-center gap-1 text-xs text-zinc-400">
+                      <FolderOpen className="h-3 w-3" />
+                      {todo.projectName}
+                    </span>
                   )}
                 </div>
               </div>

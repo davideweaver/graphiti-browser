@@ -16,6 +16,7 @@ import { useXerroWebSocketContext } from "@/context/XerroWebSocketContext";
 import { TodoRow } from "@/components/todos/TodoRow";
 import { TodoEditSheet } from "@/components/todos/TodoEditSheet";
 import { CreateTodoDialog } from "@/components/todos/CreateTodoDialog";
+import { useDeleteTodoConfirmation } from "@/hooks/use-delete-todo-confirmation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Plus, Check } from "lucide-react";
@@ -66,6 +67,8 @@ export default function Todos() {
   const [showCompleted, setShowCompleted] = useState(
     () => localStorage.getItem("todos-show-completed") === "true",
   );
+
+  const { confirmDelete, DeleteConfirmationDialog } = useDeleteTodoConfirmation();
 
   const handleToggleCompleted = (val: boolean) => {
     setShowCompleted(val);
@@ -123,14 +126,6 @@ export default function Todos() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => todosService.deleteTodo(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["todos"] });
-      queryClient.invalidateQueries({ queryKey: ["todos-projects"] });
-    },
-  });
-
   const createMutation = useMutation({
     mutationFn: (input: CreateTodoInput) => todosService.createTodo(input),
     onSuccess: () => {
@@ -173,7 +168,12 @@ export default function Todos() {
 
   return (
     <>
-      <Container title={filterLabel} tools={tools} loading={isLoading}>
+      <Container
+        title={filterLabel}
+        description="Manage your tasks and to-dos"
+        tools={tools}
+        loading={isLoading}
+      >
         {isLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -202,7 +202,7 @@ export default function Todos() {
                 onToggle={(id, completed) =>
                   toggleMutation.mutate({ id, completed })
                 }
-                onDelete={(id) => deleteMutation.mutate(id)}
+                onDelete={() => confirmDelete(todo)}
                 onOpen={setEditTodo}
               />
             ))}
@@ -223,6 +223,8 @@ export default function Todos() {
         isSubmitting={createMutation.isPending}
         defaultProjectName={defaultProjectName}
       />
+
+      <DeleteConfirmationDialog />
     </>
   );
 }

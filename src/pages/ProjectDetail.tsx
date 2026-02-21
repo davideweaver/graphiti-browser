@@ -7,6 +7,7 @@ import type { Todo, CreateTodoInput, UpdateTodoInput } from "@/types/todos";
 import { TodoRow } from "@/components/todos/TodoRow";
 import { TodoEditSheet } from "@/components/todos/TodoEditSheet";
 import { CreateTodoDialog } from "@/components/todos/CreateTodoDialog";
+import { useDeleteTodoConfirmation } from "@/hooks/use-delete-todo-confirmation";
 import { useGraphiti } from "@/context/GraphitiContext";
 import Container from "@/components/container/Container";
 import { ContainerToolButton } from "@/components/container/ContainerToolButton";
@@ -34,6 +35,7 @@ export default function ProjectDetail() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const queryClient = useQueryClient();
+  const { confirmDelete: confirmDeleteTodo, DeleteConfirmationDialog: TodoDeleteConfirmationDialog } = useDeleteTodoConfirmation();
 
   // Decode the project name from URL
   const projectName = encodedProjectName
@@ -96,22 +98,62 @@ export default function ProjectDetail() {
   const toggleTodoMutation = useMutation({
     mutationFn: ({ id, completed }: { id: string; completed: boolean }) =>
       todosService.updateTodo(id, { completed }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["project-todos", projectName] }),
-  });
+    onMutate: async ({ id, completed }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["project-todos", projectName] });
 
-  const deleteTodoMutation = useMutation({
-    mutationFn: (id: string) => todosService.deleteTodo(id),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["project-todos", projectName] }),
+      // Snapshot the previous value
+      const previousTodos = queryClient.getQueryData(["project-todos", projectName]);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(["project-todos", projectName], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          todos: old.todos.map((todo: Todo) =>
+            todo.id === id ? { ...todo, completed } : todo
+          ),
+        };
+      });
+
+      // If completing a todo, mark it as "hiding" to keep it visible during animation
+      if (completed && hideCompleted) {
+        setHidingTodoId(id);
+      }
+
+      // Return context with the previous value
+      return { previousTodos };
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousTodos) {
+        queryClient.setQueryData(["project-todos", projectName], context.previousTodos);
+      }
+      setHidingTodoId(null);
+    },
+    onSuccess: () => {
+      // Add a small delay before invalidating to allow checkbox animation to complete
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["project-todos", projectName] });
+        setHidingTodoId(null);
+      }, 300);
+    },
   });
 
   const [editTodo, setEditTodo] = useState<Todo | null>(null);
+  const [hideCompleted, setHideCompleted] = useState(true);
+  const [hidingTodoId, setHidingTodoId] = useState<string | null>(null);
 
   const handleTodoSave = async (id: string, input: UpdateTodoInput) => {
     await todosService.updateTodo(id, input);
     queryClient.invalidateQueries({ queryKey: ["project-todos", projectName] });
   };
+
+  // Filter todos based on hideCompleted state
+  // Keep todos visible briefly even when completed if they're in the "hiding" state
+  const filteredTodos = hideCompleted
+    ? todosData?.todos.filter((todo) => !todo.completed || todo.id === hidingTodoId) ?? []
+    : todosData?.todos ?? [];
 
   // Mutation for deleting project
   const deleteProjectMutation = useMutation({
@@ -296,16 +338,10 @@ export default function ProjectDetail() {
         {/* Tabs */}
         <Tabs defaultValue="todos">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="todos">
-              Todos ({todosData?.todos.length ?? 0})
-            </TabsTrigger>
-            <TabsTrigger value="sessions">
-              Sessions ({sessions.length})
-            </TabsTrigger>
-            <TabsTrigger value="entities">
-              Relationships ({entities.length})
-            </TabsTrigger>
-            <TabsTrigger value="facts">Facts ({facts.length})</TabsTrigger>
+            <TabsTrigger value="todos">Todos</TabsTrigger>
+            <TabsTrigger value="sessions">Sessions</TabsTrigger>
+            <TabsTrigger value="entities">Links</TabsTrigger>
+            <TabsTrigger value="facts">Facts</TabsTrigger>
           </TabsList>
 
           {/* Todos Tab */}
@@ -329,17 +365,31 @@ export default function ProjectDetail() {
             )}
 
             {!isLoadingTodos && (todosData?.todos.length ?? 0) > 0 && (
-              <div className="space-y-0.5">
-                {todosData!.todos.map((todo: Todo) => (
-                  <TodoRow
-                    key={todo.id}
-                    todo={todo}
-                    onToggle={(id, completed) => toggleTodoMutation.mutate({ id, completed })}
-                    onDelete={(id) => deleteTodoMutation.mutate(id)}
-                    onOpen={setEditTodo}
-                  />
-                ))}
-              </div>
+              <>
+                {filteredTodos.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <p className="text-muted-foreground">
+                        No incomplete todos
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-0.5">
+                    {filteredTodos.map((todo: Todo) => (
+                      <TodoRow
+                        key={todo.id}
+                        todo={todo}
+                        onToggle={(id, completed) =>
+                          toggleTodoMutation.mutate({ id, completed })
+                        }
+                        onDelete={() => confirmDeleteTodo(todo)}
+                        onOpen={setEditTodo}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </TabsContent>
 
@@ -537,6 +587,9 @@ export default function ProjectDetail() {
         title="Delete Project"
         description={`Are you sure you want to delete the project "${projectName}"? This will permanently delete ${projectData?.session_count || 0} session${projectData?.session_count !== 1 ? "s" : ""}, ${projectData?.episode_count || 0} episode${projectData?.episode_count !== 1 ? "s" : ""}, and all associated facts and relationships. This action cannot be undone.`}
       />
+
+      {/* Delete Todo Confirmation Dialog */}
+      <TodoDeleteConfirmationDialog />
     </Container>
   );
 }
