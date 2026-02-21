@@ -40,11 +40,19 @@
       #root:not(:empty) + .app-loader {
         display: none;
       }
+      /* TEMPORARY: Force hide loader to see errors */
+      .app-loader {
+        display: none !important;
+      }
     </style>
   </head>
   <body>
     <div id="root"></div>
     <div class="app-loader"></div>
+    <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: red; padding: 20px; z-index: 9999; font-size: 20px; font-family: monospace;">
+      🔴 IF YOU SEE THIS: HTML loaded but React failed to mount<br>
+      Check browser console for errors
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

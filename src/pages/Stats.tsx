@@ -22,7 +22,7 @@ import type { Episode } from "@/types/graphiti";
 import PeriodSelector from "@/components/dashboard/PeriodSelector";
 import SessionActivityChart from "@/components/dashboard/SessionActivityChart";
 
-export default function Dashboard() {
+export default function Stats() {
   const { groupId } = useGraphiti();
   const navigate = useNavigate();
   const [quickSearch, setQuickSearch] = useState("");
@@ -52,7 +52,7 @@ export default function Dashboard() {
 
   return (
     <Container
-      title="Dashboard"
+      title="Stats"
       description="Overview of your Graphiti memories"
       tools={<PeriodSelector />}
     >

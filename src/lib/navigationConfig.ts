@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard,
+  Home,
   FolderKanban,
   Brain,
   Search,
@@ -10,7 +10,10 @@ import {
   FileText,
   Bot,
   ListTodo,
-  Settings
+  Settings,
+  Calendar,
+  BarChart3,
+  Bell
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -31,11 +34,15 @@ export interface PrimaryNavItem {
 
 export const navigationConfig: PrimaryNavItem[] = [
   {
-    key: 'dashboard',
-    icon: LayoutDashboard,
-    label: 'Dashboard',
+    key: 'home',
+    icon: Home,
+    label: 'Home',
     defaultPath: '/',
-    secondaryItems: []
+    secondaryItems: [
+      { path: '/', icon: Calendar, label: 'Today' },
+      { path: '/home/stats', icon: BarChart3, label: 'Stats' },
+      { path: '/home/notifications', icon: Bell, label: 'Notifications' }
+    ]
   },
   {
     key: 'projects',
@@ -90,7 +97,7 @@ export const navigationConfig: PrimaryNavItem[] = [
 ];
 
 export function getActivePrimary(pathname: string): string | null {
-  if (pathname === '/') return 'dashboard';
+  if (pathname === '/' || pathname.startsWith('/home')) return 'home';
   // Project routes - including project-specific sessions
   if (pathname.startsWith('/projects') || pathname.startsWith('/project/')) return 'projects';
   if (pathname.startsWith('/documents')) return 'documents';

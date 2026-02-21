@@ -1,3 +1,4 @@
+import React from "react";
 import {
   createBrowserRouter,
   createRoutesFromElements,
@@ -12,8 +13,16 @@ const Router = createBrowserRouter(
     <Route path="/" element={<Layout />}>
       <Route
         index
-        lazy={lazyImportComponent(() => import("@/pages/Dashboard"))}
+        lazy={lazyImportComponent(() => import("@/pages/Today"))}
       />
+      <Route
+        path="/home/stats"
+        lazy={lazyImportComponent(() => import("@/pages/Stats"))}
+      />
+      {/* <Route
+        path="/home/notifications"
+        lazy={lazyImportComponent(() => import("@/pages/Notifications"))}
+      /> */}
       <Route
         path="/projects"
         lazy={lazyImportComponent(() => import("@/pages/Projects"))}
