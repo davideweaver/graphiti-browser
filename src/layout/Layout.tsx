@@ -2,6 +2,8 @@ import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { useGraphitiWebSocket } from "@/hooks/use-graphiti-websocket";
 import { useTasksRunning } from "@/hooks/use-tasks-running";
+import { useXerroWebSocketContext } from "@/context/XerroWebSocketContext";
+import { WifiOff } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 
 // Animation duration for mobile nav gestures (in ms)
@@ -30,6 +32,7 @@ const Layout = () => {
   const navigate = useNavigate();
   const params = useParams();
   const { connectionState, queueSize } = useGraphitiWebSocket();
+  const { isConnected: xerroIsConnected } = useXerroWebSocketContext();
   const isTasksRunning = useTasksRunning();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
@@ -267,6 +270,11 @@ const Layout = () => {
       <div className="relative flex-shrink-0">
         <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
         <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-green-500 animate-ping opacity-75" />
+      </div>
+    ) : null,
+    "home": !xerroIsConnected ? (
+      <div className="flex items-center justify-center w-4 h-4 rounded-full bg-red-500">
+        <WifiOff className="w-2.5 h-2.5 text-white" />
       </div>
     ) : null,
   };
