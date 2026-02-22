@@ -29,7 +29,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 
 const sheetVariants = cva(
-  "fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
+  "fixed z-50 gap-4 bg-background px-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
   {
     variants: {
       side: {
@@ -52,6 +52,7 @@ interface SheetContentProps
     React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
     VariantProps<typeof sheetVariants> {
   transparentOverlay?: boolean;
+  disableAutoSafeArea?: boolean;
 }
 
 const SheetContent = React.forwardRef<
@@ -59,16 +60,26 @@ const SheetContent = React.forwardRef<
   SheetContentProps
 >(
   (
-    { side = "right", className, children, transparentOverlay, ...props },
+    { side = "right", className, children, transparentOverlay, disableAutoSafeArea, style, ...props },
     ref,
-  ) => (
-    <SheetPortal>
-      <SheetOverlay className={transparentOverlay ? "bg-transparent" : ""} />
-      <SheetPrimitive.Content
-        ref={ref}
-        className={cn(sheetVariants({ side }), className)}
-        {...props}
-      >
+  ) => {
+    const safeAreaStyle = disableAutoSafeArea ? {} : {
+      paddingTop: "calc(1.5rem + env(safe-area-inset-top))",
+      paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom))",
+    };
+
+    return (
+      <SheetPortal>
+        <SheetOverlay className={transparentOverlay ? "bg-transparent" : ""} />
+        <SheetPrimitive.Content
+          ref={ref}
+          className={cn(sheetVariants({ side }), className)}
+          style={{
+            ...safeAreaStyle,
+            ...style,
+          }}
+          {...props}
+        >
         {children}
         <SheetPrimitive.Close
           className={cn(
@@ -84,7 +95,8 @@ const SheetContent = React.forwardRef<
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>
     </SheetPortal>
-  ),
+    );
+  },
 );
 SheetContent.displayName = SheetPrimitive.Content.displayName;
 

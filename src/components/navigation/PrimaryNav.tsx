@@ -29,7 +29,12 @@ export function PrimaryNav({
   return (
     <nav className="w-[75px] bg-background flex flex-col">
       {/* Header spacer */}
-      <div className="h-16 flex items-center justify-center">
+      <div
+        className="flex items-center justify-center"
+        style={{
+          height: "calc(4rem + env(safe-area-inset-top))",
+        }}
+      >
         {/* Optional logo or title initial */}
       </div>
 

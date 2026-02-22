@@ -49,16 +49,13 @@ export function MobileNavOverlay({
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent
         side="left"
-        className="w-full !p-0 mobile-nav-sheet"
+        className="w-full !px-0 mobile-nav-sheet"
+        disableAutoSafeArea={false}
       >
         {/* Both columns side-by-side */}
         <div
           className="flex h-full"
           {...swipeHandlers}
-          style={{
-            paddingTop: 'env(safe-area-inset-top)',
-            paddingBottom: 'env(safe-area-inset-bottom)'
-          }}
         >
           <PrimaryNav
             navigationConfig={navigationConfig}

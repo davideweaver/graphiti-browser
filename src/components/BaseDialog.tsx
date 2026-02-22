@@ -200,7 +200,7 @@ export function BaseDialog({
               position: "fixed",
               left: 0,
               right: 0,
-              top: 0,
+              top: "env(safe-area-inset-top)",
               height: `${headerHeight}px`,
               zIndex: 1002,
               padding: "12px 16px 24px",
@@ -224,7 +224,7 @@ export function BaseDialog({
             aria-label="dialog-scroll"
             style={{
               position: "absolute",
-              top: `${headerHeight}px`,
+              top: `calc(${headerHeight}px + env(safe-area-inset-top))`,
               left: 0,
               right: 0,
               bottom: `calc((${footerHeight}px + env(safe-area-inset-bottom) + var(--keyboard-offset, 0px)))`,

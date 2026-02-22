@@ -42,7 +42,10 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+      <DialogPrimitive.Close
+        className="absolute right-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+        style={{ top: "calc(1rem + env(safe-area-inset-top))" }}
+      >
         <X className="h-8 w-8" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
@@ -66,7 +69,10 @@ const DialogContentPublic = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="text-black absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-black">
+      <DialogPrimitive.Close
+        className="text-black absolute right-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-black"
+        style={{ top: "calc(1rem + env(safe-area-inset-top))" }}
+      >
         <X className="h-8 w-8" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>

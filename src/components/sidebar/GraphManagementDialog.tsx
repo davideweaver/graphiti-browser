@@ -174,7 +174,12 @@ export const GraphManagementDialog: React.FC<Props> = ({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full h-full max-w-full max-h-full md:max-w-2xl md:max-h-[80vh] md:h-auto overflow-y-auto p-6">
+        <DialogContent
+          className="w-full h-full max-w-full max-h-full md:max-w-2xl md:max-h-[80vh] md:h-auto overflow-y-auto p-6"
+          style={{
+            paddingTop: "calc(1.5rem + env(safe-area-inset-top))",
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Manage Graphs</DialogTitle>
             <DialogDescription>

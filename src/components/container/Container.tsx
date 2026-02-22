@@ -50,8 +50,13 @@ const Container: React.FC<Props> = ({
 
   // Container classes and styles based on fullHeight prop
   const containerClasses = isFixed
-    ? "h-screen flex flex-col p-0 ml-0 pt-4 md:pt-8 overflow-hidden"
-    : "h-screen p-0 ml-0 pt-4 md:pt-8";
+    ? "h-screen flex flex-col p-0 ml-0 overflow-hidden"
+    : "h-screen p-0 ml-0";
+
+  // Add safe-area-inset-top for iOS PWA mode
+  const containerStyle = isMobile
+    ? { paddingTop: "calc(1rem + env(safe-area-inset-top))" }
+    : { paddingTop: "2rem" };
 
   // Header classes and styles based on fullHeight prop
   const headerClasses = isFixed
@@ -100,7 +105,7 @@ const Container: React.FC<Props> = ({
       };
 
   return (
-    <div className={containerClasses}>
+    <div className={containerClasses} style={containerStyle}>
       {/* Header */}
       <div className={headerClasses} style={headerStyle}>
         <div className={`${titleClasses} min-w-0 flex-1`} style={titleStyle}>

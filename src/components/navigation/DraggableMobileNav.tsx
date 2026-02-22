@@ -183,8 +183,7 @@ export function DraggableMobileNav({
         style={{
           transform: `translateX(${translateX}%)`,
           transition: isDragging ? "none" : `transform ${SNAP_ANIMATION_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1)`,
-          paddingTop: "env(safe-area-inset-top)",
-          paddingBottom: "env(safe-area-inset-bottom)",
+          paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom))",
         }}
         onTouchStartCapture={handleTouchStart}
         onTouchMoveCapture={handleTouchMove}

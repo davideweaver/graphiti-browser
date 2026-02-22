@@ -16,7 +16,12 @@ export function SecondaryNavContainer({
   return (
     <nav className="w-full md:w-[380px] bg-card flex flex-col min-w-0">
       {/* Header */}
-      <div className="pt-4 md:pt-8 px-6 flex items-center justify-between mb-4">
+      <div
+        className="px-6 flex items-center justify-between mb-4 md:pt-8"
+        style={{
+          paddingTop: "calc(1rem + env(safe-area-inset-top))",
+        }}
+      >
         <h2 className="font-bold" style={{ fontSize: 28 }}>
           <span className="md:hidden">{mobileTitle || title}</span>
           <span className="hidden md:inline">{title}</span>
