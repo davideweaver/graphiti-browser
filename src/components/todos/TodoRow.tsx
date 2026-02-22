@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Todo } from "@/types/todos";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CalendarDays, Trash2, FolderOpen } from "lucide-react";
+import { CalendarDays, X, FolderOpen } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format, parseISO } from "date-fns";
 
@@ -84,7 +84,7 @@ export function TodoRow({
 
   return (
     <div
-      className={`group flex items-start gap-3 px-4 py-3 rounded-lg hover:bg-accent/30 transition-colors ${isMobile ? "-mx-4" : ""} ${onOpen ? "cursor-pointer" : ""}`}
+      className={`group flex items-start gap-3 px-4 py-3 rounded-lg hover:bg-accent/30 transition-colors -mx-4 ${onOpen ? "cursor-pointer" : ""}`}
       onClick={() => onOpen?.(todo)}
     >
       <div onClick={(e) => e.stopPropagation()}>
@@ -129,12 +129,12 @@ export function TodoRow({
         <div onClick={(e) => e.stopPropagation()}>
           <button
             onClick={onDelete}
-            className={`shrink-0 h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all ${
+            className={`shrink-0 h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-white hover:bg-muted-foreground/30 transition-all ${
               isMobile ? "" : "opacity-0 group-hover:opacity-100"
             }`}
             title="Delete todo"
           >
-            <Trash2 className="h-4 w-4" />
+            <X className="h-3.5 w-3.5" />
           </button>
         </div>
       )}

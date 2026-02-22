@@ -1,32 +1,28 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { io, Socket } from "socket.io-client";
+import { useState } from "react";
 import Container from "@/components/container/Container";
 import { ContainerToolButton } from "@/components/container/ContainerToolButton";
+import { ContainerToolToggle } from "@/components/container/ContainerToolToggle";
 import { NotificationCard } from "@/components/notifications/NotificationCard";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { notificationsService } from "@/api/notificationsService";
-import type {
-  Notification,
-  NotificationCreatedEvent,
-  NotificationReadEvent,
-  NotificationsReadAllEvent,
-} from "@/types/notifications";
-import { CheckCheck, RefreshCw } from "lucide-react";
+import { useXerroWebSocketContext } from "@/context/XerroWebSocketContext";
+import type { Notification } from "@/types/notifications";
+import { CheckCheck, Mail, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 export default function Notifications() {
   const queryClient = useQueryClient();
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [filter, setFilter] = useState<"all" | "unread">("all");
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const { subscribeToNotificationCreated, subscribeToNotificationRead, subscribeToNotificationsReadAll } = useXerroWebSocketContext();
 
   // Fetch notifications
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["notifications", filter],
+    queryKey: ["notifications", showUnreadOnly],
     queryFn: () =>
       notificationsService.listNotifications({
-        read: filter === "unread" ? false : undefined,
+        read: showUnreadOnly ? false : undefined,
         limit: 100,
       }),
   });
@@ -35,9 +31,8 @@ export default function Notifications() {
   const markAsReadMutation = useMutation({
     mutationFn: (id: string) => notificationsService.markAsRead(id),
     onSuccess: (updatedNotification) => {
-      // Update the notification in the cache
       queryClient.setQueryData<typeof data>(
-        ["notifications", filter],
+        ["notifications", showUnreadOnly],
         (old) => {
           if (!old) return old;
           return {
@@ -51,80 +46,65 @@ export default function Notifications() {
     },
   });
 
-  // Mark all as read mutation
-  const markAllAsReadMutation = useMutation({
-    mutationFn: () => notificationsService.markAllAsRead(),
-    onSuccess: () => {
-      // Refetch to get updated state
-      refetch();
+  // Delete notification mutation
+  const deleteNotificationMutation = useMutation({
+    mutationFn: (id: string) => notificationsService.deleteNotification(id),
+    onSuccess: (_, id) => {
+      queryClient.setQueryData<typeof data>(
+        ["notifications", showUnreadOnly],
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            notifications: old.notifications.filter((n) => n.id !== id),
+            total: old.total - 1,
+          };
+        }
+      );
     },
   });
 
-  // Setup Socket.IO connection
+  // Mark all as read mutation
+  const markAllAsReadMutation = useMutation({
+    mutationFn: () => notificationsService.markAllAsRead(),
+    onSuccess: () => refetch(),
+  });
+
+  // Subscribe to real-time notification events via global WebSocket
   useEffect(() => {
-    const baseUrl = import.meta.env.VITE_XERRO_SERVICE_URL || "http://localhost:9205";
-    const socketInstance = io(baseUrl, {
-      path: "/ws",
-      transports: ["websocket", "polling"],
-    });
-
-    socketInstance.on("connect", () => {
-      console.log("✅ Connected to notification service");
-    });
-
-    socketInstance.on("disconnect", () => {
-      console.log("❌ Disconnected from notification service");
-    });
-
-    socketInstance.on("connect_error", (err) => {
-      console.error("Socket connection error:", err);
-    });
-
-    // Listen for notification events
-    socketInstance.on("notification-created", (eventData: NotificationCreatedEvent) => {
-      console.log("📨 New notification:", eventData);
-
-      // Add to cache if it matches current filter
-      if (filter === "all" || filter === "unread") {
-        queryClient.setQueryData<typeof data>(
-          ["notifications", filter],
-          (old) => {
-            if (!old) return old;
-            return {
-              ...old,
-              notifications: [eventData.notification, ...old.notifications],
-              total: old.total + 1,
-            };
-          }
-        );
-      }
-
-      // Show toast for new notifications
+    const unsubCreated = subscribeToNotificationCreated((eventData) => {
+      queryClient.setQueryData<typeof data>(
+        ["notifications", showUnreadOnly],
+        (old) => {
+          if (!old) return old;
+          if (old.notifications.some((n) => n.id === eventData.notification.id)) return old;
+          return {
+            ...old,
+            notifications: [eventData.notification, ...old.notifications],
+            total: old.total + 1,
+          };
+        }
+      );
       toast({
         title: eventData.notification.title,
-        description: eventData.notification.body.slice(0, 100) + (eventData.notification.body.length > 100 ? "..." : ""),
+        description:
+          eventData.notification.body.slice(0, 100) +
+          (eventData.notification.body.length > 100 ? "..." : ""),
       });
     });
 
-    socketInstance.on("notification-read", (eventData: NotificationReadEvent) => {
-      console.log("📖 Notification marked as read:", eventData);
-
-      // Update in cache
+    const unsubRead = subscribeToNotificationRead((eventData) => {
       queryClient.setQueryData<typeof data>(
-        ["notifications", filter],
+        ["notifications", showUnreadOnly],
         (old) => {
           if (!old) return old;
-
-          // If filtering by unread, remove it
-          if (filter === "unread") {
+          if (showUnreadOnly) {
             return {
               ...old,
               notifications: old.notifications.filter((n) => n.id !== eventData.id),
               total: old.total - 1,
             };
           }
-
-          // Otherwise update it
           return {
             ...old,
             notifications: old.notifications.map((n) =>
@@ -135,19 +115,16 @@ export default function Notifications() {
       );
     });
 
-    socketInstance.on("notifications-read-all", (eventData: NotificationsReadAllEvent) => {
-      console.log("✅ All notifications marked as read:", eventData);
-
-      // Refetch to get updated state
+    const unsubReadAll = subscribeToNotificationsReadAll(() => {
       refetch();
     });
 
-    setSocket(socketInstance);
-
     return () => {
-      socketInstance.disconnect();
+      unsubCreated();
+      unsubRead();
+      unsubReadAll();
     };
-  }, [filter, queryClient, refetch]);
+  }, [showUnreadOnly, queryClient, refetch, subscribeToNotificationCreated, subscribeToNotificationRead, subscribeToNotificationsReadAll]);
 
   const handleNotificationClick = useCallback(
     (notification: Notification) => {
@@ -173,34 +150,24 @@ export default function Notifications() {
           : undefined
       }
       tools={
-        <div className="flex items-center gap-2 border-2 border-red-500">
-          <Button variant="destructive" size="sm">
-            TEST BUTTON
-          </Button>
-          <Button
-            variant={filter === "all" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setFilter("all")}
+        <div className="flex items-center gap-2">
+          {unreadCount > 0 && (
+            <ContainerToolButton
+              size="sm"
+              onClick={handleMarkAllAsRead}
+              disabled={markAllAsReadMutation.isPending}
+            >
+              <CheckCheck className="h-4 w-4 mr-2" />
+              Mark read
+            </ContainerToolButton>
+          )}
+          <ContainerToolToggle
+            pressed={showUnreadOnly}
+            onPressedChange={setShowUnreadOnly}
+            aria-label="Show unread only"
           >
-            All
-            {filter === "all" && data && (
-              <Badge variant="secondary" className="ml-2">
-                {data.total}
-              </Badge>
-            )}
-          </Button>
-          <Button
-            variant={filter === "unread" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setFilter("unread")}
-          >
-            Unread
-            {filter === "unread" && data && (
-              <Badge variant="secondary" className="ml-2">
-                {data.total}
-              </Badge>
-            )}
-          </Button>
+            <Mail strokeWidth={showUnreadOnly ? 5 : 1.5} />
+          </ContainerToolToggle>
           <ContainerToolButton
             size="icon"
             onClick={() => refetch()}
@@ -211,37 +178,6 @@ export default function Notifications() {
         </div>
       }
     >
-      {/* Mark all as read action */}
-      {unreadCount > 0 && (
-        <div className="mb-4">
-          <ContainerToolButton
-            size="sm"
-            onClick={handleMarkAllAsRead}
-            disabled={markAllAsReadMutation.isPending}
-          >
-            <CheckCheck className="h-4 w-4 mr-2" />
-            Mark all as read
-          </ContainerToolButton>
-        </div>
-      )}
-
-      {/* Connection status */}
-      {socket && (
-        <div className="mb-4">
-          <div className="flex items-center gap-2 text-sm">
-            <div
-              className={`h-2 w-2 rounded-full ${
-                socket.connected ? "bg-green-500" : "bg-red-500"
-              }`}
-            />
-            <span className="text-muted-foreground">
-              {socket.connected ? "Connected" : "Disconnected"}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Content */}
       {isLoading && (
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
@@ -269,19 +205,20 @@ export default function Notifications() {
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <p className="text-muted-foreground">
-              {filter === "unread" ? "No unread notifications" : "No notifications yet"}
+              {showUnreadOnly ? "No unread notifications" : "No notifications yet"}
             </p>
           </div>
         </div>
       )}
 
       {!isLoading && !error && data && data.notifications.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-1">
           {data.notifications.map((notification) => (
             <NotificationCard
               key={notification.id}
               notification={notification}
               onClick={() => handleNotificationClick(notification)}
+              onDelete={() => deleteNotificationMutation.mutate(notification.id)}
             />
           ))}
         </div>

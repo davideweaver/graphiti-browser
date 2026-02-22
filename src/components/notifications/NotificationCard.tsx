@@ -1,86 +1,61 @@
 import type { Notification } from "@/types/notifications";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Bell } from "lucide-react";
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface NotificationCardProps {
   notification: Notification;
   onClick?: () => void;
+  onDelete?: () => void;
 }
 
-export function NotificationCard({ notification, onClick }: NotificationCardProps) {
+export function NotificationCard({ notification, onClick, onDelete }: NotificationCardProps) {
   const isUnread = !notification.read;
 
   return (
-    <Card
+    <div
       className={cn(
-        "hover:shadow-md transition-all cursor-pointer group border-l-4",
-        isUnread
-          ? "bg-blue-500/5 border-l-blue-500"
-          : "border-l-transparent"
+        "flex items-start px-4 py-3 rounded-lg group transition-colors cursor-pointer -mx-4",
+        "hover:bg-accent/50"
       )}
       onClick={onClick}
     >
-      <CardContent className="p-4">
-        {/* Header with icon and status */}
-        <div className="flex items-start gap-3 mb-2">
-          <div className={cn(
-            "mt-0.5 p-2 rounded-full",
-            isUnread
-              ? "bg-blue-500/10"
-              : "bg-muted"
-          )}>
-            <Bell className={cn(
-              "h-4 w-4",
-              isUnread
-                ? "text-blue-600 dark:text-blue-400"
-                : "text-muted-foreground"
-            )} />
-          </div>
-
-          <div className="flex-1 min-w-0">
-            {/* Title */}
-            <div className="flex items-start justify-between gap-2 mb-1">
-              <h3 className={cn(
-                "text-sm font-medium",
-                isUnread && "font-semibold"
-              )}>
-                {notification.title}
-              </h3>
-              {isUnread && (
-                <Badge
-                  variant="default"
-                  className="bg-blue-500 text-white text-xs py-0 px-2 flex-shrink-0"
-                >
-                  NEW
-                </Badge>
-              )}
-            </div>
-
-            {/* Body */}
-            <p className="text-sm text-muted-foreground mb-2 whitespace-pre-wrap">
-              {notification.body}
-            </p>
-
-            {/* Metadata row */}
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>
-                {format(new Date(notification.createdAt), "MMM d, yyyy 'at' h:mm a")}
-              </span>
-              {notification.read && notification.readAt && (
-                <>
-                  <span>•</span>
-                  <span>
-                    Read {format(new Date(notification.readAt), "MMM d, yyyy 'at' h:mm a")}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        {/* Title row — dot only appears here */}
+        <div className="flex items-center gap-2">
+          {isUnread && (
+            <div className="flex-shrink-0 h-2 w-2 rounded-full bg-blue-500" />
+          )}
+          <span className="text-base font-semibold leading-snug block text-foreground">
+            {notification.title}
+          </span>
         </div>
-      </CardContent>
-    </Card>
+        {notification.body && (
+          <p className="text-sm text-muted-foreground mt-0.5 leading-snug">
+            {notification.body}
+          </p>
+        )}
+        <p className="text-xs text-muted-foreground/50 mt-1">
+          {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+        </p>
+      </div>
+
+      {/* Delete button */}
+      {onDelete && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+        >
+          <X className="h-3.5 w-3.5" />
+        </Button>
+      )}
+    </div>
   );
 }

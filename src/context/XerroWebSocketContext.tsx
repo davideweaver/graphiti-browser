@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import type { AgentStatusEvent, DocumentChangeEvent, TaskConfigEvent, BookmarkChangeEvent, TodoChangeEvent } from '@/types/websocket';
+import type { NotificationCreatedEvent, NotificationReadEvent, NotificationsReadAllEvent } from '@/types/notifications';
 
 interface XerroWebSocketContextValue {
   isConnected: boolean;
@@ -16,6 +17,9 @@ interface XerroWebSocketContextValue {
   subscribeToTodoCreated: (callback: (event: TodoChangeEvent) => void) => () => void;
   subscribeToTodoUpdated: (callback: (event: TodoChangeEvent) => void) => () => void;
   subscribeToTodoDeleted: (callback: (event: TodoChangeEvent) => void) => () => void;
+  subscribeToNotificationCreated: (callback: (event: NotificationCreatedEvent) => void) => () => void;
+  subscribeToNotificationRead: (callback: (event: NotificationReadEvent) => void) => () => void;
+  subscribeToNotificationsReadAll: (callback: (event: NotificationsReadAllEvent) => void) => () => void;
 }
 
 const XerroWebSocketContext = createContext<XerroWebSocketContextValue | undefined>(undefined);
@@ -36,6 +40,9 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
   const todoCreatedCallbacksRef = useRef<Set<(event: TodoChangeEvent) => void>>(new Set());
   const todoUpdatedCallbacksRef = useRef<Set<(event: TodoChangeEvent) => void>>(new Set());
   const todoDeletedCallbacksRef = useRef<Set<(event: TodoChangeEvent) => void>>(new Set());
+  const notificationCreatedCallbacksRef = useRef<Set<(event: NotificationCreatedEvent) => void>>(new Set());
+  const notificationReadCallbacksRef = useRef<Set<(event: NotificationReadEvent) => void>>(new Set());
+  const notificationsReadAllCallbacksRef = useRef<Set<(event: NotificationsReadAllEvent) => void>>(new Set());
 
   // Track last processed bookmark event to prevent duplicate processing
   const lastBookmarkEventTimestampRef = useRef<string>('');
@@ -210,6 +217,34 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
       });
     });
 
+    // Notification events (namespaced by service name: "notifications:")
+    socket.on('notifications:notification-created', (data: NotificationCreatedEvent) => {
+      console.log('[Xerro WebSocket] Notification created:', data.id);
+      notificationCreatedCallbacksRef.current.forEach(callback => {
+        try { callback(data); } catch (error) {
+          console.error('[Xerro WebSocket] Error in notification created callback:', error);
+        }
+      });
+    });
+
+    socket.on('notifications:notification-read', (data: NotificationReadEvent) => {
+      console.log('[Xerro WebSocket] Notification read:', data.id);
+      notificationReadCallbacksRef.current.forEach(callback => {
+        try { callback(data); } catch (error) {
+          console.error('[Xerro WebSocket] Error in notification read callback:', error);
+        }
+      });
+    });
+
+    socket.on('notifications:notifications-read-all', (data: NotificationsReadAllEvent) => {
+      console.log('[Xerro WebSocket] All notifications read');
+      notificationsReadAllCallbacksRef.current.forEach(callback => {
+        try { callback(data); } catch (error) {
+          console.error('[Xerro WebSocket] Error in notifications read-all callback:', error);
+        }
+      });
+    });
+
     // Cleanup on unmount
     return () => {
       socket.close();
@@ -306,6 +341,21 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
     };
   }, []);
 
+  const subscribeToNotificationCreated = useCallback((callback: (event: NotificationCreatedEvent) => void) => {
+    notificationCreatedCallbacksRef.current.add(callback);
+    return () => { notificationCreatedCallbacksRef.current.delete(callback); };
+  }, []);
+
+  const subscribeToNotificationRead = useCallback((callback: (event: NotificationReadEvent) => void) => {
+    notificationReadCallbacksRef.current.add(callback);
+    return () => { notificationReadCallbacksRef.current.delete(callback); };
+  }, []);
+
+  const subscribeToNotificationsReadAll = useCallback((callback: (event: NotificationsReadAllEvent) => void) => {
+    notificationsReadAllCallbacksRef.current.add(callback);
+    return () => { notificationsReadAllCallbacksRef.current.delete(callback); };
+  }, []);
+
   const value: XerroWebSocketContextValue = {
     isConnected,
     socket: socketRef.current,
@@ -320,6 +370,9 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
     subscribeToTodoCreated,
     subscribeToTodoUpdated,
     subscribeToTodoDeleted,
+    subscribeToNotificationCreated,
+    subscribeToNotificationRead,
+    subscribeToNotificationsReadAll,
   };
 
   return (

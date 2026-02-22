@@ -158,6 +158,28 @@ class NotificationsService {
     }
   }
 
+  async deleteNotification(id: string): Promise<void> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/notifications/${id}`,
+        { method: "DELETE" }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete notification: ${response.statusText}`);
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to delete notification";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
   async getUnreadCount(): Promise<UnreadCountResponse> {
     try {
       const response = await fetch(
