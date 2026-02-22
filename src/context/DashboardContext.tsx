@@ -7,7 +7,7 @@ import React, {
 import { useQuery } from "@tanstack/react-query";
 import { graphitiService } from "@/api/graphitiService";
 import { useGraphiti } from "./GraphitiContext";
-import { Period } from "@/types/dashboard";
+import type { Period } from "@/types/dashboard";
 import { subDays, startOfDay, endOfDay, format } from "date-fns";
 import type { SessionStatsByDay } from "@/types/graphiti";
 

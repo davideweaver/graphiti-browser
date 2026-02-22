@@ -1,4 +1,5 @@
-import { Period } from "@/types/dashboard";
+import type { Period } from "@/types/dashboard";
+import { PERIOD_OPTIONS } from "@/types/dashboard";
 import { SegmentsList, SegmentsTrigger, Segments } from "@/components/ui/segments";
 import useDashboard from "@/hooks/use-dashboard";
 
@@ -11,9 +12,9 @@ const PeriodSelector = () => {
       className="space-y-4"
     >
       <SegmentsList>
-        <SegmentsTrigger value="7d">7d</SegmentsTrigger>
-        <SegmentsTrigger value="30d">30d</SegmentsTrigger>
-        <SegmentsTrigger value="90d">90d</SegmentsTrigger>
+        {PERIOD_OPTIONS.map((p) => (
+          <SegmentsTrigger key={p} value={p}>{p}</SegmentsTrigger>
+        ))}
       </SegmentsList>
     </Segments>
   );
