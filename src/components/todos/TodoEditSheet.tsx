@@ -132,7 +132,7 @@ function ToolbarBtn({
       type="button"
       onMouseDown={(e) => { e.preventDefault(); onClick(); }}
       title={title}
-      className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${
+      className={`h-8 w-8 flex items-center justify-center rounded transition-colors ${
         active
           ? "bg-white/20 text-white"
           : "text-zinc-400 hover:text-white hover:bg-white/10"
@@ -170,7 +170,7 @@ function HeadingSelect({ editor }: { editor: Editor }) {
           editor.chain().focus().setHeading({ level: level as 1 | 2 | 3 | 4 }).run();
         }
       }}
-      className="h-7 px-1.5 text-xs bg-zinc-700 text-zinc-300 border-0 rounded focus:outline-none cursor-pointer"
+      className="h-8 px-1.5 text-xs bg-zinc-700 text-zinc-300 border-0 rounded focus:outline-none cursor-pointer"
     >
       <option value="0" className="bg-zinc-800">Normal</option>
       <option value="1" className="bg-zinc-800">H1</option>
@@ -187,34 +187,34 @@ function EditorToolbar({ editor }: { editor: Editor }) {
       <HeadingSelect editor={editor} />
       <div className="w-px h-4 bg-zinc-600 mx-1" />
       <ToolbarBtn onClick={() => editor.chain().focus().undo().run()} title="Undo">
-        <Undo2 className="h-3.5 w-3.5" />
+        <Undo2 className="h-4 w-4" />
       </ToolbarBtn>
       <ToolbarBtn onClick={() => editor.chain().focus().redo().run()} title="Redo">
-        <Redo2 className="h-3.5 w-3.5" />
+        <Redo2 className="h-4 w-4" />
       </ToolbarBtn>
       <div className="w-px h-4 bg-zinc-600 mx-1" />
       <ToolbarBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive("bold")} title="Bold">
-        <Bold className="h-3.5 w-3.5" />
+        <Bold className="h-4 w-4" />
       </ToolbarBtn>
       <ToolbarBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive("italic")} title="Italic">
-        <Italic className="h-3.5 w-3.5" />
+        <Italic className="h-4 w-4" />
       </ToolbarBtn>
       <ToolbarBtn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive("underline")} title="Underline">
-        <UnderlineIcon className="h-3.5 w-3.5" />
+        <UnderlineIcon className="h-4 w-4" />
       </ToolbarBtn>
       <div className="w-px h-4 bg-zinc-600 mx-1" />
       <ToolbarBtn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive("bulletList")} title="Bullet list">
-        <List className="h-3.5 w-3.5" />
+        <List className="h-4 w-4" />
       </ToolbarBtn>
       <ToolbarBtn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive("orderedList")} title="Ordered list">
-        <ListOrdered className="h-3.5 w-3.5" />
+        <ListOrdered className="h-4 w-4" />
       </ToolbarBtn>
       <ToolbarBtn onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive("taskList")} title="Task list">
-        <ListChecks className="h-3.5 w-3.5" />
+        <ListChecks className="h-4 w-4" />
       </ToolbarBtn>
       <div className="w-px h-4 bg-zinc-600 mx-1" />
       <ToolbarBtn onClick={() => editor.chain().focus().toggleCodeBlock().run()} active={editor.isActive("codeBlock")} title="Code block">
-        <Code2 className="h-3.5 w-3.5" />
+        <Code2 className="h-4 w-4" />
       </ToolbarBtn>
       <div className="w-px h-4 bg-zinc-600 mx-1" />
       <ToolbarBtn
@@ -234,7 +234,7 @@ function EditorToolbar({ editor }: { editor: Editor }) {
         }}
         title="Paste markdown from clipboard"
       >
-        <ClipboardPaste className="h-3.5 w-3.5" />
+        <ClipboardPaste className="h-4 w-4" />
       </ToolbarBtn>
     </div>
   );

@@ -1,6 +1,8 @@
 import { SecondaryNavItem } from "@/components/navigation/SecondaryNavItem";
 import { SecondaryNavContainer } from "@/components/navigation/SecondaryNavContainer";
+import { NotificationBadge } from "@/components/notifications/NotificationBadge";
 import { navigationConfig } from "@/lib/navigationConfig";
+import { useUnreadNotificationCount } from "@/hooks/use-unread-notification-count";
 
 interface SecondaryNavProps {
   activePrimary: string | null;
@@ -9,6 +11,7 @@ interface SecondaryNavProps {
 }
 
 export function SecondaryNav({ activePrimary, pathname, onNavigate }: SecondaryNavProps) {
+  const { unreadCount } = useUnreadNotificationCount();
   const primaryConfig = activePrimary
     ? navigationConfig.find(item => item.key === activePrimary)
     : null;
@@ -24,6 +27,7 @@ export function SecondaryNav({ activePrimary, pathname, onNavigate }: SecondaryN
           <div className="space-y-1">
             {secondaryItems.map((item) => {
               const isActive = pathname === item.path;
+              const isNotificationsItem = item.path === "/home/notifications";
               return (
                 <SecondaryNavItem
                   key={item.path}
@@ -35,6 +39,9 @@ export function SecondaryNav({ activePrimary, pathname, onNavigate }: SecondaryN
                   <span className={isActive ? "font-medium" : ""}>
                     {item.label}
                   </span>
+                  {isNotificationsItem && unreadCount > 0 && (
+                    <NotificationBadge count={unreadCount} size="sm" className="ml-auto" />
+                  )}
                 </SecondaryNavItem>
               );
             })}

@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { notificationsService } from "@/api/notificationsService";
 import { useXerroWebSocketContext } from "@/context/XerroWebSocketContext";
 import type { Notification } from "@/types/notifications";
-import { CheckCheck, Mail, RefreshCw } from "lucide-react";
+import DestructiveConfirmationDialog from "@/components/dialogs/DestructiveConfirmationDialog";
+import { CheckCheck, Mail, RefreshCw, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 export default function Notifications() {
@@ -18,6 +19,7 @@ export default function Notifications() {
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false);
+  const [isClearAllDialogOpen, setIsClearAllDialogOpen] = useState(false);
   const { subscribeToNotificationCreated, subscribeToNotificationRead, subscribeToNotificationsReadAll } = useXerroWebSocketContext();
 
   // Fetch notifications
@@ -71,6 +73,15 @@ export default function Notifications() {
   const markAllAsReadMutation = useMutation({
     mutationFn: () => notificationsService.markAllAsRead(),
     onSuccess: () => refetch(),
+  });
+
+  // Delete all notifications mutation
+  const deleteAllMutation = useMutation({
+    mutationFn: () => notificationsService.deleteAllNotifications(),
+    onSuccess: () => {
+      setIsClearAllDialogOpen(false);
+      refetch();
+    },
   });
 
   // Subscribe to real-time notification events via global WebSocket
@@ -181,6 +192,15 @@ export default function Notifications() {
           >
             <RefreshCw className="h-4 w-4" />
           </ContainerToolButton>
+          {data && data.notifications.length > 0 && (
+            <ContainerToolButton
+              size="icon"
+              onClick={() => setIsClearAllDialogOpen(true)}
+              title="Clear all notifications"
+            >
+              <X className="h-4 w-4" />
+            </ContainerToolButton>
+          )}
         </div>
       }
     >
@@ -234,6 +254,18 @@ export default function Notifications() {
         notification={selectedNotification}
         open={isDetailSheetOpen}
         onOpenChange={setIsDetailSheetOpen}
+      />
+
+      <DestructiveConfirmationDialog
+        open={isClearAllDialogOpen}
+        onOpenChange={setIsClearAllDialogOpen}
+        onConfirm={() => deleteAllMutation.mutate()}
+        onCancel={() => setIsClearAllDialogOpen(false)}
+        title="Clear all notifications"
+        description={`This will permanently delete all ${data?.total ?? ""} notifications. This cannot be undone.`}
+        isLoading={deleteAllMutation.isPending}
+        confirmText="Clear all"
+        confirmLoadingText="Clearing..."
       />
     </Container>
   );

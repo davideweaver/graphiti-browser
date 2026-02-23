@@ -158,6 +158,37 @@ class NotificationsService {
     }
   }
 
+  async deleteAllNotifications(): Promise<{ success: boolean; count: number }> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/notifications`,
+        { method: "DELETE" }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete all notifications: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      toast({
+        title: "Notifications cleared",
+        description: `${result.count} notification${result.count !== 1 ? "s" : ""} deleted`,
+      });
+
+      return result;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to delete all notifications";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
   async deleteNotification(id: string): Promise<void> {
     try {
       const response = await fetch(

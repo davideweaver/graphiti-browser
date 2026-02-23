@@ -2,6 +2,7 @@ import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { useGraphitiWebSocket } from "@/hooks/use-graphiti-websocket";
 import { useTasksRunning } from "@/hooks/use-tasks-running";
+import { useUnreadNotificationCount } from "@/hooks/use-unread-notification-count";
 import { useXerroWebSocketContext } from "@/context/XerroWebSocketContext";
 import { WifiOff } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
@@ -18,6 +19,7 @@ import { SystemSecondaryNav } from "@/components/navigation/SystemSecondaryNav";
 import { MobileNavTrigger } from "@/components/navigation/MobileNavTrigger";
 import { DraggableMobileNav } from "@/components/navigation/DraggableMobileNav";
 import { PrimaryNavFooter } from "@/components/navigation/PrimaryNavFooter";
+import { NotificationBadge } from "@/components/notifications/NotificationBadge";
 import { GraphManagementDialog } from "@/components/sidebar/GraphManagementDialog";
 import { navigationConfig, getActivePrimary } from "@/lib/navigationConfig";
 import {
@@ -34,6 +36,7 @@ const Layout = () => {
   const { connectionState, queueSize } = useGraphitiWebSocket();
   const { isConnected: xerroIsConnected } = useXerroWebSocketContext();
   const isTasksRunning = useTasksRunning();
+  const { unreadCount } = useUnreadNotificationCount();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   const [currentFolderPath, setCurrentFolderPath] = useState<string>(() =>
@@ -272,7 +275,9 @@ const Layout = () => {
         <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-green-500 animate-ping opacity-75" />
       </div>
     ) : null,
-    "home": !xerroIsConnected ? (
+    "home": unreadCount > 0 ? (
+      <NotificationBadge count={unreadCount} size="md" />
+    ) : !xerroIsConnected ? (
       <div className="flex items-center justify-center w-4 h-4 rounded-full bg-red-500">
         <WifiOff className="w-2.5 h-2.5 text-white" />
       </div>

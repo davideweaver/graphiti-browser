@@ -952,6 +952,150 @@ function SearchBar({ onSearch }: { onSearch: (query: string) => void }) {
 </div>
 ```
 
+## Notification Badges
+
+Notification badges display unread counts on navigation items using the `NotificationBadge` component and `useUnreadNotificationCount` hook.
+
+### Badge Component
+
+The `NotificationBadge` component displays a count with automatic formatting:
+- Shows count up to 99
+- Displays "99+" for counts over 99
+- Automatically hides when count is 0
+- Two sizes: `sm` for secondary nav, `md` for primary nav
+
+```tsx
+import { NotificationBadge } from "@/components/notifications/NotificationBadge";
+
+// Primary nav (size="md", default)
+<NotificationBadge count={unreadCount} />
+
+// Secondary nav (size="sm")
+<NotificationBadge count={unreadCount} size="sm" className="ml-auto" />
+```
+
+### Unread Count Hook
+
+The `useUnreadNotificationCount` hook provides real-time unread count tracking:
+- Fetches initial count from API
+- Updates automatically via WebSocket events
+- Refetches every 60 seconds as backup
+
+```tsx
+import { useUnreadNotificationCount } from "@/hooks/use-unread-notification-count";
+
+function MyComponent() {
+  const { unreadCount, isLoading, error } = useUnreadNotificationCount();
+
+  return (
+    <div>
+      {unreadCount > 0 && <NotificationBadge count={unreadCount} />}
+    </div>
+  );
+}
+```
+
+### Primary Navigation Badge
+
+Add badges to primary nav items via the `indicators` prop:
+
+```tsx
+import { NotificationBadge } from "@/components/notifications/NotificationBadge";
+import { useUnreadNotificationCount } from "@/hooks/use-unread-notification-count";
+
+function Layout() {
+  const { unreadCount } = useUnreadNotificationCount();
+
+  const navIndicators = {
+    "home": unreadCount > 0 ? (
+      <NotificationBadge count={unreadCount} size="md" />
+    ) : null,
+  };
+
+  return (
+    <PrimaryNav
+      navigationConfig={navigationConfig}
+      activePrimary={activePrimary}
+      onNavigate={handleNavigate}
+      indicators={navIndicators}
+    />
+  );
+}
+```
+
+**Position:** Top-right corner of nav button (via `absolute top-1 right-1`)
+
+### Secondary Navigation Badge
+
+Add badges inline with nav items using `ml-auto` for right alignment:
+
+```tsx
+import { NotificationBadge } from "@/components/notifications/NotificationBadge";
+import { useUnreadNotificationCount } from "@/hooks/use-unread-notification-count";
+
+function SecondaryNav() {
+  const { unreadCount } = useUnreadNotificationCount();
+
+  return (
+    <SecondaryNavItem
+      isActive={isActive}
+      onClick={() => navigate("/notifications")}
+      className="gap-3 h-11"
+    >
+      <Bell className="h-5 w-5" />
+      <span>Notifications</span>
+      {unreadCount > 0 && (
+        <NotificationBadge count={unreadCount} size="sm" className="ml-auto" />
+      )}
+    </SecondaryNavItem>
+  );
+}
+```
+
+**Position:** Far right of nav item (via `ml-auto`)
+
+### Design Specifications
+
+| Property | sm | md |
+|----------|----|----|
+| **Height** | h-4 (16px) | h-5 (20px) |
+| **Width** | w-4 (16px) | w-5 (20px) |
+| **Min Width** | min-w-[16px] | min-w-[20px] |
+| **Text Size** | text-[10px] | text-xs |
+| **Padding (99+)** | px-1 | px-1.5 |
+| **Background** | bg-red-500 | bg-red-500 |
+| **Text Color** | text-white | text-white |
+| **Border Radius** | rounded-full | rounded-full |
+
+### Real-Time Updates
+
+The badge automatically updates when:
+- **New notification created** - Count increments via WebSocket `notification:created` event
+- **Notification marked as read** - Count decrements via WebSocket `notification:read` event
+- **All marked as read** - Count resets to 0 via WebSocket `notifications:read-all` event
+- **API refetch** - Periodic backup every 60 seconds
+
+No manual cache invalidation needed - updates are handled by the hook.
+
+### Priority Ordering
+
+When multiple indicators compete for the same nav item (e.g., home section):
+1. **Notification badge** - Shows when unreadCount > 0 (highest priority)
+2. **Disconnection indicator** - Shows when WebSocket disconnected (lower priority)
+3. **Other indicators** - App-specific indicators
+
+```tsx
+const navIndicators = {
+  "home": unreadCount > 0 ? (
+    <NotificationBadge count={unreadCount} size="md" />
+  ) : !xerroIsConnected ? (
+    <div className="flex items-center justify-center w-4 h-4 rounded-full bg-red-500">
+      <WifiOff className="w-2.5 h-2.5 text-white" />
+    </div>
+  ) : null,
+};
+```
+
 ## Responsive Visibility
 
 ### Hide on Mobile
