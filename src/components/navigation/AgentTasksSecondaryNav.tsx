@@ -104,11 +104,11 @@ export function AgentTasksSecondaryNav({
           isActive={currentView === "activity"}
           onClick={() => handleNavigation("/agent-tasks/activity")}
         >
-          <div className="flex items-center gap-2 w-full">
+          <div className="flex items-center gap-2">
             <Activity className="h-4 w-4 flex-shrink-0" />
-            <span className="font-medium flex-1">Task Activity</span>
+            <span className="font-medium">Task Activity</span>
             {isTasksRunning && (
-              <div className="relative flex-shrink-0">
+              <div className="relative flex-shrink-0 ml-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
                 <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-green-500 animate-ping opacity-75" />
               </div>
