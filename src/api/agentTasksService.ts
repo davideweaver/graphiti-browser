@@ -6,6 +6,7 @@ import type {
   ToolsResponse,
   AgentExecutionTrace,
   RunningTasksResponse,
+  CreateTaskInput,
 } from "@/types/agentTasks";
 
 class AgentTasksService {
@@ -253,6 +254,32 @@ class AgentTasksService {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to update task";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async createTask(input: CreateTaskInput): Promise<ScheduledTask> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/v1/scheduled-tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || `Failed to create task: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to create task";
       toast({
         title: "Error",
         description: message,

@@ -161,7 +161,7 @@ export default function Todos() {
         onPressedChange={handleToggleCompleted}
         aria-label="Toggle completed todos"
       >
-        <Check strokeWidth={showCompleted ? 5 : 1.5} />
+        <Check strokeWidth={showCompleted ? 5 : 1.5} className={showCompleted ? undefined : "opacity-40"} />
       </ContainerToolToggle>
     </div>
   );

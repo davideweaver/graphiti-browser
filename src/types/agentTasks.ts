@@ -63,6 +63,16 @@ export interface ScheduledTaskListResponse {
   count: number;
 }
 
+export interface CreateTaskInput {
+  name: string;
+  task: string;
+  schedule?: string;
+  runAt?: string;
+  description?: string;
+  enabled?: boolean;
+  properties?: Record<string, unknown>;
+}
+
 /**
  * Properties for run-agent tasks
  * Based on xerro-service/src/tasks/run-agent.ts

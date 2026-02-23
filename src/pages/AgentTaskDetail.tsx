@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
 import Container from "@/components/container/Container";
 import { ContainerToolButton } from "@/components/container/ContainerToolButton";
+import { ContainerToolToggle } from "@/components/container/ContainerToolToggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,16 @@ import {
   formatTimestamp,
   formatRelativeTime,
 } from "@/lib/cronFormatter";
-import { CheckCircle2, XCircle, Clock, Play, Trash2, Copy, Power, Loader2 } from "lucide-react";
+import {
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Play,
+  Trash2,
+  Copy,
+  Power,
+  Loader2,
+} from "lucide-react";
 import { TaskExecutionSheet } from "@/components/tasks/TaskExecutionSheet";
 import { TaskExecutionRow } from "@/components/tasks/TaskExecutionRow";
 import { RunAgentConfigForm } from "@/components/agent-tasks/RunAgentConfigForm";
@@ -34,10 +44,15 @@ export default function AgentTaskDetail() {
     useState<TaskExecution | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [clearScratchpadDialogOpen, setClearScratchpadDialogOpen] = useState(false);
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [clearScratchpadDialogOpen, setClearScratchpadDialogOpen] =
+    useState(false);
   const [clearHistoryDialogOpen, setClearHistoryDialogOpen] = useState(false);
-  const [deleteExecutionDialogOpen, setDeleteExecutionDialogOpen] = useState(false);
-  const [executionToDelete, setExecutionToDelete] = useState<string | null>(null);
+  const [deleteExecutionDialogOpen, setDeleteExecutionDialogOpen] =
+    useState(false);
+  const [executionToDelete, setExecutionToDelete] = useState<string | null>(
+    null,
+  );
   const [isDelayingRedirect, setIsDelayingRedirect] = useState(false);
 
   // Listen for real-time task configuration updates
@@ -108,7 +123,9 @@ export default function AgentTaskDetail() {
     mutationFn: () => agentTasksService.clearScratchpad(id!),
     onSuccess: () => {
       // Invalidate scratchpad query to refresh data
-      queryClient.invalidateQueries({ queryKey: ["agent-task-scratchpad", id] });
+      queryClient.invalidateQueries({
+        queryKey: ["agent-task-scratchpad", id],
+      });
     },
   });
 
@@ -124,7 +141,8 @@ export default function AgentTaskDetail() {
 
   // Mutation to delete individual execution
   const deleteExecutionMutation = useMutation({
-    mutationFn: (executionId: string) => agentTasksService.deleteExecution(executionId),
+    mutationFn: (executionId: string) =>
+      agentTasksService.deleteExecution(executionId),
     onSuccess: () => {
       // Invalidate history query to refresh data
       queryClient.invalidateQueries({ queryKey: ["agent-task-history", id] });
@@ -133,11 +151,32 @@ export default function AgentTaskDetail() {
     },
   });
 
+  // Mutation to duplicate task
+  const duplicateMutation = useMutation({
+    mutationFn: () =>
+      agentTasksService.createTask({
+        name: `${task!.name} (Copy)`,
+        task: task!.task,
+        ...(task!.schedule && { schedule: task!.schedule }),
+        ...(task!.runAt && { runAt: task!.runAt }),
+        ...(task!.description && { description: task!.description }),
+        enabled: false,
+        properties: task!.properties,
+      }),
+    onSuccess: (newTask) => {
+      setDuplicateDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["agent-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["agent-tasks-nav"] });
+      toast.success("Task duplicated");
+      navigate(`/agent-tasks/${newTask.id}`);
+    },
+  });
+
   // Mutation to toggle enabled status
   const toggleEnabledMutation = useMutation({
-    mutationFn: () => agentTasksService.updateTask(id!, { enabled: !task?.enabled }),
+    mutationFn: (enabled: boolean) =>
+      agentTasksService.updateTask(id!, { enabled }),
     onSuccess: () => {
-      // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["agent-task", id] });
       queryClient.invalidateQueries({ queryKey: ["agent-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["agent-tasks-nav"] });
@@ -186,7 +225,9 @@ export default function AgentTaskDetail() {
         <div className="flex items-center gap-2">
           <ContainerToolButton
             onClick={handleRunTask}
-            disabled={triggerMutation.isPending || isDelayingRedirect || !task.enabled}
+            disabled={
+              triggerMutation.isPending || isDelayingRedirect || !task.enabled
+            }
             size="sm"
             variant="primary"
           >
@@ -195,16 +236,27 @@ export default function AgentTaskDetail() {
             ) : (
               <Play className="h-4 w-4 mr-2" />
             )}
-            {triggerMutation.isPending || isDelayingRedirect ? "Running..." : "Run"}
+            {triggerMutation.isPending || isDelayingRedirect
+              ? "Running..."
+              : "Run"}
           </ContainerToolButton>
-          <ContainerToolButton
-            onClick={() => toggleEnabledMutation.mutate()}
+          <ContainerToolToggle
+            pressed={task.enabled}
+            onPressedChange={(val) => toggleEnabledMutation.mutate(val)}
             disabled={toggleEnabledMutation.isPending}
-            size="icon"
-            variant={task.enabled ? "default" : "secondary"}
-            title={task.enabled ? "Disable Task" : "Enable Task"}
+            aria-label={task.enabled ? "Disable Task" : "Enable Task"}
+            className="data-[state=on]:bg-green-600 data-[state=on]:hover:bg-green-700"
           >
-            <Power className="h-4 w-4" />
+            <Power strokeWidth={task.enabled ? 3.5 : 1.5} className={task.enabled ? undefined : "opacity-40"} />
+          </ContainerToolToggle>
+          <ContainerToolButton
+            onClick={() => setDuplicateDialogOpen(true)}
+            disabled={duplicateMutation.isPending}
+            size="icon"
+            variant="default"
+            title="Duplicate Task"
+          >
+            <Copy className="h-4 w-4" />
           </ContainerToolButton>
           <ContainerToolButton
             onClick={() => setDeleteDialogOpen(true)}
@@ -272,11 +324,14 @@ export default function AgentTaskDetail() {
                     size="sm"
                     className="h-6 w-6 p-0 flex-shrink-0"
                     onClick={() => {
-                      navigator.clipboard.writeText(task.id).then(() => {
-                        toast.success("Task ID copied to clipboard");
-                      }).catch(() => {
-                        toast.error("Failed to copy Task ID");
-                      });
+                      navigator.clipboard
+                        .writeText(task.id)
+                        .then(() => {
+                          toast.success("Task ID copied to clipboard");
+                        })
+                        .catch(() => {
+                          toast.error("Failed to copy Task ID");
+                        });
                     }}
                   >
                     <Copy className="h-3 w-3" />
@@ -312,7 +367,8 @@ export default function AgentTaskDetail() {
               {isMobile ? "Config" : "Config"}
             </TabsTrigger>
             <TabsTrigger value="history">
-              {isMobile ? "Runs" : "History"} {history ? `(${history.length})` : ''}
+              {isMobile ? "Runs" : "History"}{" "}
+              {history ? `(${history.length})` : ""}
             </TabsTrigger>
             <TabsTrigger value="scratchpad">
               {isMobile ? "Scratch" : "Scratchpad"}
@@ -377,7 +433,9 @@ export default function AgentTaskDetail() {
               <RunAgentConfigForm
                 task={task}
                 onSaved={() => {
-                  queryClient.invalidateQueries({ queryKey: ["agent-task", id] });
+                  queryClient.invalidateQueries({
+                    queryKey: ["agent-task", id],
+                  });
                   queryClient.invalidateQueries({ queryKey: ["agent-tasks"] });
                 }}
                 buttonPosition="bottom"
@@ -461,39 +519,57 @@ export default function AgentTaskDetail() {
                     <div className="grid grid-cols-2 gap-4">
                       {trace.trace.toolCalls.length > 0 && (
                         <div>
-                          <span className="text-muted-foreground">Executed At:</span>
-                          <p>{formatTimestamp(trace.trace.toolCalls[0].calledAt)}</p>
+                          <span className="text-muted-foreground">
+                            Executed At:
+                          </span>
+                          <p>
+                            {formatTimestamp(trace.trace.toolCalls[0].calledAt)}
+                          </p>
                           <p className="text-xs text-muted-foreground">
-                            {formatRelativeTime(trace.trace.toolCalls[0].calledAt)}
+                            {formatRelativeTime(
+                              trace.trace.toolCalls[0].calledAt,
+                            )}
                           </p>
                         </div>
                       )}
                       <div>
-                        <span className="text-muted-foreground">Execution ID:</span>
+                        <span className="text-muted-foreground">
+                          Execution ID:
+                        </span>
                         <p className="font-mono">{trace.trace.executionId}</p>
                       </div>
                       {trace.trace.sessionId && (
                         <div>
-                          <span className="text-muted-foreground">Session ID:</span>
+                          <span className="text-muted-foreground">
+                            Session ID:
+                          </span>
                           <p className="font-mono">{trace.trace.sessionId}</p>
                         </div>
                       )}
                       {trace.trace.cwd && (
                         <div>
-                          <span className="text-muted-foreground">Working Dir:</span>
+                          <span className="text-muted-foreground">
+                            Working Dir:
+                          </span>
                           <p className="font-mono">{trace.trace.cwd}</p>
                         </div>
                       )}
                       {trace.trace.permissionMode && (
                         <div>
-                          <span className="text-muted-foreground">Permissions:</span>
-                          <p className="font-mono">{trace.trace.permissionMode}</p>
+                          <span className="text-muted-foreground">
+                            Permissions:
+                          </span>
+                          <p className="font-mono">
+                            {trace.trace.permissionMode}
+                          </p>
                         </div>
                       )}
                       {trace.trace.totalCostUsd !== undefined && (
                         <div>
                           <span className="text-muted-foreground">Cost:</span>
-                          <p className="font-mono">${trace.trace.totalCostUsd.toFixed(4)}</p>
+                          <p className="font-mono">
+                            ${trace.trace.totalCostUsd.toFixed(4)}
+                          </p>
                         </div>
                       )}
                     </div>
@@ -503,30 +579,43 @@ export default function AgentTaskDetail() {
                 {/* Tool Calls Timeline */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-sm">Tool Calls ({trace.trace.toolCalls.length})</CardTitle>
+                    <CardTitle className="text-sm">
+                      Tool Calls ({trace.trace.toolCalls.length})
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {trace.trace.toolCalls.map((call, idx) => {
-                      const result = trace.trace!.toolResults.find(r => r.toolUseId === call.id);
+                      const result = trace.trace!.toolResults.find(
+                        (r) => r.toolUseId === call.id,
+                      );
                       return (
-                        <div key={call.id} className="border-l-2 border-muted pl-4 space-y-2">
+                        <div
+                          key={call.id}
+                          className="border-l-2 border-muted pl-4 space-y-2"
+                        >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="font-mono text-xs">{call.name}</Badge>
-                              {result && (
-                                result.isError ? (
+                              <Badge
+                                variant="outline"
+                                className="font-mono text-xs"
+                              >
+                                {call.name}
+                              </Badge>
+                              {result &&
+                                (result.isError ? (
                                   <XCircle className="h-3 w-3 text-red-500" />
                                 ) : (
                                   <CheckCircle2 className="h-3 w-3 text-green-500" />
-                                )
-                              )}
+                                ))}
                             </div>
                             <span className="text-xs text-muted-foreground">
                               {new Date(call.calledAt).toLocaleTimeString()}
                             </span>
                           </div>
                           <div>
-                            <p className="text-xs text-muted-foreground mb-1">Input:</p>
+                            <p className="text-xs text-muted-foreground mb-1">
+                              Input:
+                            </p>
                             <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-32">
                               {JSON.stringify(call.input, null, 2)}
                             </pre>
@@ -534,9 +623,14 @@ export default function AgentTaskDetail() {
                           {result && (
                             <div>
                               <div className="flex items-center justify-between mb-1">
-                                <p className="text-xs text-muted-foreground">Output:</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Output:
+                                </p>
                                 {result.truncated && (
-                                  <Badge variant="secondary" className="text-xs">
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
                                     Truncated ({result.originalSizeBytes} bytes)
                                   </Badge>
                                 )}
@@ -556,20 +650,33 @@ export default function AgentTaskDetail() {
                 {trace.trace.permissions.length > 0 && (
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-sm">Permission Decisions</CardTitle>
+                      <CardTitle className="text-sm">
+                        Permission Decisions
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2">
                         {trace.trace.permissions.map((perm, idx) => (
-                          <div key={idx} className="flex items-center justify-between text-xs border-b pb-2 last:border-0">
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between text-xs border-b pb-2 last:border-0"
+                          >
                             <div className="flex items-center gap-2">
-                              <Badge variant={perm.decision === 'allow' ? 'default' : 'destructive'}>
+                              <Badge
+                                variant={
+                                  perm.decision === "allow"
+                                    ? "default"
+                                    : "destructive"
+                                }
+                              >
                                 {perm.decision}
                               </Badge>
                               <span className="font-mono">{perm.toolName}</span>
                             </div>
                             {perm.reason && (
-                              <span className="text-muted-foreground">{perm.reason}</span>
+                              <span className="text-muted-foreground">
+                                {perm.reason}
+                              </span>
                             )}
                           </div>
                         ))}
@@ -582,7 +689,8 @@ export default function AgentTaskDetail() {
               <Card>
                 <CardContent className="p-12 text-center">
                   <p className="text-sm text-muted-foreground">
-                    No trace data available. Trace data is collected automatically on each run.
+                    No trace data available. Trace data is collected
+                    automatically on each run.
                   </p>
                 </CardContent>
               </Card>
@@ -609,6 +717,20 @@ export default function AgentTaskDetail() {
         onCancel={() => setDeleteDialogOpen(false)}
         title="Delete Task"
         description={`Are you sure you want to delete "${task.name}"? This action cannot be undone. All task configuration, execution history, and scratchpad data will be permanently deleted.`}
+      />
+
+      {/* Duplicate Confirmation Dialog */}
+      <DestructiveConfirmationDialog
+        open={duplicateDialogOpen}
+        onOpenChange={setDuplicateDialogOpen}
+        onConfirm={() => duplicateMutation.mutate()}
+        onCancel={() => setDuplicateDialogOpen(false)}
+        title="Duplicate Task"
+        description={`Create a copy of "${task.name}"? The duplicate will be disabled by default.`}
+        isLoading={duplicateMutation.isPending}
+        confirmText="Duplicate"
+        confirmLoadingText="Duplicating..."
+        confirmVariant="default"
       />
 
       {/* Clear Scratchpad Confirmation Dialog */}

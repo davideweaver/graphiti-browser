@@ -11,12 +11,19 @@ import { notificationsService } from "@/api/notificationsService";
 import { useXerroWebSocketContext } from "@/context/XerroWebSocketContext";
 import type { Notification } from "@/types/notifications";
 import DestructiveConfirmationDialog from "@/components/dialogs/DestructiveConfirmationDialog";
-import { CheckCheck, Mail, RefreshCw, X } from "lucide-react";
+import { CheckCheck, RefreshCw, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 export default function Notifications() {
   const queryClient = useQueryClient();
-  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const [showUnreadOnly, setShowUnreadOnly] = useState(
+    () => localStorage.getItem("notifications-show-unread-only") === "true",
+  );
+
+  const handleToggleUnreadOnly = (val: boolean) => {
+    setShowUnreadOnly(val);
+    localStorage.setItem("notifications-show-unread-only", String(val));
+  };
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false);
   const [isClearAllDialogOpen, setIsClearAllDialogOpen] = useState(false);
@@ -184,10 +191,10 @@ export default function Notifications() {
           )}
           <ContainerToolToggle
             pressed={showUnreadOnly}
-            onPressedChange={setShowUnreadOnly}
+            onPressedChange={handleToggleUnreadOnly}
             aria-label="Show unread only"
           >
-            <Mail strokeWidth={showUnreadOnly ? 5 : 1.5} />
+            <div className={`h-2.5 w-2.5 rounded-full bg-current${showUnreadOnly ? "" : " opacity-40"}`} />
           </ContainerToolToggle>
           <ContainerToolButton
             size="icon"

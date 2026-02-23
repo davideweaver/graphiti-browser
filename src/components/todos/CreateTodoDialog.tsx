@@ -3,8 +3,9 @@ import type { CreateTodoInput } from "@/types/todos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { BaseDialog } from "@/components/BaseDialog";
-import { ProjectCombobox } from "./ProjectCombobox";
+import ProjectSelector from "@/components/memory/ProjectSelector";
 import { useGraphiti } from "@/context/GraphitiContext";
 import { X } from "lucide-react";
 
@@ -27,13 +28,15 @@ export function CreateTodoDialog({
 }: CreateTodoDialogProps) {
   const { groupId } = useGraphiti();
   const [title, setTitle] = useState("");
-  const [projectName, setProjectName] = useState(defaultProjectName || "");
+  const [body, setBody] = useState("");
+  const [projectName, setProjectName] = useState<string | null>(defaultProjectName || null);
   const [scheduledDate, setScheduledDate] = useState("");
 
   useEffect(() => {
     if (open) {
       setTitle("");
-      setProjectName(defaultProjectName || "");
+      setBody("");
+      setProjectName(defaultProjectName || null);
       setScheduledDate("");
     }
   }, [open, defaultProjectName]);
@@ -42,7 +45,8 @@ export function CreateTodoDialog({
     e.preventDefault();
     if (!title.trim()) return;
     const input: CreateTodoInput = { title: title.trim() };
-    if (projectName.trim()) input.projectName = projectName.trim();
+    if (body.trim()) input.body = body.trim();
+    if (projectName) input.projectName = projectName;
     if (scheduledDate)
       input.scheduledDate = new Date(scheduledDate + "T00:00:00").toISOString();
     onSubmit(input);
@@ -84,10 +88,20 @@ export function CreateTodoDialog({
             className="text-lg"
           />
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="todo-body" className="text-base">Notes</Label>
+          <Textarea
+            id="todo-body"
+            placeholder="Add any additional notes or details..."
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            className="min-h-[100px] resize-y text-base"
+          />
+        </div>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="todo-project" className="text-base">Project (optional)</Label>
-            <ProjectCombobox
+            <Label htmlFor="todo-project" className="text-base">Project</Label>
+            <ProjectSelector
               value={projectName}
               onChange={setProjectName}
               groupId={groupId}
@@ -95,20 +109,15 @@ export function CreateTodoDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="todo-date" className="text-base">Scheduled date (optional)</Label>
+            <Label htmlFor="todo-date" className="text-base">Scheduled date</Label>
             <div className="relative">
               <Input
                 id="todo-date"
                 type="date"
                 value={scheduledDate}
                 onChange={(e) => setScheduledDate(e.target.value)}
-                className="h-10 text-base appearance-none pr-10"
+                className="h-10 text-base pr-10"
               />
-              {!scheduledDate && (
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none text-base">
-                  Select a date
-                </div>
-              )}
               {scheduledDate && (
                 <button
                   type="button"
