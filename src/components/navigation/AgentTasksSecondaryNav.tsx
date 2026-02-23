@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Clock, RefreshCw, Activity, Bot, BotOff } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useTaskConfigUpdates } from "@/hooks/use-task-config-updates";
+import { useTasksRunning } from "@/hooks/use-tasks-running";
 import { toast } from "sonner";
 
 interface AgentTasksSecondaryNavProps {
@@ -33,6 +34,7 @@ export function AgentTasksSecondaryNav({
 }: AgentTasksSecondaryNavProps) {
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearch = useDebounce(searchInput, 300);
+  const isTasksRunning = useTasksRunning();
 
   // Initialize showDisabled from localStorage
   const [showDisabled, setShowDisabled] = useState<boolean>(() => {
@@ -105,6 +107,12 @@ export function AgentTasksSecondaryNav({
           <div className="flex items-center gap-2 w-full">
             <Activity className="h-4 w-4" />
             <SecondaryNavItemTitle>Task Activity</SecondaryNavItemTitle>
+            {isTasksRunning && (
+              <div className="relative flex-shrink-0 ml-auto">
+                <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+                <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-green-500 animate-ping opacity-75" />
+              </div>
+            )}
           </div>
         </SecondaryNavItem>
         <SecondaryNavItem
