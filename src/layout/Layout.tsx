@@ -276,7 +276,7 @@ const Layout = () => {
       </div>
     ) : null,
     "home": unreadCount > 0 ? (
-      <NotificationBadge count={unreadCount} size="md" />
+      <NotificationBadge count={unreadCount} size="sm" />
     ) : !xerroIsConnected ? (
       <div className="flex items-center justify-center w-4 h-4 rounded-full bg-red-500">
         <WifiOff className="w-2.5 h-2.5 text-white" />

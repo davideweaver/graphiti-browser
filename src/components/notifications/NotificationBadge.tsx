@@ -25,7 +25,7 @@ export function NotificationBadge({
   return (
     <div
       className={cn(
-        "flex items-center justify-center rounded-full bg-red-500 text-white font-medium",
+        "flex items-center justify-center rounded-full bg-blue-500 text-white font-medium",
         size === "sm" && "h-4 w-4 text-[10px] min-w-[16px]",
         size === "md" && "h-5 w-5 text-xs min-w-[20px]",
         // Make width auto for "99+" to accommodate text

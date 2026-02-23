@@ -962,15 +962,15 @@ The `NotificationBadge` component displays a count with automatic formatting:
 - Shows count up to 99
 - Displays "99+" for counts over 99
 - Automatically hides when count is 0
-- Two sizes: `sm` for secondary nav, `md` for primary nav
+- Two sizes: `sm` (16px) and `md` (20px) - `sm` used for both nav types
 
 ```tsx
 import { NotificationBadge } from "@/components/notifications/NotificationBadge";
 
-// Primary nav (size="md", default)
-<NotificationBadge count={unreadCount} />
+// Primary nav
+<NotificationBadge count={unreadCount} size="sm" />
 
-// Secondary nav (size="sm")
+// Secondary nav
 <NotificationBadge count={unreadCount} size="sm" className="ml-auto" />
 ```
 
@@ -1008,7 +1008,7 @@ function Layout() {
 
   const navIndicators = {
     "home": unreadCount > 0 ? (
-      <NotificationBadge count={unreadCount} size="md" />
+      <NotificationBadge count={unreadCount} size="sm" />
     ) : null,
   };
 
@@ -1063,7 +1063,7 @@ function SecondaryNav() {
 | **Min Width** | min-w-[16px] | min-w-[20px] |
 | **Text Size** | text-[10px] | text-xs |
 | **Padding (99+)** | px-1 | px-1.5 |
-| **Background** | bg-red-500 | bg-red-500 |
+| **Background** | bg-blue-500 | bg-blue-500 |
 | **Text Color** | text-white | text-white |
 | **Border Radius** | rounded-full | rounded-full |
 
@@ -1087,7 +1087,7 @@ When multiple indicators compete for the same nav item (e.g., home section):
 ```tsx
 const navIndicators = {
   "home": unreadCount > 0 ? (
-    <NotificationBadge count={unreadCount} size="md" />
+    <NotificationBadge count={unreadCount} size="sm" />
   ) : !xerroIsConnected ? (
     <div className="flex items-center justify-center w-4 h-4 rounded-full bg-red-500">
       <WifiOff className="w-2.5 h-2.5 text-white" />
