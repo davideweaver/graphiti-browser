@@ -39,3 +39,11 @@ export interface NotificationsReadAllEvent {
   unreadCount: number;
   timestamp: string;
 }
+
+export interface DirectMessageResponse {
+  success: boolean;
+  channelId: string;
+  parentTs: string;
+  threadTs: string;
+  threadUrl: string;
+}

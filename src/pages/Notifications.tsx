@@ -55,6 +55,7 @@ export default function Notifications() {
   const deleteNotificationMutation = useMutation({
     mutationFn: (id: string) => notificationsService.deleteNotification(id),
     onSuccess: (_, id) => {
+      localStorage.removeItem(`notification-slack-url-${id}`);
       queryClient.setQueryData<typeof data>(
         ["notifications", showUnreadOnly],
         (old) => {
@@ -79,6 +80,9 @@ export default function Notifications() {
   const deleteAllMutation = useMutation({
     mutationFn: () => notificationsService.deleteAllNotifications(),
     onSuccess: () => {
+      data?.notifications.forEach((n) => {
+        localStorage.removeItem(`notification-slack-url-${n.id}`);
+      });
       setIsClearAllDialogOpen(false);
       refetch();
     },

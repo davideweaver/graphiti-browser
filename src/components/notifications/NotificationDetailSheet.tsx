@@ -1,10 +1,13 @@
+import { useState, useEffect } from "react";
 import type { Notification } from "@/types/notifications";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { SidePanelHeader } from "@/components/shared/SidePanelHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { formatDistanceToNow, format } from "date-fns";
-import { Clock, CheckCircle2, MessageSquare, FolderOpen, Activity } from "lucide-react";
+import { Clock, CheckCircle2, MessageSquare, FolderOpen, Activity, Send, ExternalLink } from "lucide-react";
+import { notificationsService } from "@/api/notificationsService";
 
 interface NotificationDetailSheetProps {
   notification: Notification | null;
@@ -12,12 +15,42 @@ interface NotificationDetailSheetProps {
   onOpenChange: (open: boolean) => void;
 }
 
+function slackUrlKey(notificationId: string) {
+  return `notification-slack-url-${notificationId}`;
+}
+
 export function NotificationDetailSheet({
   notification,
   open,
   onOpenChange,
 }: NotificationDetailSheetProps) {
+  const [isSending, setIsSending] = useState(false);
+  const [slackThreadUrl, setSlackThreadUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (notification) {
+      const saved = localStorage.getItem(slackUrlKey(notification.id));
+      setSlackThreadUrl(saved ?? null);
+    } else {
+      setSlackThreadUrl(null);
+    }
+  }, [notification]);
+
   if (!notification) return null;
+
+  async function handleSendToSlack() {
+    if (!notification) return;
+    setIsSending(true);
+    try {
+      const result = await notificationsService.sendDirectMessage(notification);
+      localStorage.setItem(slackUrlKey(notification.id), result.threadUrl);
+      setSlackThreadUrl(result.threadUrl);
+    } catch {
+      // toast already shown by service
+    } finally {
+      setIsSending(false);
+    }
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -54,6 +87,49 @@ export function NotificationDetailSheet({
               </CardContent>
             </Card>
           )}
+
+          {/* Send to Slack */}
+          <div>
+            {slackThreadUrl ? (
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Sent to Slack
+                </span>
+                <a
+                  href={slackThreadUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Open in Slack
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSendToSlack}
+                disabled={isSending}
+              >
+                {isSending ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    Sending…
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Send to Slack
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
 
           {/* Metadata Card */}
           <Card>

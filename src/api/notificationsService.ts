@@ -1,5 +1,6 @@
 import { toast } from "@/hooks/use-toast";
 import type {
+  DirectMessageResponse,
   Notification,
   NotificationListResponse,
   UnreadCountResponse,
@@ -202,6 +203,49 @@ class NotificationsService {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to delete notification";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async sendDirectMessage(notification: Notification): Promise<DirectMessageResponse> {
+    try {
+      const body: Record<string, string> = {
+        message: notification.message,
+      };
+      if (notification.context) body.context = notification.context;
+      if (notification.source) body.source = notification.source;
+      if (notification.workingDirectory) body.workingDirectory = notification.workingDirectory;
+      if (notification.sessionId) body.sessionId = notification.sessionId;
+
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/agent/direct-message`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to send direct message: ${response.statusText}`);
+      }
+
+      const result: DirectMessageResponse = await response.json();
+
+      toast({
+        title: "Sent to Slack",
+        description: "Message sent. Open the thread in Slack.",
+      });
+
+      return result;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to send direct message";
       toast({
         title: "Error",
         description: message,
