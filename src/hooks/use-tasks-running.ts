@@ -1,15 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAgentStatus } from "./use-agent-status";
+import { agentTasksService } from "@/api/agentTasksService";
 import type { AgentStatusEvent } from "@/types/websocket";
 
 /**
  * Lightweight hook to track if any agent tasks are currently running.
- * Uses the same WebSocket connection as TaskActivity page - no additional overhead.
+ * Fetches initial state on mount, then uses WebSocket for real-time updates.
  * Returns true if any tasks are running, false otherwise.
  */
 export function useTasksRunning(): boolean {
   const [runningTaskIds, setRunningTaskIds] = useState<Set<string>>(new Set());
 
+  // Fetch initial running tasks on mount
+  useEffect(() => {
+    const fetchInitialRunningTasks = async () => {
+      try {
+        const response = await agentTasksService.getRunningTasks();
+        const executionIds = response.executions.map((exec) => exec.executionId);
+        setRunningTaskIds(new Set(executionIds));
+      } catch (error) {
+        console.error("Failed to fetch initial running tasks:", error);
+      }
+    };
+
+    fetchInitialRunningTasks();
+  }, []);
+
+  // Subscribe to WebSocket updates for real-time changes
   useAgentStatus((event: AgentStatusEvent) => {
     setRunningTaskIds((prev) => {
       const updated = new Set(prev);
