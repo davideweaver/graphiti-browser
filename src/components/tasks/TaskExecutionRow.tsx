@@ -73,9 +73,9 @@ export function TaskExecutionRow({
               {execution.taskName}
             </button>
           )}
-          <span className="text-sm text-muted-foreground">
-            {formatTimestamp(execution.timestamp)}
-          </span>
+        </div>
+        <div className="text-sm text-muted-foreground pl-6">
+          {formatTimestamp(execution.timestamp)}
         </div>
         {(execution.normalizedResult?.display.summary || execution.message) && (
           <div className="text-sm text-muted-foreground pl-6 max-w-2xl prose prose-sm dark:prose-invert prose-p:inline prose-strong:font-semibold">
