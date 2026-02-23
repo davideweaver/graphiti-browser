@@ -557,6 +557,172 @@ const [sheetOpen, setSheetOpen] = useState(false);
 <SheetContent side="bottom"> // Slides from bottom
 ```
 
+### SidePanelHeader (Standardized)
+
+**Use this component for all side panel headers to maintain consistency.**
+
+Location: `src/components/shared/SidePanelHeader.tsx`
+
+Design specifications:
+- Title: `text-xl font-semibold` with `pr-8` for close button clearance
+- Description: `text-sm text-muted-foreground`
+- Left-aligned content
+- Automatic close button (X) positioning
+- Optional action buttons in title row
+
+#### Basic Usage
+
+```tsx
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { SidePanelHeader } from "@/components/shared/SidePanelHeader";
+
+<Sheet open={open} onOpenChange={setOpen}>
+  <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+    <SidePanelHeader
+      title="Panel Title"
+      description="Optional description or metadata"
+    />
+
+    <div className="mt-6 space-y-4">
+      {/* Panel content */}
+    </div>
+  </SheetContent>
+</Sheet>
+```
+
+#### With Action Button
+
+```tsx
+import { Button } from "@/components/ui/button";
+import { Copy } from "lucide-react";
+
+<SidePanelHeader
+  title="Execution Trace"
+  action={
+    <Button variant="ghost" size="icon" onClick={handleCopy}>
+      <Copy className="h-4 w-4" />
+    </Button>
+  }
+/>
+```
+
+#### With ReactNode Content
+
+```tsx
+<SidePanelHeader
+  title={
+    <div className="flex items-center gap-2">
+      <Brain className="h-5 w-5" />
+      Agent Trace
+    </div>
+  }
+  description={
+    <span className="flex items-center gap-1.5 text-muted-foreground">
+      <Clock className="h-3.5 w-3.5" />
+      Completed 2 hours ago
+    </span>
+  }
+/>
+```
+
+#### Custom Styling
+
+```tsx
+<SidePanelHeader
+  title="Todo Task"
+  titleClassName="text-lg text-zinc-100"  // Override title size/color
+  descriptionClassName="text-zinc-500"    // Override description color
+  headerClassName="border-b pb-4"         // Add header wrapper styles
+/>
+```
+
+#### Props Interface
+
+```typescript
+interface SidePanelHeaderProps {
+  title: string | ReactNode;              // Required: Panel title
+  description?: string | ReactNode;       // Optional: Description/metadata
+  titleClassName?: string;                // Optional: Override title styles
+  descriptionClassName?: string;          // Optional: Override description styles
+  headerClassName?: string;               // Optional: Wrapper styles
+  action?: ReactNode;                     // Optional: Action button(s) in title row
+}
+```
+
+#### Examples from Codebase
+
+**NotificationDetailSheet** - Standard header with status indicator:
+```tsx
+<SidePanelHeader
+  title={notification.message}
+  description={
+    notification.read ? (
+      <span className="flex items-center gap-1.5 text-muted-foreground">
+        <CheckCircle2 className="h-3.5 w-3.5" />
+        Read {formatDistanceToNow(new Date(notification.readAt!))}
+      </span>
+    ) : (
+      <span className="flex items-center gap-1.5 text-blue-500">
+        <div className="h-2 w-2 rounded-full bg-blue-500" />
+        Unread
+      </span>
+    )
+  }
+/>
+```
+
+**TraceDrawer** - Header with action button:
+```tsx
+<SidePanelHeader
+  title={
+    <div className="flex items-center gap-2">
+      <Brain className="h-5 w-5" />
+      Agent Execution Trace
+    </div>
+  }
+  action={
+    <Button variant="ghost" size="icon" onClick={handleCopyTrace}>
+      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+    </Button>
+  }
+/>
+```
+
+**TodoEditSheet** - Custom dark theme with inline editing:
+```tsx
+<SidePanelHeader
+  titleClassName="text-lg text-zinc-100"
+  title={
+    editingTitle ? (
+      <input
+        value={titleValue}
+        onChange={(e) => setTitleValue(e.target.value)}
+        className="text-lg font-semibold text-zinc-100 bg-transparent border-b border-zinc-500"
+      />
+    ) : (
+      <span className="cursor-text" onClick={startEditing}>
+        {title}
+      </span>
+    )
+  }
+  description={
+    <div className="flex items-center gap-2">
+      <CalendarDays className="h-3.5 w-3.5" />
+      {scheduledDate}
+    </div>
+  }
+/>
+```
+
+#### Design Guidelines
+
+1. **Always use SidePanelHeader** - Never use `SheetHeader` directly for side panels
+2. **Consistent spacing** - Use `mt-6` for first content element after header
+3. **Icon sizing** - Use `h-3.5 w-3.5` for icons in description row
+4. **Title length** - Keep titles concise (under 60 characters when possible)
+5. **Description usage** - Use for metadata, status, or brief context (not long explanations)
+6. **Action buttons** - Keep to 1-2 buttons maximum, use icon-only buttons
+
 ## Tabs
 
 ### Basic Tabs
