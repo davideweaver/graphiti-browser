@@ -650,24 +650,27 @@ Show actions only when hovering over an element.
 
 ### Group Hover for Inline Actions
 
+Hover-reveal actions must always be visible on mobile — there is no hover state on touch devices.
+
 ```tsx
+const isMobile = useIsMobile();
+
 <div className="group relative">
   {/* Main content */}
   <div className="flex items-center justify-between">
     <span>{item.name}</span>
 
-    {/* Actions appear on hover */}
-    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+    {/* Actions: always visible on mobile, reveal on hover on desktop */}
+    <div className={isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100 transition-opacity"}>
       <Button size="icon" variant="ghost">
-        <Edit className="h-4 w-4" />
-      </Button>
-      <Button size="icon" variant="ghost">
-        <Trash2 className="h-4 w-4" />
+        <X className="h-3.5 w-3.5" />
       </Button>
     </div>
   </div>
 </div>
 ```
+
+**Rule:** Any action hidden behind `opacity-0 group-hover:opacity-100` must use `useIsMobile()` and render at full opacity on mobile. Without this, touch users have no way to access the action.
 
 ### Card with Hover Actions
 

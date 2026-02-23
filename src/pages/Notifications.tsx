@@ -5,6 +5,7 @@ import Container from "@/components/container/Container";
 import { ContainerToolButton } from "@/components/container/ContainerToolButton";
 import { ContainerToolToggle } from "@/components/container/ContainerToolToggle";
 import { NotificationCard } from "@/components/notifications/NotificationCard";
+import { NotificationDetailSheet } from "@/components/notifications/NotificationDetailSheet";
 import { Button } from "@/components/ui/button";
 import { notificationsService } from "@/api/notificationsService";
 import { useXerroWebSocketContext } from "@/context/XerroWebSocketContext";
@@ -15,6 +16,8 @@ import { toast } from "@/hooks/use-toast";
 export default function Notifications() {
   const queryClient = useQueryClient();
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false);
   const { subscribeToNotificationCreated, subscribeToNotificationRead, subscribeToNotificationsReadAll } = useXerroWebSocketContext();
 
   // Fetch notifications
@@ -86,10 +89,11 @@ export default function Notifications() {
         }
       );
       toast({
-        title: eventData.notification.title,
-        description:
-          eventData.notification.body.slice(0, 100) +
-          (eventData.notification.body.length > 100 ? "..." : ""),
+        title: eventData.notification.message,
+        description: eventData.notification.context
+          ? eventData.notification.context.slice(0, 100) +
+            (eventData.notification.context.length > 100 ? "..." : "")
+          : undefined,
       });
     });
 
@@ -128,6 +132,8 @@ export default function Notifications() {
 
   const handleNotificationClick = useCallback(
     (notification: Notification) => {
+      setSelectedNotification(notification);
+      setIsDetailSheetOpen(true);
       if (!notification.read) {
         markAsReadMutation.mutate(notification.id);
       }
@@ -223,6 +229,12 @@ export default function Notifications() {
           ))}
         </div>
       )}
+
+      <NotificationDetailSheet
+        notification={selectedNotification}
+        open={isDetailSheetOpen}
+        onOpenChange={setIsDetailSheetOpen}
+      />
     </Container>
   );
 }

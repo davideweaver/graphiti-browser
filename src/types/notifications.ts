@@ -1,8 +1,10 @@
 export interface Notification {
   id: string;
-  title: string;
-  body: string;
-  target?: string;
+  message: string;              // Was: title
+  context?: string;             // Was: body (optional, max 8000 chars)
+  source?: string;              // NEW (optional, max 100 chars)
+  workingDirectory?: string;    // NEW (optional, max 500 chars)
+  sessionId?: string;           // NEW (optional, max 100 chars)
   read: boolean;
   createdAt: string;
   readAt?: string;

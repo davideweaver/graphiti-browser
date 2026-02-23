@@ -395,7 +395,7 @@ export function TodoEditSheet({ todo, onClose, onSave }: TodoEditSheetProps) {
                   {displayTitle}
                 </h2>
               )}
-              <div className="flex items-center justify-between mt-1.5">
+              <div className="flex items-center gap-4 mt-1.5">
                 <span className="text-xs text-zinc-500 flex items-center gap-1">
                   {saveState === "saving" && <><Loader2 className="h-3 w-3 animate-spin" /> Saving…</>}
                   {saveState === "saved" && <><Check className="h-3 w-3 text-green-500" /> Saved</>}

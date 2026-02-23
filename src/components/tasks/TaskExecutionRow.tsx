@@ -53,10 +53,10 @@ export function TaskExecutionRow({
             e.stopPropagation();
             onDelete(execution.id);
           }}
-          className={`absolute top-1 right-1 h-9 w-9 text-gray-400 hover:text-gray-300 hover:bg-white/20 transition-colors rounded-md flex items-center justify-center ${isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+          className={`absolute top-1 right-1 h-7 w-7 text-muted-foreground hover:text-white hover:bg-muted-foreground/30 transition-all rounded-md flex items-center justify-center ${isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
           title="Delete"
         >
-          <X className="h-6 w-6" strokeWidth={2.5} />
+          <X className="h-3.5 w-3.5" />
         </button>
       )}
       <div className="flex-1 space-y-1">
