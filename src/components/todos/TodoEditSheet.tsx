@@ -9,7 +9,8 @@ import TaskItem from "@tiptap/extension-task-item";
 import { Markdown } from "tiptap-markdown";
 
 import type { Todo, UpdateTodoInput } from "@/types/todos";
-import { Sheet, SheetContent, SheetHeader } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { SidePanelHeader } from "@/components/shared/SidePanelHeader";
 import { formatScheduledDate } from "@/components/todos/TodoRow";
 import {
   CalendarDays, Check, Loader2, FolderOpen,
@@ -365,87 +366,110 @@ export function TodoEditSheet({ todo, onClose, onSave }: TodoEditSheetProps) {
       <SheetContent side="right" className="w-full sm:max-w-lg flex flex-col p-0 gap-0 bg-zinc-900 border-zinc-700">
         {todo && (
           <>
-            <SheetHeader className="px-6 pt-6 pb-4 border-b border-zinc-700 shrink-0">
-              {editingTitle ? (
-                <input
-                  ref={titleInputRef}
-                  value={titleValue}
-                  onChange={(e) => setTitleValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") {
-                      setEditingTitle(false);
-                    } else if (e.key === "Enter") {
-                      e.preventDefault();
-                      const trimmed = titleValue.trim();
-                      if (trimmed && trimmed !== displayTitle) {
-                        onSave(todo.id, { title: trimmed });
-                        setDisplayTitle(trimmed);
-                      }
-                      setEditingTitle(false);
-                    }
-                  }}
-                  onBlur={() => setEditingTitle(false)}
-                  className="text-lg font-semibold leading-snug text-zinc-100 bg-transparent border-b border-zinc-500 focus:border-zinc-300 focus:outline-none w-full"
-                />
-              ) : (
-                <h2
-                  className="text-lg font-semibold leading-snug text-zinc-100 cursor-text hover:text-zinc-300 transition-colors"
-                  onClick={() => { setTitleValue(displayTitle); setEditingTitle(true); }}
-                >
-                  {displayTitle}
-                </h2>
-              )}
-              <div className="flex items-center gap-4 mt-1.5">
-                <span className="text-xs text-zinc-500 flex items-center gap-1">
-                  {saveState === "saving" && <><Loader2 className="h-3 w-3 animate-spin" /> Saving…</>}
-                  {saveState === "saved" && <><Check className="h-3 w-3 text-green-500" /> Saved</>}
-                </span>
-                <div className="flex items-center gap-2">
-                  {editingDate ? (
-                    <input
-                      ref={dateInputRef}
-                      type="date"
-                      value={dateValue}
-                      onChange={(e) => setDateValue(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Escape") {
-                          setEditingDate(false);
-                        } else if (e.key === "Enter") {
-                          e.preventDefault();
-                          saveDate(dateValue);
-                          setEditingDate(false);
+            <div className="px-6">
+              <SidePanelHeader
+                titleClassName="text-lg text-zinc-100"
+                title={
+                editingTitle ? (
+                  <input
+                    ref={titleInputRef}
+                    value={titleValue}
+                    onChange={(e) => setTitleValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        setEditingTitle(false);
+                      } else if (e.key === "Enter") {
+                        e.preventDefault();
+                        const trimmed = titleValue.trim();
+                        if (trimmed && trimmed !== displayTitle) {
+                          onSave(todo.id, { title: trimmed });
+                          setDisplayTitle(trimmed);
                         }
-                      }}
-                      onBlur={() => setEditingDate(false)}
-                      className="text-xs text-zinc-400 bg-transparent border-b border-zinc-500 focus:border-zinc-300 focus:outline-none"
-                    />
-                  ) : displayDate ? (
-                    <span
-                      className="flex items-center gap-1 text-xs text-zinc-400 cursor-pointer hover:text-zinc-300 transition-colors"
-                      onClick={() => { setDateValue(displayDate.split("T")[0]); setEditingDate(true); }}
-                    >
-                      <CalendarDays className="h-3 w-3" />
-                      {formatScheduledDate(displayDate)}
-                    </span>
-                  ) : (
-                    <span
-                      className="flex items-center gap-1 text-xs text-zinc-600 cursor-pointer hover:text-zinc-400 transition-colors"
-                      onClick={() => { setDateValue(new Date().toISOString().split("T")[0]); setEditingDate(true); }}
-                    >
-                      <CalendarDays className="h-3 w-3" />
-                      Add date
+                        setEditingTitle(false);
+                      }
+                    }}
+                    onBlur={() => setEditingTitle(false)}
+                    className="text-lg font-semibold leading-snug text-zinc-100 bg-transparent border-b border-zinc-500 focus:border-zinc-300 focus:outline-none w-full"
+                  />
+                ) : (
+                  <span
+                    className="cursor-text hover:text-zinc-300 transition-colors"
+                    onClick={() => { setTitleValue(displayTitle); setEditingTitle(true); }}
+                  >
+                    {displayTitle}
+                  </span>
+                )
+              }
+              description={
+                <div className="flex items-center gap-2">
+                  {/* Save status */}
+                  {saveState === "saving" && (
+                    <span className="flex items-center gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Saving…
                     </span>
                   )}
-                  {todo.projectName && (
-                    <span className="flex items-center gap-1 text-xs text-zinc-400">
-                      <FolderOpen className="h-3 w-3" />
-                      {todo.projectName}
+                  {saveState === "saved" && (
+                    <span className="flex items-center gap-1">
+                      <Check className="h-3 w-3 text-green-500" />
+                      Saved
                     </span>
+                  )}
+                  {saveState === "idle" && (
+                    <>
+                      {/* Date */}
+                      {editingDate ? (
+                        <input
+                          ref={dateInputRef}
+                          type="date"
+                          value={dateValue}
+                          onChange={(e) => setDateValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Escape") {
+                              setEditingDate(false);
+                            } else if (e.key === "Enter") {
+                              e.preventDefault();
+                              saveDate(dateValue);
+                              setEditingDate(false);
+                            }
+                          }}
+                          onBlur={() => setEditingDate(false)}
+                          className="text-sm bg-transparent border-b border-zinc-500 focus:border-zinc-300 focus:outline-none text-zinc-400"
+                        />
+                      ) : displayDate ? (
+                        <span
+                          className="flex items-center gap-1 cursor-pointer hover:text-zinc-300 transition-colors"
+                          onClick={() => { setDateValue(displayDate.split("T")[0]); setEditingDate(true); }}
+                        >
+                          <CalendarDays className="h-3.5 w-3.5" />
+                          {formatScheduledDate(displayDate)}
+                        </span>
+                      ) : (
+                        <span
+                          className="flex items-center gap-1 text-zinc-600 cursor-pointer hover:text-zinc-400 transition-colors"
+                          onClick={() => { setDateValue(new Date().toISOString().split("T")[0]); setEditingDate(true); }}
+                        >
+                          <CalendarDays className="h-3.5 w-3.5" />
+                          Add date
+                        </span>
+                      )}
+                      {/* Project name */}
+                      {todo.projectName && (
+                        <>
+                          <span className="text-zinc-600">•</span>
+                          <span className="flex items-center gap-1">
+                            <FolderOpen className="h-3.5 w-3.5" />
+                            {todo.projectName}
+                          </span>
+                        </>
+                      )}
+                    </>
                   )}
                 </div>
-              </div>
-            </SheetHeader>
-            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              }
+            />
+            </div>
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden mt-6">
               {editor && <EditorToolbar editor={editor} />}
               <div className="flex-1 overflow-auto">
                 <EditorContent editor={editor} className="h-full" />

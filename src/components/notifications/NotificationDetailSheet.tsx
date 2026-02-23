@@ -1,11 +1,6 @@
 import type { Notification } from "@/types/notifications";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { SidePanelHeader } from "@/components/shared/SidePanelHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, format } from "date-fns";
@@ -27,12 +22,10 @@ export function NotificationDetailSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="text-xl pr-8">
-            {notification.message}
-          </SheetTitle>
-          <SheetDescription>
-            {notification.read ? (
+        <SidePanelHeader
+          title={notification.message}
+          description={
+            notification.read ? (
               <span className="flex items-center gap-1.5 text-muted-foreground">
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 Read {formatDistanceToNow(new Date(notification.readAt!), { addSuffix: true })}
@@ -42,9 +35,9 @@ export function NotificationDetailSheet({
                 <div className="h-2 w-2 rounded-full bg-blue-500" />
                 Unread
               </span>
-            )}
-          </SheetDescription>
-        </SheetHeader>
+            )
+          }
+        />
 
         <div className="space-y-4 mt-6">
           {/* Context Card */}

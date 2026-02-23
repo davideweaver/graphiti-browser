@@ -2,13 +2,8 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { graphitiService } from "@/api/graphitiService";
 import { useGraphiti } from "@/context/GraphitiContext";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { SidePanelHeader } from "./SidePanelHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -114,14 +109,10 @@ export function NodeDetailSheet({ nodeType, nodeId, open, onOpenChange, groupId:
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="text-xl">
-            {isLoading ? <Skeleton className="h-6 w-3/4" /> : getNodeTitle()}
-          </SheetTitle>
-          <SheetDescription>
-            {isLoading ? <Skeleton className="h-4 w-1/2" /> : getNodeDescription()}
-          </SheetDescription>
-        </SheetHeader>
+        <SidePanelHeader
+          title={isLoading ? <Skeleton className="h-6 w-3/4" /> : getNodeTitle()}
+          description={isLoading ? <Skeleton className="h-4 w-1/2" /> : getNodeDescription()}
+        />
 
         {!isLoading && nodeData && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">

@@ -1,9 +1,5 @@
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { SidePanelHeader } from "@/components/shared/SidePanelHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -86,12 +82,14 @@ export default function TraceDrawer({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-[600px] sm:max-w-[600px]">
-        <SheetHeader>
-          <SheetTitle className="flex items-center justify-between">
+        <SidePanelHeader
+          title={
             <div className="flex items-center gap-2">
               <Brain className="h-5 w-5" />
               Agent Execution Trace
             </div>
+          }
+          action={
             <Button
               variant="ghost"
               size="icon"
@@ -105,8 +103,8 @@ export default function TraceDrawer({
                 <Copy className="h-4 w-4" />
               )}
             </Button>
-          </SheetTitle>
-        </SheetHeader>
+          }
+        />
 
         <ScrollArea className="h-[calc(100vh-100px)] mt-6">
           <div className="space-y-4 pr-4">

@@ -1,10 +1,5 @@
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { SidePanelHeader } from "@/components/shared/SidePanelHeader";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,9 +34,10 @@ export function TaskExecutionSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto w-full sm:max-w-2xl">
-        <SheetHeader className="-mt-0 pt-1">
-          <SheetTitle>Execution Details</SheetTitle>
-        </SheetHeader>
+        <SidePanelHeader
+          title="Execution Details"
+          headerClassName="-mt-0 pt-1"
+        />
 
         <div className="mt-6">
           <Tabs defaultValue="details" className="w-full">
