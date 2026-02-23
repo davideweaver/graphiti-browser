@@ -10,13 +10,16 @@ import { Markdown } from "tiptap-markdown";
 
 import type { Todo, UpdateTodoInput } from "@/types/todos";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 import { SidePanelHeader } from "@/components/shared/SidePanelHeader";
 import { formatScheduledDate } from "@/components/todos/TodoRow";
+import { todosService } from "@/api/todosService";
 import {
   CalendarDays, Check, Loader2, FolderOpen,
   Bold, Italic, Underline as UnderlineIcon,
   List, ListOrdered, ListChecks, Code2,
   Undo2, Redo2, ClipboardPaste,
+  Send, ExternalLink, CheckCircle2,
 } from "lucide-react";
 
 const CustomTaskItem = TaskItem.extend({
@@ -252,6 +255,8 @@ interface TodoEditSheetProps {
 
 export function TodoEditSheet({ todo, onClose, onSave }: TodoEditSheetProps) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [isSending, setIsSending] = useState(false);
+  const [slackThreadUrl, setSlackThreadUrl] = useState<string | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedMarkdownRef = useRef<string>("");
@@ -263,6 +268,14 @@ export function TodoEditSheet({ todo, onClose, onSave }: TodoEditSheetProps) {
 
   useEffect(() => {
     if (todo) setDisplayTitle(todo.title);
+  }, [todo?.id]);
+
+  useEffect(() => {
+    if (todo) {
+      setSlackThreadUrl(localStorage.getItem(`todo-slack-url-${todo.id}`) ?? null);
+    } else {
+      setSlackThreadUrl(null);
+    }
   }, [todo?.id]);
 
   useEffect(() => {
@@ -296,6 +309,20 @@ export function TodoEditSheet({ todo, onClose, onSave }: TodoEditSheetProps) {
       setDisplayDate(null);
     }
   };
+
+  async function handleSendToSlack() {
+    if (!todo) return;
+    setIsSending(true);
+    try {
+      const result = await todosService.sendTodoToSlack(todo);
+      localStorage.setItem(`todo-slack-url-${todo.id}`, result.threadUrl);
+      setSlackThreadUrl(result.threadUrl);
+    } catch {
+      // toast already shown by service
+    } finally {
+      setIsSending(false);
+    }
+  }
 
   const scheduleSave = useCallback(
     (id: string, markdown: string) => {
@@ -469,7 +496,45 @@ export function TodoEditSheet({ todo, onClose, onSave }: TodoEditSheetProps) {
               }
             />
             </div>
-            <div className="flex-1 flex flex-col min-h-0 overflow-hidden mt-6">
+            {/* Slack strip */}
+            <div className="px-6 pt-2 pb-1">
+              {slackThreadUrl ? (
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center gap-1.5 text-sm text-green-400 font-medium">
+                    <CheckCircle2 className="h-4 w-4" /> Sent to Slack
+                  </span>
+                  <a
+                    href={slackThreadUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+                  >
+                    Open in Slack <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSendToSlack}
+                  disabled={isSending}
+                  className="border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500 hover:bg-zinc-800"
+                >
+                  {isSending ? (
+                    <>
+                      <Loader2 className="animate-spin h-4 w-4 mr-2" />
+                      Sending…
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Send to Slack
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden mt-3">
               {editor && <EditorToolbar editor={editor} />}
               <div className="flex-1 overflow-auto">
                 <EditorContent editor={editor} className="h-full" />

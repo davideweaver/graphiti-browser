@@ -7,6 +7,7 @@ import type {
   TodoListResult,
   TodosProjectsResult,
 } from "@/types/todos";
+import type { DirectMessageResponse } from "@/types/notifications";
 
 class TodosService {
   private baseUrl: string;
@@ -149,6 +150,43 @@ class TodosService {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to delete todo";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async sendTodoToSlack(todo: Todo): Promise<DirectMessageResponse> {
+    try {
+      const body: Record<string, string> = { message: todo.title };
+      if (todo.body) body.context = todo.body;
+      if (todo.projectName) {
+        body.source = todo.projectName;
+        body.workingDirectory = `/Users/dweaver/Projects/ai/claude-assist/projects/${todo.projectName}`;
+      }
+
+      const response = await fetch(`${this.baseUrl}/api/v1/agent/direct-message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to send to Slack: ${response.statusText}`);
+      }
+
+      const result: DirectMessageResponse = await response.json();
+      toast({
+        title: "Sent to Slack",
+        description: "Todo sent. Open the thread in Slack.",
+      });
+      return result;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to send to Slack";
       toast({
         title: "Error",
         description: message,

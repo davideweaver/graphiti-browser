@@ -53,6 +53,7 @@ export function useDeleteTodoConfirmation(
   const deleteMutation = useMutation({
     mutationFn: (id: string) => todosService.deleteTodo(id),
     onSuccess: (_, deletedId) => {
+      localStorage.removeItem(`todo-slack-url-${deletedId}`);
       // Invalidate all todo-related queries
       queryClient.invalidateQueries({ queryKey: ["todos"] });
       queryClient.invalidateQueries({ queryKey: ["todos-projects"] });
