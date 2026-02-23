@@ -14,10 +14,10 @@ export function SecondaryNavContainer({
   children,
 }: SecondaryNavContainerProps) {
   return (
-    <nav className="w-full md:w-[380px] bg-card flex flex-col min-w-0">
+    <nav className="w-full md:w-[380px] bg-card flex flex-col min-w-0 md:pt-[17px]">
       {/* Header */}
       <div
-        className="px-6 flex items-center justify-between mb-4 md:pt-8"
+        className="px-6 flex items-center justify-between mb-4"
         style={{
           paddingTop: "calc(1rem + env(safe-area-inset-top))",
         }}
