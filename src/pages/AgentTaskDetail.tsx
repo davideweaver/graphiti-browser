@@ -7,6 +7,9 @@ import { ContainerToolToggle } from "@/components/container/ContainerToolToggle"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DestructiveConfirmationDialog from "@/components/dialogs/DestructiveConfirmationDialog";
@@ -25,6 +28,9 @@ import {
   Copy,
   Power,
   Loader2,
+  Pencil,
+  Save,
+  X,
 } from "lucide-react";
 import { TaskExecutionSheet } from "@/components/tasks/TaskExecutionSheet";
 import { TaskExecutionRow } from "@/components/tasks/TaskExecutionRow";
@@ -54,6 +60,10 @@ export default function AgentTaskDetail() {
     null,
   );
   const [isDelayingRedirect, setIsDelayingRedirect] = useState(false);
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editSchedule, setEditSchedule] = useState("");
+  const [editDescription, setEditDescription] = useState("");
 
   // Listen for real-time task configuration updates
   useTaskConfigUpdates();
@@ -183,6 +193,29 @@ export default function AgentTaskDetail() {
     },
   });
 
+  // Mutation to update task name, description, and schedule
+  const updateDetailsMutation = useMutation({
+    mutationFn: () =>
+      agentTasksService.updateTask(id!, {
+        name: editName.trim(),
+        description: editDescription.trim() || undefined,
+        schedule: editSchedule.trim() || undefined,
+      }),
+    onSuccess: () => {
+      setIsEditingDetails(false);
+      queryClient.invalidateQueries({ queryKey: ["agent-task", id] });
+      queryClient.invalidateQueries({ queryKey: ["agent-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["agent-tasks-nav"] });
+    },
+  });
+
+  const handleStartEdit = () => {
+    setEditName(task!.name);
+    setEditDescription(task!.description ?? "");
+    setEditSchedule(task!.schedule ?? "");
+    setIsEditingDetails(true);
+  };
+
   // Helper function to trigger task and navigate after delay
   const handleRunTask = () => {
     setIsDelayingRedirect(true);
@@ -275,36 +308,106 @@ export default function AgentTaskDetail() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Task Details</CardTitle>
-              <Badge variant={task.enabled ? "default" : "secondary"}>
-                {task.enabled ? "Enabled" : "Disabled"}
-              </Badge>
+              <div className="flex items-center gap-2">
+                {isEditingDetails ? (
+                  <>
+                    <Button
+                      size="sm"
+                      onClick={() => updateDetailsMutation.mutate()}
+                      disabled={updateDetailsMutation.isPending || !editName.trim()}
+                    >
+                      {updateDetailsMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-2" />
+                      )}
+                      Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setIsEditingDetails(false)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Badge variant={task.enabled ? "default" : "secondary"}>
+                      {task.enabled ? "Enabled" : "Disabled"}
+                    </Badge>
+                    <Button variant="ghost" size="sm" onClick={handleStartEdit}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {task.description && (
+            {isEditingDetails ? (
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Name</Label>
+                <Input
+                  className="mt-1"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                />
+              </div>
+            ) : null}
+            {isEditingDetails ? (
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Description</Label>
+                <Textarea
+                  className="mt-1"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={2}
+                  placeholder="Optional description"
+                />
+              </div>
+            ) : task.description ? (
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">
                   Description
                 </h3>
                 <p className="text-sm">{task.description}</p>
               </div>
-            )}
+            ) : null}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">
                   Schedule
                 </h3>
-                <p className="text-sm">
-                  {task.schedule
-                    ? formatCronExpression(task.schedule)
-                    : task.runAt
-                      ? `One-time: ${formatTimestamp(task.runAt)}`
-                      : "Not scheduled"}
-                </p>
-                {task.schedule && (
-                  <p className="text-xs text-muted-foreground font-mono mt-1">
-                    {task.schedule}
-                  </p>
+                {isEditingDetails && !task.runAt ? (
+                  <div>
+                    <Input
+                      value={editSchedule}
+                      onChange={(e) => setEditSchedule(e.target.value)}
+                      placeholder="Cron expression (e.g. 0 9 * * 1-5)"
+                      className="font-mono text-sm"
+                    />
+                    {editSchedule && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatCronExpression(editSchedule)}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-sm">
+                      {task.schedule
+                        ? formatCronExpression(task.schedule)
+                        : task.runAt
+                          ? `One-time: ${formatTimestamp(task.runAt)}`
+                          : "Not scheduled"}
+                    </p>
+                    {task.schedule && (
+                      <p className="text-xs text-muted-foreground font-mono mt-1">
+                        {task.schedule}
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
               <div>

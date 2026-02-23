@@ -224,6 +224,8 @@ class AgentTasksService {
       name?: string;
       description?: string;
       enabled?: boolean;
+      schedule?: string;
+      runAt?: string;
       properties?: Record<string, unknown>;
     }
   ): Promise<ScheduledTask> {
