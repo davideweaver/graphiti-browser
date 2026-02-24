@@ -23,7 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { DayNavigation } from "@/components/episodes/DayNavigation";
 import { SessionRow } from "@/components/episodes/SessionRow";
-import { CalendarIcon, FolderKanban, ChevronDown } from "lucide-react";
+import { CalendarIcon, FolderKanban, FolderTree, ChevronDown } from "lucide-react";
 import {
   format,
   startOfDay,
@@ -61,7 +61,9 @@ export default function Sessions() {
   });
 
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [groupByProject, setGroupByProject] = useState(true); // Default to grouped
+  const [groupByProject, setGroupByProject] = useState(
+    () => localStorage.getItem("sessions-group-by-project") !== "false", // Default to grouped
+  );
   const [openProjects, setOpenProjects] = useState<Set<string>>(new Set()); // Track open projects
   const [deletedSessionIds, setDeletedSessionIds] = useState<Set<string>>(new Set());
 
@@ -219,10 +221,13 @@ export default function Sessions() {
       <ContainerToolToggle
         size="sm"
         pressed={groupByProject}
-        onPressedChange={setGroupByProject}
+        onPressedChange={(val) => {
+          setGroupByProject(val);
+          localStorage.setItem("sessions-group-by-project", String(val));
+        }}
         aria-label="Group by project"
       >
-        Group by Project
+        <FolderTree strokeWidth={groupByProject ? 2.5 : 1.5} className={groupByProject ? undefined : "opacity-40"} />
       </ContainerToolToggle>
       <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
         <PopoverTrigger asChild>
@@ -319,15 +324,17 @@ export default function Sessions() {
                       onOpenChange={() => toggleProject(project)}
                     >
                       <CollapsibleTrigger asChild>
-                        <div className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-2 -mx-2 rounded-lg transition-colors">
+                        <div className="flex items-center gap-1.5 cursor-pointer hover:bg-muted/30 px-2 py-1.5 -mx-2 rounded-md transition-colors text-muted-foreground">
                           <ChevronDown
-                            className={`h-5 w-5 transition-transform ${
+                            className={`h-3.5 w-3.5 transition-transform ${
                               isOpen ? "rotate-0" : "-rotate-90"
                             }`}
                           />
-                          <FolderKanban className="h-5 w-5" />
-                          <h2 className="text-xl font-bold">{project}</h2>
-                          <span className="text-sm font-normal text-muted-foreground">
+                          <FolderKanban className="h-3.5 w-3.5" />
+                          <span className="text-xs font-semibold uppercase tracking-wider">
+                            {project}
+                          </span>
+                          <span className="text-xs font-normal opacity-60">
                             ({sessions.length})
                           </span>
                         </div>

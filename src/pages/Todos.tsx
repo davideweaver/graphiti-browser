@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { todosService } from "@/api/todosService";
@@ -19,9 +19,31 @@ import { CreateTodoDialog } from "@/components/todos/CreateTodoDialog";
 import { useDeleteTodoConfirmation } from "@/hooks/use-delete-todo-confirmation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Plus, Check } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Plus, Check, FolderTree, FolderKanban, ChevronDown } from "lucide-react";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function groupTodosByProject(todos: Todo[]): { project: string; todos: Todo[] }[] {
+  const groups = new Map<string, Todo[]>();
+  for (const todo of todos) {
+    const key = todo.projectName || "";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(todo);
+  }
+  return Array.from(groups.entries())
+    .sort(([a], [b]) => {
+      if (a === "" && b === "") return 0;
+      if (a === "") return 1;
+      if (b === "") return -1;
+      return a.localeCompare(b);
+    })
+    .map(([project, todos]) => ({ project, todos }));
+}
 
 async function fetchTodayTodos(search?: string): Promise<TodoListResult> {
   const today = new Date().toISOString().split("T")[0];
@@ -67,6 +89,11 @@ export default function Todos() {
   const [showCompleted, setShowCompleted] = useState(
     () => localStorage.getItem("todos-show-completed") === "true",
   );
+  const [groupByProject, setGroupByProject] = useState(
+    () => localStorage.getItem("todos-group-by-project") === "true",
+  );
+
+  const [closedProjects, setClosedProjects] = useState<Set<string>>(new Set());
 
   const { confirmDelete, DeleteConfirmationDialog } = useDeleteTodoConfirmation();
 
@@ -75,13 +102,26 @@ export default function Todos() {
     localStorage.setItem("todos-show-completed", String(val));
   };
 
+  const handleToggleGroupByProject = (val: boolean) => {
+    setGroupByProject(val);
+    localStorage.setItem("todos-group-by-project", String(val));
+  };
+
+  const toggleProject = (key: string) => {
+    setClosedProjects((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
   const filter = searchParams.get("filter") || "today";
+  const isProjectFilter = filter.startsWith("project:");
   const search = searchParams.get("search") || undefined;
   const queryFilter = buildQueryFilter(filter, search);
   const filterLabel = getFilterLabel(filter);
-  const defaultProjectName = filter.startsWith("project:")
-    ? filter.slice(8)
-    : undefined;
+  const defaultProjectName = isProjectFilter ? filter.slice(8) : undefined;
 
   const { data, isLoading } = useQuery({
     queryKey: ["todos", filter, search],
@@ -93,6 +133,11 @@ export default function Todos() {
 
   const allTodos = data?.todos || [];
   const todos = showCompleted ? allTodos : allTodos.filter((t) => !t.completed);
+
+  const groupedTodos = useMemo(() => {
+    if (!groupByProject || isProjectFilter) return null;
+    return groupTodosByProject(todos);
+  }, [todos, groupByProject, isProjectFilter]);
 
   const {
     subscribeToTodoCreated,
@@ -156,6 +201,15 @@ export default function Todos() {
         <Plus className="mr-1.5" />
         New Todo
       </ContainerToolButton>
+      {!isProjectFilter && (
+        <ContainerToolToggle
+          pressed={groupByProject}
+          onPressedChange={handleToggleGroupByProject}
+          aria-label="Group by project"
+        >
+          <FolderTree strokeWidth={groupByProject ? 2.5 : 1.5} className={groupByProject ? undefined : "opacity-40"} />
+        </ContainerToolToggle>
+      )}
       <ContainerToolToggle
         pressed={showCompleted}
         onPressedChange={handleToggleCompleted}
@@ -192,13 +246,59 @@ export default function Todos() {
               Add Todo
             </Button>
           </div>
+        ) : groupByProject && !isProjectFilter && groupedTodos ? (
+          <div className="space-y-6">
+            {groupedTodos.map(({ project, todos: groupTodos }) => {
+              const key = project || "__none__";
+              const isOpen = !closedProjects.has(key);
+              const displayName = project || "No Project";
+              return (
+                <Collapsible
+                  key={key}
+                  open={isOpen}
+                  onOpenChange={() => toggleProject(key)}
+                >
+                  <CollapsibleTrigger asChild>
+                    <div className="flex items-center gap-1.5 cursor-pointer hover:bg-muted/30 px-2 py-1.5 -mx-2 rounded-md transition-colors text-muted-foreground">
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 transition-transform ${isOpen ? "rotate-0" : "-rotate-90"}`}
+                      />
+                      <FolderKanban className="h-3.5 w-3.5" />
+                      <span className="text-xs font-semibold uppercase tracking-wider">
+                        {displayName}
+                      </span>
+                      <span className="text-xs font-normal opacity-60">
+                        ({groupTodos.length})
+                      </span>
+                    </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="space-y-0.5 mt-2">
+                      {groupTodos.map((todo: Todo) => (
+                        <TodoRow
+                          key={todo.id}
+                          todo={todo}
+                          showProject={false}
+                          onToggle={(id, completed) =>
+                            toggleMutation.mutate({ id, completed })
+                          }
+                          onDelete={() => confirmDelete(todo)}
+                          onOpen={setEditTodo}
+                        />
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              );
+            })}
+          </div>
         ) : (
           <div className="space-y-0.5">
             {todos.map((todo: Todo) => (
               <TodoRow
                 key={todo.id}
                 todo={todo}
-                showProject={!filter.startsWith("project:")}
+                showProject={!isProjectFilter}
                 onToggle={(id, completed) =>
                   toggleMutation.mutate({ id, completed })
                 }

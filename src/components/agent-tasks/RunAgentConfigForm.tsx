@@ -35,7 +35,8 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top" }: Ru
   const props = task.properties as unknown as RunAgentProperties;
   const currentPermissions = props.permissions;
   const currentPermissionMode =
-    typeof currentPermissions === "string" && currentPermissions === "allow_all"
+    !currentPermissions ||
+    (typeof currentPermissions === "string" && currentPermissions === "allow_all")
       ? "allow_all"
       : "custom";
   const currentAllowList =
