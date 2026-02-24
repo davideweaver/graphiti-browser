@@ -7,6 +7,8 @@ import type {
   AgentExecutionTrace,
   RunningTasksResponse,
   CreateTaskInput,
+  TaskVersionSnapshot,
+  TaskVersionsResponse,
 } from "@/types/agentTasks";
 
 class AgentTasksService {
@@ -577,6 +579,83 @@ class AgentTasksService {
         error instanceof Error
           ? error.message
           : "Failed to clear task history";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async getTaskVersions(id: string): Promise<TaskVersionsResponse> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/scheduled-tasks/${id}/versions`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch task versions: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to fetch task versions";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async getTaskVersion(id: string, version: number): Promise<TaskVersionSnapshot> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/scheduled-tasks/${id}/versions/${version}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch task version: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to fetch task version";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
+  async restoreTaskVersion(id: string, version: number): Promise<ScheduledTask> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/scheduled-tasks/${id}/versions/${version}/restore`,
+        { method: "POST" }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to restore task version: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      toast({
+        title: "Version restored",
+        description: `Task restored to v${version}`,
+      });
+
+      return result;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to restore task version";
       toast({
         title: "Error",
         description: message,

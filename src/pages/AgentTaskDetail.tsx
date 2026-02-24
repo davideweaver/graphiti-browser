@@ -31,9 +31,11 @@ import {
   Pencil,
   Save,
   X,
+  History,
 } from "lucide-react";
 import { TaskExecutionSheet } from "@/components/tasks/TaskExecutionSheet";
 import { TaskExecutionRow } from "@/components/tasks/TaskExecutionRow";
+import { TaskVersionHistorySheet } from "@/components/agent-tasks/TaskVersionHistorySheet";
 import { RunAgentConfigForm } from "@/components/agent-tasks/RunAgentConfigForm";
 import { useTaskConfigUpdates } from "@/hooks/use-task-config-updates";
 import { useAgentCompletionUpdates } from "@/hooks/use-agent-completion-updates";
@@ -64,6 +66,7 @@ export default function AgentTaskDetail() {
   const [editName, setEditName] = useState("");
   const [editSchedule, setEditSchedule] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [versionsSheetOpen, setVersionsSheetOpen] = useState(false);
 
   // Listen for real-time task configuration updates
   useTaskConfigUpdates();
@@ -542,6 +545,7 @@ export default function AgentTaskDetail() {
                   queryClient.invalidateQueries({ queryKey: ["agent-tasks"] });
                 }}
                 buttonPosition="bottom"
+                onVersionsClick={() => setVersionsSheetOpen(true)}
               />
             ) : (
               <div className="space-y-2">
@@ -561,6 +565,16 @@ export default function AgentTaskDetail() {
                     </CardContent>
                   </Card>
                 )}
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => setVersionsSheetOpen(true)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <History className="h-4 w-4 mr-2" />
+                    Versions
+                  </Button>
+                </div>
               </div>
             )}
           </TabsContent>
@@ -807,6 +821,14 @@ export default function AgentTaskDetail() {
         execution={selectedExecution}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
+      />
+
+      {/* Version History Sheet */}
+      <TaskVersionHistorySheet
+        taskId={task?.id ?? null}
+        currentVersion={task?.version}
+        open={versionsSheetOpen}
+        onOpenChange={setVersionsSheetOpen}
       />
 
       {/* Delete Confirmation Dialog */}

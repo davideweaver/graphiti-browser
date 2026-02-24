@@ -9,6 +9,7 @@ export interface ScheduledTask {
   properties: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+  version?: number; // Incremented on each config update
 }
 
 export interface NormalizedTaskResult {
@@ -186,4 +187,21 @@ export interface RunningTask {
  */
 export interface RunningTasksResponse {
   running: RunningTask[];
+}
+
+/**
+ * A single version snapshot of a scheduled task's configuration
+ */
+export interface TaskVersionSnapshot {
+  version: number;
+  savedAt: string; // ISO datetime
+  config: ScheduledTask & { version: number };
+}
+
+/**
+ * Response from /api/v1/scheduled-tasks/:id/versions
+ */
+export interface TaskVersionsResponse {
+  taskId: string;
+  versions: TaskVersionSnapshot[];
 }

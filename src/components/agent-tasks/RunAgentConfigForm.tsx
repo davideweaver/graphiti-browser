@@ -19,15 +19,16 @@ import { ToolsMultiSelect } from "@/components/agent-tasks/ToolsMultiSelect";
 import { agentTasksService } from "@/api/agentTasksService";
 import { llamacppAdminService } from "@/api/llamacppAdminService";
 import type { ScheduledTask, RunAgentProperties } from "@/types/agentTasks";
-import { Pencil, Save, Loader2, X } from "lucide-react";
+import { Pencil, Save, Loader2, X, History } from "lucide-react";
 
 interface RunAgentConfigFormProps {
   task: ScheduledTask;
   onSaved?: () => void;
   buttonPosition?: "top" | "bottom";
+  onVersionsClick?: () => void;
 }
 
-export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top" }: RunAgentConfigFormProps) {
+export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top", onVersionsClick }: RunAgentConfigFormProps) {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
 
@@ -233,7 +234,17 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top" }: Ru
         </CardContent>
       </Card>
       {buttonPosition === "bottom" && (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          {onVersionsClick && (
+            <Button
+              onClick={onVersionsClick}
+              variant="outline"
+              size="sm"
+            >
+              <History className="h-4 w-4 mr-2" />
+              Versions
+            </Button>
+          )}
           <Button
             onClick={() => setIsEditing(true)}
             variant="outline"
