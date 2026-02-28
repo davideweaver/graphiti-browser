@@ -5,18 +5,20 @@ import Container from "@/components/container/Container";
 import { ContainerToolButton } from "@/components/container/ContainerToolButton";
 import { ContainerToolToggle } from "@/components/container/ContainerToolToggle";
 import { Badge } from "@/components/ui/badge";
-import { Copy, ChevronLeft, FolderOpen, RefreshCw, Trash2, AlertCircle, WifiOff, Bookmark, ChevronDown } from "lucide-react";
+import { Copy, ChevronLeft, FolderOpen, RefreshCw, Trash2, AlertCircle, WifiOff, Bookmark, ChevronDown, Pencil, CheckCheck, Loader2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { MobileDrawerButton } from "@/components/mobile/MobileBottomDrawer";
+import { MobileOverflowMenu } from "@/components/mobile/MobileOverflowMenu";
 import { toast } from "sonner";
 import { getSearchQuery } from "@/lib/documentsSearchStorage";
 import { setCurrentFolderPath, clearLastDocumentPath } from "@/lib/documentsStorage";
 import DestructiveConfirmationDialog from "@/components/dialogs/DestructiveConfirmationDialog";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { MarkdownViewer, ExcalidrawViewer } from "@/components/document-viewers";
 import { getFileType, DocumentFileType } from "@/lib/fileTypeUtils";
 import { isExcalidrawMarkdown, parseExcalidrawMarkdown } from "@/lib/excalidrawParser";
@@ -29,6 +31,10 @@ export default function DocumentDetail() {
   const documentPath = params["*"] || "";
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
 
   // Check if document is bookmarked
@@ -95,9 +101,22 @@ export default function DocumentDetail() {
     },
   });
 
+  // Update document mutation
+  const updateDocumentMutation = useMutation({
+    mutationFn: (content: string) => documentsService.updateDocument(documentPath, content),
+    onSuccess: () => {
+      setIsEditing(false);
+      queryClient.invalidateQueries({ queryKey: ["document", documentPath] });
+      toast.success("Document saved");
+    },
+    onError: () => {
+      toast.error("Failed to save document");
+    },
+  });
+
   // Disable query during and after deletion to prevent 500 error
   const {
-    data: document,
+    data: documentData,
     isLoading,
     refetch,
   } = useQuery({
@@ -115,12 +134,14 @@ export default function DocumentDetail() {
 
   const handleDocumentUpdated = useCallback((event) => {
     if (event.path === documentPath || event.absolutePath.endsWith(documentPath)) {
-      refetch();
+      if (!isEditing) {
+        refetch();
+      }
       queryClient.invalidateQueries({ queryKey: ["documents-nav"] });
     } else {
       queryClient.invalidateQueries({ queryKey: ["documents-nav"] });
     }
-  }, [documentPath, refetch, queryClient]);
+  }, [documentPath, isEditing, refetch, queryClient]);
 
   const handleDocumentRemoved = useCallback((event) => {
     if (event.path === documentPath || event.absolutePath.endsWith(documentPath)) {
@@ -161,21 +182,95 @@ export default function DocumentDetail() {
   // Detect file type
   const fileType = getFileType(documentPath);
 
+  const handleEdit = () => {
+    setEditContent(documentData?.content || "");
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => setIsEditing(false);
+
+  const handleSave = () => updateDocumentMutation.mutate(editContent);
+
+  const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+      e.preventDefault();
+      handleSave();
+    }
+  };
+
+  const copyToClipboard = (text: string, successMessage: string) => {
+    // Use synchronous execCommand for better mobile compatibility
+    // This works better from portaled content (dropdowns, sheets)
+    const success = copyToClipboardSync(text);
+
+    if (success) {
+      toast.success(successMessage);
+    } else {
+      // If sync method fails, try modern async API
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text)
+          .then(() => {
+            toast.success(successMessage);
+          })
+          .catch((err) => {
+            console.error("Clipboard API also failed:", err);
+            toast.error("Failed to copy to clipboard");
+          });
+      } else {
+        toast.error("Failed to copy to clipboard");
+      }
+    }
+  };
+
+  const copyToClipboardSync = (text: string): boolean => {
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+
+      // Make textarea visible and focusable
+      textArea.style.position = "fixed";
+      textArea.style.top = "50%";
+      textArea.style.left = "50%";
+      textArea.style.width = "100px";
+      textArea.style.height = "100px";
+      textArea.style.opacity = "0";
+      textArea.style.pointerEvents = "none";
+      textArea.style.zIndex = "9999";
+
+      // Add to body with higher z-index than modals
+      document.body.appendChild(textArea);
+
+      // Force focus and selection
+      textArea.focus();
+      textArea.setSelectionRange(0, text.length);
+
+      // Small delay to ensure focus
+      const successful = document.execCommand('copy');
+
+      document.body.removeChild(textArea);
+
+      return successful;
+    } catch (error) {
+      console.error("Sync copy failed:", error);
+      return false;
+    }
+  };
+
   const handleCopyContent = () => {
-    if (document?.content) {
-      let contentToCopy = document.content;
+    if (documentData?.content) {
+      let contentToCopy = documentData.content;
       let contentType = "content";
 
       // For Excalidraw files, copy the decompressed JSON
       if (fileType === DocumentFileType.EXCALIDRAW) {
         try {
-          if (isExcalidrawMarkdown(document.content)) {
-            const parsed = parseExcalidrawMarkdown(document.content);
+          if (isExcalidrawMarkdown(documentData.content)) {
+            const parsed = parseExcalidrawMarkdown(documentData.content);
             contentToCopy = JSON.stringify(parsed, null, 2);
             contentType = "Excalidraw JSON";
           } else {
             // Already JSON, just prettify it
-            const parsed = JSON.parse(document.content);
+            const parsed = JSON.parse(documentData.content);
             contentToCopy = JSON.stringify(parsed, null, 2);
             contentType = "Excalidraw JSON";
           }
@@ -186,15 +281,14 @@ export default function DocumentDetail() {
         }
       }
 
-      navigator.clipboard.writeText(contentToCopy);
-      toast.success(`${contentType} copied to clipboard`);
+      const capitalizedContentType = contentType.charAt(0).toUpperCase() + contentType.slice(1);
+      copyToClipboard(contentToCopy, `${capitalizedContentType} copied to clipboard`);
     }
   };
 
   const handleCopyAbsolutePath = () => {
-    if (document?.absolutePath) {
-      navigator.clipboard.writeText(document.absolutePath);
-      toast.success("Absolute path copied to clipboard");
+    if (documentData?.absolutePath) {
+      copyToClipboard(documentData.absolutePath, "Absolute path copied to clipboard");
     } else {
       toast.error("Absolute path not available", {
         description: "Try refreshing the document",
@@ -204,8 +298,7 @@ export default function DocumentDetail() {
 
   const handleCopyRelativePath = () => {
     if (documentPath) {
-      navigator.clipboard.writeText(documentPath);
-      toast.success("Relative path copied to clipboard");
+      copyToClipboard(documentPath, "Relative path copied to clipboard");
     }
   };
 
@@ -272,8 +365,8 @@ export default function DocumentDetail() {
   }
 
   // Format modified date
-  const modifiedDate = document?.modified
-    ? new Date(document.modified).toLocaleString()
+  const modifiedDate = documentData?.modified
+    ? new Date(documentData.modified).toLocaleString()
     : "";
 
   return (
@@ -293,84 +386,169 @@ export default function DocumentDetail() {
       }
       tools={
         <div className="flex items-center gap-2">
-          {hasActiveSearch && (
-            <ContainerToolButton size="sm" onClick={handleBackToSearch}>
-              <ChevronLeft className="h-4 w-4 md:mr-2" />
-              <span className="hidden md:inline">Back</span>
-            </ContainerToolButton>
-          )}
-          {!isConnected && (
-            <Badge variant="secondary" className="flex items-center gap-1.5">
-              <WifiOff className="h-3 w-3" />
-              <span>Offline</span>
-            </Badge>
-          )}
-          <ContainerToolToggle
-            pressed={isBookmarked}
-            onPressedChange={handleToggleBookmark}
-            disabled={!documentPath || toggleBookmarkMutation.isPending}
-            aria-label="Toggle bookmark"
-          >
-            <Bookmark
-              className="h-4 w-4"
-              fill={isBookmarked ? "currentColor" : "none"}
-            />
-          </ContainerToolToggle>
-          <ContainerToolButton
-            size="icon"
-            onClick={handleRefresh}
-            disabled={!documentPath}
-          >
-            <RefreshCw className="h-4 w-4" />
-          </ContainerToolButton>
-          <ContainerToolButton
-            size="icon"
-            onClick={handleShowInFolder}
-            disabled={!documentPath}
-          >
-            <FolderOpen className="h-4 w-4" />
-          </ContainerToolButton>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <ContainerToolButton size="sm" disabled={!document}>
-                <Copy className="h-4 w-4" />
-                <ChevronDown className="h-3 w-3 ml-1" />
+          {isEditing ? (
+            <>
+              <ContainerToolButton
+                variant="primary"
+                size="sm"
+                onClick={handleSave}
+                disabled={updateDocumentMutation.isPending}
+              >
+                {updateDocumentMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 md:mr-2 animate-spin" />
+                ) : (
+                  <CheckCheck className="h-4 w-4 md:mr-2" />
+                )}
+                <span className="hidden md:inline">Save</span>
               </ContainerToolButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleCopyContent}>
-                <Copy className="h-4 w-4 mr-2" />
-                Copy content
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleCopyAbsolutePath}>
-                <Copy className="h-4 w-4 mr-2" />
-                Copy absolute path
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleCopyRelativePath}>
-                <Copy className="h-4 w-4 mr-2" />
-                Copy relative path
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <ContainerToolButton
-            size="icon"
-            onClick={handleOpenDeleteDialog}
-            disabled={!documentPath}
-            variant="destructive"
-          >
-            <Trash2 className="h-4 w-4" />
-          </ContainerToolButton>
+              <ContainerToolButton variant="destructive-solid" size="sm" onClick={handleCancelEdit} disabled={updateDocumentMutation.isPending}>
+                <X className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Cancel</span>
+              </ContainerToolButton>
+            </>
+          ) : (
+            <>
+              {hasActiveSearch && (
+                <ContainerToolButton size="sm" onClick={handleBackToSearch}>
+                  <ChevronLeft className="h-4 w-4 md:mr-2" />
+                  <span className="hidden md:inline">Back</span>
+                </ContainerToolButton>
+              )}
+              {!isConnected && (
+                <Badge variant="secondary" className="flex items-center gap-1.5">
+                  <WifiOff className="h-3 w-3" />
+                  <span>Offline</span>
+                </Badge>
+              )}
+              <ContainerToolToggle
+                pressed={isBookmarked}
+                onPressedChange={handleToggleBookmark}
+                disabled={!documentPath || toggleBookmarkMutation.isPending}
+                aria-label="Toggle bookmark"
+              >
+                <Bookmark
+                  className="h-4 w-4"
+                  fill={isBookmarked ? "currentColor" : "none"}
+                />
+              </ContainerToolToggle>
+              {fileType === DocumentFileType.MARKDOWN && (
+                <ContainerToolButton
+                  size="icon"
+                  onClick={handleEdit}
+                  disabled={!documentData}
+                >
+                  <Pencil className="h-4 w-4" />
+                </ContainerToolButton>
+              )}
+              <ContainerToolButton
+                size="icon"
+                onClick={handleShowInFolder}
+                disabled={!documentPath}
+              >
+                <FolderOpen className="h-4 w-4" />
+              </ContainerToolButton>
+
+              <MobileOverflowMenu title="More Options" disabled={!documentData}>
+                <ContainerToolButton
+                  size="icon"
+                  onClick={handleRefresh}
+                  disabled={!documentPath}
+                  data-drawer-label="Refresh"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </ContainerToolButton>
+
+                {/* Desktop: Dropdown menu */}
+                <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <ContainerToolButton size="sm" disabled={!documentData}>
+                      <Copy className="h-4 w-4" />
+                      <ChevronDown className="h-3 w-3 ml-1" />
+                    </ContainerToolButton>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                      <button
+                        onClick={() => {
+                          handleCopyContent();
+                          setDropdownOpen(false);
+                        }}
+                        className="w-full"
+                      >
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy content
+                      </button>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <button
+                        onClick={() => {
+                          handleCopyAbsolutePath();
+                          setDropdownOpen(false);
+                        }}
+                        className="w-full"
+                      >
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy absolute path
+                      </button>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <button
+                        onClick={() => {
+                          handleCopyRelativePath();
+                          setDropdownOpen(false);
+                        }}
+                        className="w-full"
+                      >
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy relative path
+                      </button>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Mobile: Flattened drawer menu items */}
+                <MobileDrawerButton
+                  onClick={handleCopyContent}
+                  icon={<Copy className="h-4 w-4" />}
+                >
+                  Copy content
+                </MobileDrawerButton>
+                <MobileDrawerButton
+                  onClick={handleCopyAbsolutePath}
+                  icon={<Copy className="h-4 w-4" />}
+                >
+                  Copy absolute path
+                </MobileDrawerButton>
+                <MobileDrawerButton
+                  onClick={handleCopyRelativePath}
+                  icon={<Copy className="h-4 w-4" />}
+                >
+                  Copy relative path
+                </MobileDrawerButton>
+
+                <ContainerToolButton
+                  size="icon"
+                  onClick={handleOpenDeleteDialog}
+                  disabled={!documentPath}
+                  variant="destructive"
+                  data-drawer-label="Delete"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </ContainerToolButton>
+              </MobileOverflowMenu>
+            </>
+          )}
         </div>
       }
     >
       {/* Frontmatter Display - hide for Excalidraw files */}
       {fileType !== DocumentFileType.EXCALIDRAW &&
-        document?.frontmatter &&
-        Object.keys(document.frontmatter).length > 0 && (
+        documentData?.frontmatter &&
+        Object.keys(documentData.frontmatter).length > 0 && (
           <div className="mb-6 p-4 bg-accent/50 rounded-lg">
             <h3 className="text-sm font-semibold mb-2">Metadata</h3>
             <div className="grid gap-2 text-sm">
-              {Object.entries(document.frontmatter).map(([key, value]) => (
+              {Object.entries(documentData.frontmatter).map(([key, value]) => (
                 <div key={key} className="flex gap-2">
                   <span className="font-medium text-muted-foreground shrink-0">
                     {key}:
@@ -391,18 +569,31 @@ export default function DocumentDetail() {
             <div
               key={i}
               className="h-4 bg-accent/50 rounded animate-pulse"
+              // eslint-disable-next-line react-hooks/purity
               style={{ width: `${Math.random() * 40 + 60}%` }}
             />
           ))}
         </div>
-      ) : document ? (
+      ) : documentData ? (
         <>
           {fileType === DocumentFileType.MARKDOWN && (
-            <MarkdownViewer content={document.content} documentPath={documentPath} />
+            isEditing ? (
+              <textarea
+                ref={textareaRef}
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                onKeyDown={handleTextareaKeyDown}
+                className="w-full min-h-[calc(100vh-220px)] p-0 font-mono text-sm bg-transparent border-none outline-none resize-none"
+                spellCheck={false}
+                autoFocus
+              />
+            ) : (
+              <MarkdownViewer content={documentData.content} documentPath={documentPath} />
+            )
           )}
           {fileType === DocumentFileType.EXCALIDRAW && (
             <ExcalidrawViewer
-              content={document.content}
+              content={documentData.content}
               onError={handleExcalidrawError}
             />
           )}

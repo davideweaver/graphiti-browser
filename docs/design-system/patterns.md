@@ -1096,6 +1096,280 @@ const navIndicators = {
 };
 ```
 
+## Mobile Overflow Menu Pattern
+
+Use the `MobileOverflowMenu` wrapper for toolbar tools that should overflow to a drawer on mobile. This pattern automatically handles responsive behavior and uses a non-portaled drawer to preserve "trusted user gesture" context for secure browser APIs (clipboard, geolocation, etc.).
+
+### Why Non-Portaled?
+
+**Problem:** Radix UI components (Sheet, Dialog, DropdownMenu) use React Portal to render content at the document root. Mobile browsers block secure APIs like `navigator.clipboard` when called from portaled content because the portal breaks the "trusted user gesture" chain.
+
+**Solution:** `MobileOverflowMenu` uses `MobileBottomDrawer` which renders inline in the component tree with `fixed` positioning, maintaining the user gesture context while providing the same visual experience as a Sheet.
+
+### MobileOverflowMenu Component
+
+**Location:** `src/components/mobile/MobileOverflowMenu.tsx`
+
+The `MobileOverflowMenu` wrapper automatically handles responsive behavior for overflow tools:
+
+**Desktop:** Renders children inline (standard behavior)
+**Mobile:** Hides children and shows a three-dot (⋮) button that opens a non-portaled bottom drawer
+
+```tsx
+interface MobileOverflowMenuProps {
+  title: string;        // Drawer title on mobile
+  children: ReactNode;  // Tools to overflow
+  disabled?: boolean;   // Disable overflow button
+}
+```
+
+### Usage Pattern
+
+Wrap overflow tools with `MobileOverflowMenu`. The wrapper handles all responsive logic automatically.
+
+```tsx
+import { ContainerToolButton } from "@/components/container/ContainerToolButton";
+import { MobileOverflowMenu } from "@/components/mobile/MobileOverflowMenu";
+import { MobileDrawerButton } from "@/components/mobile/MobileBottomDrawer";
+import { RefreshCw, Copy, Trash2 } from "lucide-react";
+
+<div className="flex gap-2">
+  {/* Always visible tools */}
+  <ContainerToolButton size="icon" onClick={handleEdit}>
+    <Edit className="h-4 w-4" />
+  </ContainerToolButton>
+
+  {/* Overflow tools */}
+  <MobileOverflowMenu title="More Options" disabled={!documentData}>
+    {/* Tool button with label for mobile drawer */}
+    <ContainerToolButton
+      size="icon"
+      onClick={handleRefresh}
+      data-drawer-label="Refresh"
+    >
+      <RefreshCw className="h-4 w-4" />
+    </ContainerToolButton>
+
+    {/* Desktop: Dropdown menu (shown inline) */}
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <ContainerToolButton size="sm">
+          <Copy className="h-4 w-4" />
+          <ChevronDown className="h-3 w-3 ml-1" />
+        </ContainerToolButton>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={handleCopy}>Copy</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+
+    {/* Mobile: Flattened drawer items */}
+    <MobileDrawerButton onClick={handleCopy} icon={<Copy />}>
+      Copy content
+    </MobileDrawerButton>
+
+    {/* Destructive tool button */}
+    <ContainerToolButton
+      size="icon"
+      onClick={handleDelete}
+      variant="destructive"
+      data-drawer-label="Delete"
+    >
+      <Trash2 className="h-4 w-4" />
+    </ContainerToolButton>
+  </MobileOverflowMenu>
+</div>
+```
+
+### How It Works
+
+**Desktop (`md` and up):**
+- Uses `hidden md:contents` to render children inline
+- Shows dropdown menus and icon buttons normally
+- No three-dot button visible
+
+**Mobile (below `md`):**
+- Hides all children
+- Shows three-dot (MoreVertical) button
+- Opens bottom drawer on click
+- Automatically converts `ContainerToolButton` with `data-drawer-label` to drawer menu items
+- Passes through `MobileDrawerButton` items as-is (for flattening nested menus)
+- Auto-closes drawer after any action (100ms delay)
+
+### data-drawer-label Attribute
+
+Add `data-drawer-label` to `ContainerToolButton` to provide text for the mobile drawer menu. Icon-only buttons on desktop become labeled menu items on mobile.
+
+```tsx
+<ContainerToolButton
+  size="icon"
+  onClick={handleRefresh}
+  data-drawer-label="Refresh"  // ← Text shown in mobile drawer
+>
+  <RefreshCw className="h-4 w-4" />
+</ContainerToolButton>
+```
+
+### MobileDrawerButton
+
+Use `MobileDrawerButton` for items that should only appear in the mobile drawer (not on desktop). Useful for flattening nested menus.
+
+```tsx
+interface MobileDrawerButtonProps {
+  onClick: () => void;
+  icon?: ReactNode;      // Optional leading icon
+  children: ReactNode;   // Button label text
+  className?: string;    // Optional additional classes
+}
+```
+
+**Styling:**
+- Borderless design with hover state (`hover:bg-accent`)
+- Height: `h-12` (48px) for comfortable touch targets
+- Padding: `px-4` (16px horizontal)
+- Icon spacing: `mr-3` (12px between icon and text)
+- Left-aligned text with flex layout
+
+**Use Case:** Flatten nested menus on mobile. Desktop shows a dropdown menu, mobile shows individual drawer items.
+
+### Design Specifications
+
+**Drawer Container:**
+- Position: `fixed inset-0 z-50` (fullscreen overlay)
+- Visibility: `md:hidden` (mobile only)
+- Background overlay: `bg-black/80` with fade-in animation
+- Drawer panel: `bottom-0 left-0 right-0` with slide-up animation
+- Border: `border-t` with `rounded-t-lg`
+
+**Drawer Header:**
+- Padding: `p-4 pb-2`
+- Title: `text-lg font-semibold`
+- Close button: `h-9 w-9` with `X` icon (`h-6 w-6`, `strokeWidth={2.5}`)
+- Close button colors: `text-gray-400 hover:text-gray-300`
+
+**Button Container:**
+- Padding: `p-2 pb-6` (tighter spacing, extra bottom for safe area)
+- Layout: `flex flex-col` (stacked buttons)
+
+### Clipboard Implementation
+
+For clipboard operations to work from the drawer, use synchronous `execCommand` as primary method:
+
+```tsx
+const copyToClipboardSync = (text: string): boolean => {
+  try {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.top = "50%";
+    textArea.style.left = "50%";
+    textArea.style.opacity = "0";
+    textArea.style.zIndex = "9999";
+
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.setSelectionRange(0, text.length);
+
+    const successful = document.execCommand('copy');
+    document.body.removeChild(textArea);
+
+    return successful;
+  } catch (error) {
+    return false;
+  }
+};
+
+const handleCopy = () => {
+  const success = copyToClipboardSync(content);
+  if (success) {
+    toast.success("Copied to clipboard");
+  } else {
+    // Fallback to async API if needed
+    navigator.clipboard.writeText(content)
+      .then(() => toast.success("Copied to clipboard"))
+      .catch(() => toast.error("Failed to copy"));
+  }
+  setTimeout(() => setDrawerOpen(false), 100);
+};
+```
+
+**Why `execCommand` first:**
+- Synchronous operation completes within the user gesture event
+- More reliable from fixed-position overlays on mobile
+- Modern Clipboard API can still be used as fallback
+
+### When to Use
+
+✅ **Use MobileOverflowMenu when:**
+- Toolbar has too many tools to fit on mobile
+- Tools include clipboard operations or secure APIs
+- Need to maintain user gesture context on mobile
+- Want automatic responsive behavior
+
+❌ **Don't use when:**
+- All tools fit comfortably on mobile
+- Desktop-only feature (no mobile users)
+- Tools are simple links (can use responsive visibility instead)
+
+### Complete Example from DocumentDetail.tsx
+
+```tsx
+<MobileOverflowMenu title="More Options" disabled={!documentData}>
+  {/* Icon button → labeled drawer item */}
+  <ContainerToolButton
+    size="icon"
+    onClick={handleRefresh}
+    data-drawer-label="Refresh"
+  >
+    <RefreshCw className="h-4 w-4" />
+  </ContainerToolButton>
+
+  {/* Desktop: Dropdown menu (shown inline) */}
+  <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+    <DropdownMenuTrigger asChild>
+      <ContainerToolButton size="sm" disabled={!documentData}>
+        <Copy className="h-4 w-4" />
+        <ChevronDown className="h-3 w-3 ml-1" />
+      </ContainerToolButton>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="end">
+      <DropdownMenuItem asChild>
+        <button onClick={() => { handleCopyContent(); setDropdownOpen(false); }}>
+          <Copy className="h-4 w-4 mr-2" />
+          Copy content
+        </button>
+      </DropdownMenuItem>
+      {/* More dropdown items... */}
+    </DropdownMenuContent>
+  </DropdownMenu>
+
+  {/* Mobile: Flattened drawer items (replace dropdown hierarchy) */}
+  <MobileDrawerButton onClick={handleCopyContent} icon={<Copy className="h-4 w-4" />}>
+    Copy content
+  </MobileDrawerButton>
+  <MobileDrawerButton onClick={handleCopyAbsolutePath} icon={<Copy className="h-4 w-4" />}>
+    Copy absolute path
+  </MobileDrawerButton>
+  <MobileDrawerButton onClick={handleCopyRelativePath} icon={<Copy className="h-4 w-4" />}>
+    Copy relative path
+  </MobileDrawerButton>
+
+  {/* Destructive button → red drawer item */}
+  <ContainerToolButton
+    size="icon"
+    onClick={handleOpenDeleteDialog}
+    variant="destructive"
+    data-drawer-label="Delete"
+  >
+    <Trash2 className="h-4 w-4" />
+  </ContainerToolButton>
+</MobileOverflowMenu>
+```
+
+**Result:**
+- **Desktop:** Shows Refresh icon | Copy▼ dropdown | Delete icon
+- **Mobile:** Shows ⋮ → Drawer with: Refresh, Copy content, Copy absolute path, Copy relative path, Delete (red)
+
 ## Responsive Visibility
 
 ### Hide on Mobile
