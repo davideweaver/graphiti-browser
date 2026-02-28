@@ -2,6 +2,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import remarkWikiLinks from "@/lib/remarkWikiLinks";
+import remarkNestedCodeBlocks from "@/lib/remarkNestedCodeBlocks";
 import { MarkdownLink } from "@/components/markdown/MarkdownLink";
 import type { Components } from "react-markdown";
 
@@ -22,7 +23,12 @@ export function MarkdownViewer({ content, documentPath }: MarkdownViewerProps) {
   return (
     <article className="prose prose-sm dark:prose-invert max-w-none">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkBreaks, remarkWikiLinks]}
+        remarkPlugins={[
+          remarkNestedCodeBlocks,
+          remarkGfm,
+          remarkBreaks,
+          remarkWikiLinks,
+        ]}
         components={markdownComponents}
       >
         {content}
