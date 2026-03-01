@@ -5,7 +5,7 @@ import {
   CardTitle,
   CardContent,
 } from "@/components/ui/card";
-import { ChartContainer, ChartConfig } from "@/components/ui/chart";
+import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 import { LoaderCircle } from "lucide-react";
 
 type Props = {

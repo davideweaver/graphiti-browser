@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { TimelineBar } from "./TimelineBar";
 import { format, differenceInMinutes } from "date-fns";
 import { Info, Trash2 } from "lucide-react";
@@ -28,7 +28,6 @@ export function SessionRow({
   const navigate = useNavigate();
   const { groupId } = useGraphiti();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [isHovered, setIsHovered] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);

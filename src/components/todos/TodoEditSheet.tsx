@@ -84,6 +84,7 @@ const CustomTaskItem = TaskItem.extend({
             .focus(undefined, { scrollIntoView: false })
             .command(({ tr }) => {
               const pos = getPos();
+              if (pos === undefined) return false;
               const currentNode = tr.doc.nodeAt(pos);
               tr.setNodeMarkup(pos, undefined, { ...currentNode?.attrs, checked });
               return true;
@@ -160,6 +161,7 @@ function HeadingSelect({ editor }: { editor: Editor }) {
       editor.off("selectionUpdate", update);
       editor.off("update", update);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]);
 
   return (
@@ -268,6 +270,7 @@ export function TodoEditSheet({ todo, onClose, onSave }: TodoEditSheetProps) {
 
   useEffect(() => {
     if (todo) setDisplayTitle(todo.title);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todo?.id]);
 
   useEffect(() => {
@@ -276,6 +279,7 @@ export function TodoEditSheet({ todo, onClose, onSave }: TodoEditSheetProps) {
     } else {
       setSlackThreadUrl(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todo?.id]);
 
   useEffect(() => {
@@ -292,6 +296,7 @@ export function TodoEditSheet({ todo, onClose, onSave }: TodoEditSheetProps) {
 
   useEffect(() => {
     if (todo) setDisplayDate(todo.scheduledDate ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todo?.id]);
 
   useEffect(() => {

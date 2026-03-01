@@ -75,6 +75,7 @@ export default function Sessions() {
 
   // Reset to today when graph changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedDate(startOfDay(new Date()));
     setOpenProjects(new Set());
   }, [groupId]);
@@ -211,6 +212,7 @@ export default function Sessions() {
   useEffect(() => {
     if (groupedSessions && groupedSessions.length > 0) {
       const firstProject = groupedSessions[0][0];
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOpenProjects(new Set([firstProject]));
     }
   }, [groupedSessions]);

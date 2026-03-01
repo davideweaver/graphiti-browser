@@ -10,7 +10,6 @@ import { SecondaryNavContainer } from "@/components/navigation/SecondaryNavConta
 import {
   LayoutDashboard,
   Activity,
-  FileText,
   Server,
   Database,
   Router as RouterIcon,

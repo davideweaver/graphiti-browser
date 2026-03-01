@@ -100,6 +100,7 @@ export function useDeleteTodoConfirmation(
         confirmLoadingText="Deleting..."
       />
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todoToDelete, dialogOpen, deleteMutation.isPending]);
 
   return {

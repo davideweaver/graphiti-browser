@@ -1,5 +1,5 @@
 import { SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 
 interface SidePanelHeaderProps {
   title: string | ReactNode;

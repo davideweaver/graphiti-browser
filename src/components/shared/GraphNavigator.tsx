@@ -195,14 +195,14 @@ export function GraphNavigator({ nodeType, nodeId, groupId }: GraphNavigatorProp
     // Clicking a node selects it for metadata display
     setSelectedNodeId(node.id);
     setSelectedEdgeId(null);
-    setSelectedElement({ type: 'node', data: node.apiNode });
+    setSelectedElement({ type: 'node', data: node.apiNode as unknown as APIGraphNode });
   };
 
   const handleLinkClick = (link: ForceGraphLink) => {
     // Clicking an edge selects it for metadata display
-    setSelectedEdgeId(link.apiEdge.uuid);
+    setSelectedEdgeId(link.apiEdge.uuid as string | null);
     setSelectedNodeId(null);
-    setSelectedElement({ type: 'edge', data: link.apiEdge });
+    setSelectedElement({ type: 'edge', data: link.apiEdge as unknown as APIGraphEdge });
   };
 
   const handleOpenNode = () => {
@@ -443,7 +443,7 @@ function NodeMetadataCard({ node }: { node: APIGraphNode }) {
           } else if (key.includes("_at") || key.includes("timestamp")) {
             // Try to format as date
             try {
-              displayValue = new Date(value).toLocaleString();
+              displayValue = new Date(value as string | number | Date).toLocaleString();
             } catch {
               displayValue = String(value);
             }
@@ -521,7 +521,7 @@ function EdgeMetadataCard({ edge }: { edge: APIGraphEdge }) {
           } else if (key.includes("_at") || key.includes("timestamp")) {
             // Try to format as date
             try {
-              displayValue = new Date(value).toLocaleString();
+              displayValue = new Date(value as string | number | Date).toLocaleString();
             } catch {
               displayValue = String(value);
             }
@@ -606,7 +606,7 @@ function transformToForceGraph(
     isCentered: true,
     size: calculateNodeSize(centerNode.node_type, connections.length),
     color: getNodeColor(centerNode.node_type),
-    apiNode: centerNode,
+    apiNode: centerNode as unknown as Record<string, unknown>,
   });
 
   // Add all connected nodes (deduplicated)
@@ -619,7 +619,7 @@ function transformToForceGraph(
         isCentered: false,
         size: calculateNodeSize(conn.node.node_type, 1),
         color: getNodeColor(conn.node.node_type),
-        apiNode: conn.node,
+        apiNode: conn.node as unknown as Record<string, unknown>,
       });
     }
   });
@@ -631,7 +631,7 @@ function transformToForceGraph(
     label: conn.relationship.label,
     type: conn.relationship.edge_type,
     color: getEdgeColor(conn.relationship.edge_type),
-    apiEdge: conn.relationship,
+    apiEdge: conn.relationship as unknown as Record<string, unknown>,
   }));
 
   return { nodes: Array.from(nodeMap.values()), links };

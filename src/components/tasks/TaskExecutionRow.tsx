@@ -2,7 +2,6 @@ import { formatTimestamp, formatDuration } from "@/lib/cronFormatter";
 import { CheckCircle2, XCircle, X } from "lucide-react";
 import type { TaskExecution } from "@/types/agentTasks";
 import ReactMarkdown from "react-markdown";
-import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface TaskExecutionRowProps {
@@ -10,7 +9,6 @@ interface TaskExecutionRowProps {
   onClick?: () => void;
   showTaskName?: boolean;
   onTaskNameClick?: () => void;
-  showDuration?: boolean;
   onDelete?: (executionId: string) => void;
 }
 
@@ -19,7 +17,6 @@ export function TaskExecutionRow({
   onClick,
   showTaskName = false,
   onTaskNameClick,
-  showDuration = true,
   onDelete,
 }: TaskExecutionRowProps) {
   const isMobile = useIsMobile();

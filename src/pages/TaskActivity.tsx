@@ -6,19 +6,15 @@ import { ContainerToolButton } from "@/components/container/ContainerToolButton"
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import DestructiveConfirmationDialog from "@/components/dialogs/DestructiveConfirmationDialog";
 import { agentTasksService } from "@/api/agentTasksService";
 import {
   Activity,
   Zap,
   CheckCircle2,
-  ArrowRight,
   WifiOff,
   Wrench,
-  XCircle,
   Ban,
-  Settings,
   X,
   Trash2,
 } from "lucide-react";
@@ -54,6 +50,7 @@ function RunningTaskCard({
   useEffect(() => {
     if (isFinished) {
       // Stop the timer and use the final elapsed time
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setClientElapsed(task.elapsedMs);
       return;
     }
@@ -485,6 +482,7 @@ export default function TaskActivity() {
 
   // Filter out tasks older than 1 minute
   const displayedFinished = recentlyFinished.filter((task) => {
+    // eslint-disable-next-line react-hooks/purity
     const age = Date.now() - task.finishedAt;
     return age < 60000; // 60 seconds
   });

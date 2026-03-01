@@ -19,7 +19,7 @@ export interface Entity {
   entity_type?: string; // "Person", "Organization", "Location", etc. (legacy - now in labels)
   labels: string[]; // Entity type labels like ["Person", "Entity"]
   summary: string;
-  attributes: Record<string, any>; // Additional entity attributes
+  attributes: Record<string, unknown>; // Additional entity attributes
   group_id: string;
   created_at: string;
 }
@@ -54,6 +54,8 @@ export interface Fact {
   created_at: string;
   expired_at?: string;
   similarity_score?: number; // Optional - similarity/reranker score (0.0-1.0)
+  fact_type?: string; // Optional fact classification
+  score?: number; // Optional relevance score (alias for similarity_score)
   // Provenance fields (optional, only included when requested via include_entities/include_episodes)
   source_node_uuid?: string; // UUID of source entity in relationship
   target_node_uuid?: string; // UUID of target entity in relationship
@@ -118,6 +120,8 @@ export interface Session {
   project_name?: string; // Optional project name for the session
   first_episode_preview?: string; // Optional preview of the first episode content
   programmatic?: boolean; // Optional flag indicating if session was created programmatically
+  name?: string; // Optional display name for the session
+  created_at?: string; // Optional creation timestamp
 }
 
 // Response from /sessions/{group_id}
@@ -198,7 +202,7 @@ export interface GraphNode {
   node_type: "Entity" | "Episodic" | "Session" | "Project" | "Community" | "Fact";
   label: string; // Display name
   labels: string[]; // All node labels (e.g., ["Person", "Entity"])
-  metadata: Record<string, any>; // All node properties
+  metadata: Record<string, unknown>; // All node properties
   created_at: string | null;
 }
 
@@ -209,7 +213,7 @@ export interface GraphEdge {
   label: string; // Display name/fact
   source_uuid: string;
   target_uuid: string;
-  metadata: Record<string, any>; // All edge properties
+  metadata: Record<string, unknown>; // All edge properties
   created_at: string | null;
 }
 
@@ -238,7 +242,7 @@ export interface EdgeConnectionsResponse {
 export interface SourceInfo {
   name: string; // e.g., "meeting-notes.md", "Manual Entry"
   type: "file" | "text" | "session" | "meeting"; // Extensible source types
-  metadata: Record<string, any>; // Additional metadata (filename, file_size, etc.)
+  metadata: Record<string, unknown>; // Additional metadata (filename, file_size, etc.)
 }
 
 // Request for adding content with source tracking
@@ -248,7 +252,7 @@ export interface AddContentRequest {
   project_name: string | null; // Optional project (null → "_general")
   source_name: string;
   source_type: string;
-  source_metadata: Record<string, any>;
+  source_metadata: Record<string, unknown>;
 }
 
 // Response from POST /content

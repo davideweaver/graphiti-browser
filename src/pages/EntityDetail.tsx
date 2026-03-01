@@ -25,7 +25,7 @@ import DestructiveConfirmationDialog from "@/components/dialogs/DestructiveConfi
 import { ChevronLeft, Info, Edit, Trash2 } from "lucide-react";
 import { FactCard } from "@/components/search/FactCard";
 import { NodeDetailSheet } from "@/components/shared/NodeDetailSheet";
-import type { Entity, Fact } from "@/types/graphiti";
+import type { Fact } from "@/types/graphiti";
 
 export default function EntityDetail() {
   const { uuid } = useParams<{ uuid: string }>();
@@ -199,7 +199,7 @@ export default function EntityDetail() {
     return entity.labels.find((label) => label !== "Entity") || entity.entity_type || "Unknown";
   }, [entity]);
 
-  const isLoading = isLoadingEntity || isLoadingFacts || isLoadingRelationships;
+  void (isLoadingEntity || isLoadingFacts || isLoadingRelationships);
 
   if (isLoadingEntity) {
     return (
@@ -392,7 +392,7 @@ export default function EntityDetail() {
                     key={fact.uuid}
                     fact={fact}
                     onEdit={handleEditFact}
-                    onConfirm={handleDeleteFact}
+                    onDelete={handleDeleteFact}
                   />
                 ))}
               </div>

@@ -41,6 +41,7 @@ export function ProjectCombobox({ value, onChange, groupId, disabled }: Props) {
   // When value changes externally, update search field if combobox is closed
   useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSearch(value);
     }
   }, [value, open]);

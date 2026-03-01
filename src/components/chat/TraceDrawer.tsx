@@ -45,6 +45,7 @@ export default function TraceDrawer({
         .filter(turn => turn.toolDecisions.length > 0)
         .map(turn => turn.turnNumber);
       if (turnsWithTools.length > 0) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setExpandedTurns(new Set(turnsWithTools));
       }
     }
@@ -74,7 +75,8 @@ export default function TraceDrawer({
       setCopied(true);
       toast.success("Trace copied to clipboard");
       setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (_error) {
       toast.error("Failed to copy trace");
     }
   };

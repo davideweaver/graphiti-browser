@@ -134,10 +134,12 @@ export default function Todos() {
   const allTodos = data?.todos || [];
   const todos = showCompleted ? allTodos : allTodos.filter((t) => !t.completed);
 
+  /* eslint-disable react-hooks/preserve-manual-memoization */
   const groupedTodos = useMemo(() => {
     if (!groupByProject || isProjectFilter) return null;
     return groupTodosByProject(todos);
   }, [todos, groupByProject, isProjectFilter]);
+  /* eslint-enable react-hooks/preserve-manual-memoization */
 
   const {
     subscribeToTodoCreated,

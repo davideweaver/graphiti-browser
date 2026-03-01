@@ -47,6 +47,7 @@ export const GraphitiProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useGraphiti = () => {
   const context = useContext(GraphitiContext);
   if (!context) {

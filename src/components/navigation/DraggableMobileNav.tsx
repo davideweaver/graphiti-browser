@@ -42,6 +42,7 @@ export function DraggableMobileNav({
   // Animate open/close when isOpen changes
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTranslateX(0);
       currentTranslateX.current = 0;
       shouldCloseAfterTransition.current = false;

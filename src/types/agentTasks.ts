@@ -57,6 +57,8 @@ export interface TaskExecution {
   model?: string;
   /** Whether a local model was used */
   isLocal?: boolean;
+  /** Task name (when returned from executions list endpoint) */
+  taskName?: string;
 }
 
 export interface ScheduledTaskListResponse {

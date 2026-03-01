@@ -23,7 +23,7 @@ export function createChatAgent(config: ChatAgentConfig) {
 
   // Initialize ModelFactory with both providers
   if (!ModelFactory.isInitialized()) {
-    const models: any = {};
+    const models: Record<string, unknown> = {};
 
     // Always configure llamacpp
     models.llamacpp = {
@@ -41,7 +41,7 @@ export function createChatAgent(config: ChatAgentConfig) {
     }
 
     ModelFactory.initialize({
-      models,
+      models: models as Parameters<typeof ModelFactory.initialize>[0]['models'],
       defaultModel: provider,
     });
   }

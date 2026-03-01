@@ -67,6 +67,7 @@ ChartContainer.displayName = "Chart"
 
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   const colorConfig = Object.entries(config).filter(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     ([_, config]) => config.theme || config.color
   )
 
@@ -100,16 +101,28 @@ ${colorConfig
 
 const ChartTooltip = RechartsPrimitive.Tooltip
 
+type TooltipContentProps = React.ComponentProps<"div"> & {
+  active?: boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  payload?: any[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  label?: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  labelFormatter?: (...args: any[]) => React.ReactNode
+  labelClassName?: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  formatter?: (...args: any[]) => React.ReactNode
+  color?: string
+  nameKey?: string
+  labelKey?: string
+  hideLabel?: boolean
+  hideIndicator?: boolean
+  indicator?: "line" | "dot" | "dashed"
+}
+
 const ChartTooltipContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
-    React.ComponentProps<"div"> & {
-      hideLabel?: boolean
-      hideIndicator?: boolean
-      indicator?: "line" | "dot" | "dashed"
-      nameKey?: string
-      labelKey?: string
-    }
+  TooltipContentProps
 >(
   (
     {
@@ -256,13 +269,17 @@ ChartTooltipContent.displayName = "ChartTooltip"
 
 const ChartLegend = RechartsPrimitive.Legend
 
+type LegendContentProps = React.ComponentProps<"div"> & {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  payload?: any[]
+  verticalAlign?: string
+  hideIcon?: boolean
+  nameKey?: string
+}
+
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"div"> &
-    Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
-      hideIcon?: boolean
-      nameKey?: string
-    }
+  LegendContentProps
 >(
   (
     { className, hideIcon = false, payload, verticalAlign = "bottom", nameKey },

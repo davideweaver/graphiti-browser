@@ -16,7 +16,7 @@ export function useTasksRunning(): boolean {
     const fetchInitialRunningTasks = async () => {
       try {
         const response = await agentTasksService.getRunningTasks();
-        const executionIds = response.executions.map((exec) => exec.executionId);
+        const executionIds = response.running.map((exec) => exec.executionId);
         setRunningTaskIds(new Set(executionIds));
       } catch (error) {
         console.error("Failed to fetch initial running tasks:", error);

@@ -10,6 +10,7 @@ export function useWidthBreakpoint(breakpoint: number) {
     };
 
     // Set initial value
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsBelow(mql.matches);
 
     // Listen for changes

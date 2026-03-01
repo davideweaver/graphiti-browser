@@ -49,8 +49,8 @@ export function useAgentChat({ agent, onAddMessage, onUpdateMessage }: UseAgentC
         console.log('   Response text length:', result.text?.length || 0);
 
         // Extract memory facts from tool results
-        let memoryFactIds: string[] = [];
-        let memoryFacts: Array<{ uuid: string; fact: string; valid_at: string }> = [];
+        const memoryFactIds: string[] = [];
+        const memoryFacts: Array<{ uuid: string; fact: string; valid_at: string }> = [];
 
         if (result.steps) {
           for (const step of result.steps) {
@@ -58,8 +58,8 @@ export function useAgentChat({ agent, onAddMessage, onUpdateMessage }: UseAgentC
               for (const toolResult of step.toolResults) {
                 console.log('🔍 Processing tool result:', toolResult.toolName);
 
-                // Cast to any to access result property (type definitions incomplete)
-                const tr = toolResult as any;
+                // Cast to access result property (type definitions incomplete)
+                const tr = toolResult as Record<string, unknown>;
 
                 // Check for graphiti_search tool (direct pattern)
                 if (tr.toolName === 'graphiti_search' && tr.result) {
@@ -72,9 +72,9 @@ export function useAgentChat({ agent, onAddMessage, onUpdateMessage }: UseAgentC
                       const facts = parsed.facts;
                       console.log('   Found', facts.length, 'facts');
 
-                      memoryFactIds.push(...facts.map((f: any) => f.uuid));
+                      memoryFactIds.push(...facts.map((f: Record<string, unknown>) => f.uuid as string));
                       memoryFacts.push(
-                        ...facts.map((f: any) => ({
+                        ...facts.map((f: Record<string, unknown>) => ({
                           uuid: f.uuid,
                           fact: f.fact,
                           valid_at: f.valid_at,

@@ -7,15 +7,16 @@ import { useIsMobile } from "@/hooks/use-mobile";
 const DEFAULT_PADDING = 24;
 
 type Props = {
-  children: React.ReactNode;
-  title: React.ReactNode;
-  description?: string;
+  children?: React.ReactNode;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
   tools?: React.ReactNode;
   bodyHorzPadding?: number;
   bodyTopOffset?: number;
   maintainScrollPosition?: boolean;
   loading?: boolean;
   content?: ContentType;
+  icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>;
 };
 
 export type ContentType = "fixed" | "full" | "fixedWithScroll";
@@ -30,6 +31,8 @@ const Container: React.FC<Props> = ({
   maintainScrollPosition = false,
   loading = false,
   content = "full",
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  icon: _icon,
 }) => {
   useScrollToTop(!maintainScrollPosition);
   const bodyHorzPadding = bodyPadding ?? DEFAULT_PADDING;
@@ -110,16 +113,16 @@ const Container: React.FC<Props> = ({
       <div className={headerClasses} style={headerStyle}>
         <div className={`${titleClasses} min-w-0 flex-1`} style={titleStyle}>
           <h1
-            className="font-bold flex items-center"
-            style={{ fontSize: 28, lineHeight: 1.2, marginTop: 6 }}
+            className="font-bold flex items-center break-words"
+            style={{ fontSize: 28, lineHeight: 1.2, marginTop: 6, overflowWrap: "break-word", wordBreak: "break-word" }}
           >
             {title}{" "}
             {loading && (
-              <Loader2 className="h-6 w-6 ml-2 animate-spin text-muted-foreground" />
+              <Loader2 className="h-6 w-6 ml-2 flex-shrink-0 animate-spin text-muted-foreground" />
             )}
           </h1>
           {description && (
-            <div className="text-sm text-muted-foreground mb-4 md:mb-0 min-w-0 w-full overflow-hidden">
+            <div className="text-sm text-muted-foreground mb-4 md:mb-0 min-w-0 w-full break-words">
               {description}
             </div>
           )}

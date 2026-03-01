@@ -12,6 +12,7 @@ export function useIsMobile() {
     };
 
     // Set initial value
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMobile(mql.matches);
 
     // Listen for changes

@@ -109,7 +109,7 @@ export function FactCard({ fact, onOpenDetails, onEdit, onDelete }: FactCardProp
               </div>
             )}
             {isInvalid && (
-              <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" title="Fact was immediately invalidated" />
+              <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" aria-label="Fact was immediately invalidated" />
             )}
             {fact.similarity_score != null && scoreConfig && (
               <>

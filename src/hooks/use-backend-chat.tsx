@@ -85,7 +85,7 @@ export function useBackendChat({ onAddMessage, onUpdateMessage, groupId }: UseBa
 
         // Extract memory facts for badges
         const memoryFacts = data.memoryFacts || [];
-        const memoryFactIds = memoryFacts.map((f: any) => f.uuid);
+        const memoryFactIds = memoryFacts.map((f: Record<string, unknown>) => f.uuid);
 
         // Update assistant message with response and full trace
         onUpdateMessage(assistantMsg.id, {

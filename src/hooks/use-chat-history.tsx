@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { ChatMessage, ChatHistory } from "@/types/chat";
 import { estimateTokens } from "./use-token-counter";
 

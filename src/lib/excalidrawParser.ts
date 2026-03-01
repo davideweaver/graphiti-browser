@@ -37,7 +37,7 @@ export function isExcalidrawMarkdown(content: string): boolean {
  *
  * The Obsidian Excalidraw plugin uses LZ-String compression (not pako/zlib)
  */
-export function parseExcalidrawMarkdown(content: string): any {
+export function parseExcalidrawMarkdown(content: string): Record<string, unknown> {
   // Extract the compressed-json code block
   const compressedJsonMatch = content.match(/```compressed-json\n([\s\S]+?)\n```/);
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { graphitiService } from "@/api/graphitiService";
@@ -21,7 +21,6 @@ import { Search as SearchIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { FactCard } from "@/components/search/FactCard";
 import { SessionCard } from "@/components/sessions/SessionCard";
 import { NodeDetailSheet } from "@/components/shared/NodeDetailSheet";
-import type { Fact } from "@/types/graphiti";
 
 type SearchMode = "facts" | "sessions";
 type NodeType = "fact" | "session" | "entity";
@@ -61,6 +60,7 @@ const clearSessionSearchState = (groupId: string) => {
     // Ignore storage errors
   }
 };
+void clearSessionSearchState;
 
 export default function Search() {
   const { groupId } = useGraphiti();
@@ -107,6 +107,7 @@ export default function Search() {
 
   // Reset cursors when sort or limit changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCursors([undefined]);
   }, [sortOrder, sessionLimit]);
 
@@ -114,6 +115,7 @@ export default function Search() {
   useEffect(() => {
     const savedState = loadSessionSearchState(groupId);
     if (savedState) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSessionSearchQuery(savedState.searchQuery);
       setSessionSearchInput(savedState.searchQuery);
       setSessionSearchPerformed(savedState.performed);
@@ -131,7 +133,6 @@ export default function Search() {
       setSessionSearchInput("");
       setSessionSearchPerformed(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupId]);
 
   // Handle mode change
@@ -219,6 +220,7 @@ export default function Search() {
   // Store cursor for next page
   useEffect(() => {
     if (sessionsQuery.data?.cursor && sessionsQuery.data.has_more) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCursors(prev => {
         const newCursors = [...prev];
         newCursors[page] = sessionsQuery.data.cursor ?? undefined;

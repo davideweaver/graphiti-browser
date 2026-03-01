@@ -23,6 +23,7 @@ import { MarkdownViewer, ExcalidrawViewer } from "@/components/document-viewers"
 import { getFileType, DocumentFileType } from "@/lib/fileTypeUtils";
 import { isExcalidrawMarkdown, parseExcalidrawMarkdown } from "@/lib/excalidrawParser";
 import { useDocumentChanges } from "@/hooks/use-document-changes";
+import type { DocumentChangeEvent, BookmarkChangeEvent } from "@/types/websocket";
 
 export default function DocumentDetail() {
   const params = useParams();
@@ -127,12 +128,12 @@ export default function DocumentDetail() {
 
   // Memoize callbacks to prevent re-subscriptions
   // Note: These must come AFTER the useQuery hook so refetch is available
-  const handleDocumentAdded = useCallback((event) => {
+  const handleDocumentAdded = useCallback((event: DocumentChangeEvent) => {
     toast.success(`Document added: ${event.path}`);
     queryClient.invalidateQueries({ queryKey: ["documents-nav"] });
   }, [queryClient]);
 
-  const handleDocumentUpdated = useCallback((event) => {
+  const handleDocumentUpdated = useCallback((event: DocumentChangeEvent) => {
     if (event.path === documentPath || event.absolutePath.endsWith(documentPath)) {
       if (!isEditing) {
         refetch();
@@ -143,7 +144,7 @@ export default function DocumentDetail() {
     }
   }, [documentPath, isEditing, refetch, queryClient]);
 
-  const handleDocumentRemoved = useCallback((event) => {
+  const handleDocumentRemoved = useCallback((event: DocumentChangeEvent) => {
     if (event.path === documentPath || event.absolutePath.endsWith(documentPath)) {
       toast.error(`This document was deleted: ${event.path}`, {
         description: "Redirecting to documents...",
@@ -158,7 +159,7 @@ export default function DocumentDetail() {
     }
   }, [documentPath, navigate, queryClient]);
 
-  const handleBookmarkChanged = useCallback((event) => {
+  const handleBookmarkChanged = useCallback((event: BookmarkChangeEvent) => {
     queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
 
     if (event.path === documentPath) {
@@ -374,7 +375,7 @@ export default function DocumentDetail() {
       title={fileName || "Document"}
       description={
         <div className="flex flex-col gap-1 min-w-0 w-full">
-          <span className="text-sm text-muted-foreground truncate block">
+          <span className="text-sm text-muted-foreground break-words block">
             {documentPath}
           </span>
           {modifiedDate && (

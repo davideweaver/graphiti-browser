@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { xerroService } from "@/api/xerroService";
@@ -16,6 +16,15 @@ import {
 } from "@/components/ui/select";
 import { ScrollText, Pause, Play } from "lucide-react";
 
+interface CombinedLog {
+  source: string;
+  timestamp?: string;
+  level?: string;
+  message?: string;
+  metadata?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export default function SystemLogs() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isPaused, setIsPaused] = useState(false);
@@ -29,7 +38,7 @@ export default function SystemLogs() {
     queryKey: ["xerro-logs", level === "all" ? undefined : level, limit],
     queryFn: () =>
       xerroService.getLogs({
-        level: level === "all" ? undefined : (level as any),
+        level: level === "all" ? undefined : level,
         limit,
       }),
     refetchInterval: isPaused ? false : 3000, // 3 seconds
@@ -45,7 +54,7 @@ export default function SystemLogs() {
       // For now, just get router logs
       // In a real implementation, you'd combine server logs too
       return llamacppAdminService.getRouterLogs({
-        level: level === "all" ? undefined : (level as any),
+        level: level === "all" ? undefined : level,
         limit,
       });
     },
@@ -56,24 +65,24 @@ export default function SystemLogs() {
   });
 
   // Combine and sort logs
-  const combinedLogs =
+  const combinedLogs: CombinedLog[] =
     service === "all"
       ? [
-          ...(xerroLogs?.logs || []).map((log) => ({ ...log, source: "xerro" })),
+          ...(xerroLogs?.logs || []).map((log) => ({ ...log, source: "xerro" } as CombinedLog)),
           ...(llamacppLogs?.logs || []).map((log) => ({
             ...log,
             source: "llamacpp",
-          })),
+          } as CombinedLog)),
         ].sort(
           (a, b) =>
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()
         )
       : service === "xerro"
-        ? (xerroLogs?.logs || []).map((log) => ({ ...log, source: "xerro" }))
+        ? (xerroLogs?.logs || []).map((log) => ({ ...log, source: "xerro" } as CombinedLog))
         : (llamacppLogs?.logs || []).map((log) => ({
             ...log,
             source: "llamacpp",
-          }));
+          } as CombinedLog));
 
   const isLoading =
     service === "all"
@@ -195,10 +204,10 @@ export default function SystemLogs() {
                 <div key={index} className="p-4 hover:bg-accent/50">
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 min-w-[100px] text-xs text-muted-foreground font-mono">
-                      {formatTimestamp(log.timestamp)}
+                      {log.timestamp ? formatTimestamp(log.timestamp) : "—"}
                     </div>
                     <div className="flex-shrink-0">
-                      <Badge variant={getLevelBadgeVariant(log.level)}>
+                      <Badge variant={getLevelBadgeVariant(log.level || "")}>
                         {log.level}
                       </Badge>
                     </div>

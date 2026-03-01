@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { documentsService } from "@/api/documentsService";
@@ -38,7 +38,7 @@ export default function DocumentSearch() {
     enabled: searchQuery.length > 0,
   });
 
-  const results = data?.results || [];
+  const results = useMemo(() => data?.results || [], [data?.results]);
 
   // Save results to localStorage
   useEffect(() => {

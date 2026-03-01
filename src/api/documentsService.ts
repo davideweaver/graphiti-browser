@@ -149,6 +149,17 @@ class DocumentsService {
     );
   }
 
+  async updateDocument(path: string, content: string): Promise<DocumentViewResponse> {
+    const params = new URLSearchParams({ path });
+    return this.fetch<DocumentViewResponse>(
+      `/api/v1/obsidian/documents?${params}`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ content, preserveFrontmatter: true, autoVectorize: true }),
+      }
+    );
+  }
+
   async deleteDocument(path: string): Promise<void> {
     const params = new URLSearchParams({ path });
     return this.fetch<void>(

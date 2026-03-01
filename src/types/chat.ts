@@ -19,8 +19,8 @@ export interface PreSearchResult {
 
 export interface ToolCall {
   tool: string;
-  input: any;
-  output: any;
+  input: unknown;
+  output: unknown;
   timestamp?: string;
   success?: boolean;
   error?: string;
@@ -29,13 +29,13 @@ export interface ToolCall {
 export interface ToolDecision {
   toolName: string;
   toolCallId: string;
-  input: any;
+  input: unknown;
 }
 
 export interface ToolExecutionResult {
   toolCallId: string;
   toolName: string;
-  output: any;
+  output: unknown;
   error?: string;
   success: boolean;
 }
@@ -67,7 +67,7 @@ export interface AgentTrace {
   llmTurns?: LLMTurn[];
   // Additional data
   reasoning?: string[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ChatMessage {

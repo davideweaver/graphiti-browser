@@ -55,7 +55,7 @@ export default function MemoryInput({ onContentChange }: Props) {
       setFileContent(content);
 
       // Determine source type from file extension
-      let sourceType: "file" = "file";
+      const sourceType = "file" as const;
 
       onContentChange(content, {
         name: file.name,

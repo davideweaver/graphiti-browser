@@ -1,4 +1,4 @@
-import { visit, SKIP } from "unist-util-visit";
+import { visit } from "unist-util-visit";
 import type { Root, Text, Link, Image, Parent } from "mdast";
 
 /**

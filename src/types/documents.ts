@@ -1,6 +1,6 @@
 export interface ObsidianDocument {
   path: string; // "Projects/Feature.md"
-  frontmatter: Record<string, any>;
+  frontmatter: Record<string, unknown>;
   created: string; // ISO timestamp
   modified: string; // ISO timestamp
 }
@@ -16,7 +16,7 @@ export interface DocumentViewResponse {
   path: string;
   absolutePath: string; // Absolute filesystem path on the server
   content: string; // Markdown content
-  frontmatter: Record<string, any>;
+  frontmatter: Record<string, unknown>;
   created: string;
   modified: string;
   totalLines?: number;

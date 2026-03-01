@@ -22,7 +22,6 @@ import {
 import {
   CheckCircle2,
   XCircle,
-  Clock,
   Play,
   Trash2,
   Copy,
@@ -701,7 +700,7 @@ export default function AgentTaskDetail() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {trace.trace.toolCalls.map((call, idx) => {
+                    {trace.trace.toolCalls.map((call) => {
                       const result = trace.trace!.toolResults.find(
                         (r) => r.toolUseId === call.id,
                       );

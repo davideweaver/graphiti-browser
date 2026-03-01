@@ -5,7 +5,6 @@ import { graphitiService } from "@/api/graphitiService";
 import { useGraphiti } from "@/context/GraphitiContext";
 import Container from "@/components/container/Container";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -46,6 +45,7 @@ export default function Entities() {
       updateParams({ search: debouncedSearchInput, page: 1 });
       setCursors([undefined]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearchInput]);
 
   // Sync input with URL on mount

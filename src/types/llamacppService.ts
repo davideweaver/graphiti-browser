@@ -13,7 +13,7 @@ export interface ServerInfo {
   modelPath: string;
   port: number;
   host: string;
-  status: "running" | "stopped" | "crashed" | "starting";
+  status: "running" | "stopped" | "crashed" | "starting" | "error";
   pid?: number;
   threads?: number;
   ctxSize?: number;
@@ -49,10 +49,12 @@ export interface RouterConfig {
   createdAt?: string;
   lastStarted?: string;
   lastStopped?: string;
+  timeout?: number;
+  retries?: number;
 }
 
 export interface RouterStatus {
-  status: "running" | "stopped" | "not_configured";
+  status: "running" | "stopped" | "not_configured" | "error";
   config: RouterConfig | null;
   pid?: number;
   isRunning: boolean;
@@ -60,6 +62,10 @@ export interface RouterStatus {
   createdAt?: string;
   lastStarted?: string;
   lastStopped?: string;
+  error?: string;
+  port?: number;
+  uptime?: number;
+  connectedServers?: number;
 }
 
 export interface SystemStatusResponse {
@@ -97,9 +103,18 @@ export interface RouterControlResponse {
   pid?: number;
 }
 
+export interface LogEntry {
+  timestamp?: string;
+  level?: string;
+  message?: string;
+  metadata?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export interface LogResponse {
   stdout: string;
   stderr: string;
+  logs?: LogEntry[];
 }
 
 export interface LogQueryParams {

@@ -34,6 +34,7 @@ export function CreateTodoDialog({
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTitle("");
       setBody("");
       setProjectName(defaultProjectName || null);

@@ -1,4 +1,5 @@
-import { useState, ReactNode, ReactElement, cloneElement, isValidElement } from "react";
+import React, { useState, cloneElement, isValidElement } from "react";
+import type { ReactNode, ReactElement } from "react";
 import { MoreVertical } from "lucide-react";
 import { ContainerToolButton } from "@/components/container/ContainerToolButton";
 import { MobileBottomDrawer, MobileDrawerButton } from "./MobileBottomDrawer";
@@ -35,12 +36,15 @@ export function MobileOverflowMenu({
   const processChild = (child: ReactNode) => {
     if (!isValidElement(child)) return;
 
+    const childElement = child as ReactElement<Record<string, unknown>>;
+    const childProps = childElement.props;
+
     // Check if it's a ContainerToolButton with data-drawer-label
-    if (child.type === ContainerToolButton && child.props['data-drawer-label']) {
-      const label = child.props['data-drawer-label'];
-      const icon = child.props.children;
-      const onClick = child.props.onClick;
-      const variant = child.props.variant;
+    if (childElement.type === ContainerToolButton && childProps['data-drawer-label']) {
+      const label = childProps['data-drawer-label'] as ReactNode;
+      const icon = childProps.children as ReactNode;
+      const onClick = childProps.onClick as (() => void) | undefined;
+      const variant = childProps.variant as string | undefined;
 
       mobileDrawerItems.push(
         <MobileDrawerButton
@@ -57,22 +61,24 @@ export function MobileOverflowMenu({
       );
     }
     // If it's already a MobileDrawerButton, wrap onClick to add close logic
-    else if (child.type === MobileDrawerButton) {
-      const originalOnClick = child.props.onClick;
-      const wrappedButton = cloneElement(child as ReactElement, {
-        onClick: () => {
-          originalOnClick?.();
-          setTimeout(() => setDrawerOpen(false), 100);
-        },
-        key: mobileDrawerItems.length,
-      });
+    else if (childElement.type === MobileDrawerButton) {
+      const originalOnClick = childProps.onClick as (() => void) | undefined;
+      const wrappedButton = cloneElement(
+        childElement as ReactElement<{ onClick?: () => void; key?: React.Key }>,
+        {
+          onClick: () => {
+            originalOnClick?.();
+            setTimeout(() => setDrawerOpen(false), 100);
+          },
+          key: mobileDrawerItems.length,
+        }
+      );
       mobileDrawerItems.push(wrappedButton);
     }
     // Recursively process children
-    else if (child.props?.children) {
-      const childArray = Array.isArray(child.props.children)
-        ? child.props.children
-        : [child.props.children];
+    else if (childProps.children) {
+      const nestedChildren = childProps.children as ReactNode | ReactNode[];
+      const childArray = Array.isArray(nestedChildren) ? nestedChildren : [nestedChildren];
       childArray.forEach(processChild);
     }
   };

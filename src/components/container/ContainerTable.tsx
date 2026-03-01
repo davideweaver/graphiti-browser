@@ -18,7 +18,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export type Column<T> = {
-  header: string;
+  header: React.ReactNode;
   accessor: keyof T;
   render?: (row: T) => React.ReactNode;
 };

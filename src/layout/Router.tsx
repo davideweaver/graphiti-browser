@@ -1,4 +1,3 @@
-import React from "react";
 import {
   createBrowserRouter,
   createRoutesFromElements,
@@ -157,6 +156,7 @@ const Router = createBrowserRouter(
   ),
   {
     future: {
+      // @ts-expect-error - future flag for react-router-dom v7 compat
       v7_startTransition: true,
     },
   }

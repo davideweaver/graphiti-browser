@@ -109,7 +109,7 @@ export function ProjectTimelineBar({
       } else {
         // Monthly markers for longer periods
         const markers: { date: Date; position: number }[] = [];
-        let currentDate = new Date(projectStart);
+        const currentDate = new Date(projectStart);
         while (currentDate <= displayEnd) {
           const daysSince = differenceInDays(currentDate, projectStart);
           markers.push({

@@ -3,8 +3,6 @@ import type { ChatMessage } from "@/types/chat";
 
 const CHARS_PER_TOKEN = 4;
 const MAX_CONVERSATION_TOKENS = 12000;
-const MAX_MEMORY_TOKENS = 2000;
-const SYSTEM_PROMPT_TOKENS = 500;
 
 export function estimateTokens(text: string): number {
   return Math.ceil(text.length / CHARS_PER_TOKEN);

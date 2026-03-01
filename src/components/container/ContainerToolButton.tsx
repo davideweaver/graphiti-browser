@@ -13,6 +13,8 @@ const containerToolButtonVariants = cva(
           "bg-green-600 text-white hover:bg-green-700 dark:bg-green-600 dark:text-white dark:hover:bg-green-700",
         destructive:
           "bg-[hsl(220_8%_18%)] text-[hsl(210_40%_98%)] hover:bg-destructive hover:text-destructive-foreground dark:bg-[hsl(220_8%_18%)] dark:text-[hsl(210_40%_98%)] dark:hover:bg-destructive dark:hover:text-destructive-foreground",
+        "destructive-solid":
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
           "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
         ghost: "hover:bg-accent hover:text-accent-foreground",

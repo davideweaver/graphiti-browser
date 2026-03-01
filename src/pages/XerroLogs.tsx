@@ -27,7 +27,7 @@ export default function XerroLogs() {
     queryKey: ["xerro-logs", level === "all" ? undefined : level, limit],
     queryFn: () =>
       xerroService.getLogs({
-        level: level === "all" ? undefined : (level as any),
+        level: level === "all" ? undefined : level,
         limit,
       }),
     refetchInterval: isPaused ? false : 3000, // 3 seconds

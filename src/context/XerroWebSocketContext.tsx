@@ -5,7 +5,6 @@ import type { NotificationCreatedEvent, NotificationReadEvent, NotificationsRead
 
 interface XerroWebSocketContextValue {
   isConnected: boolean;
-  socket: Socket | null;
   subscribeToAgentStatus: (callback: (event: AgentStatusEvent) => void) => () => void;
   subscribeToTaskCreated: (callback: (event: TaskConfigEvent) => void) => () => void;
   subscribeToTaskUpdated: (callback: (event: TaskConfigEvent) => void) => () => void;
@@ -358,7 +357,6 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
 
   const value: XerroWebSocketContextValue = {
     isConnected,
-    socket: socketRef.current,
     subscribeToAgentStatus,
     subscribeToTaskCreated,
     subscribeToTaskUpdated,
@@ -382,6 +380,7 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useXerroWebSocketContext() {
   const context = useContext(XerroWebSocketContext);
   if (context === undefined) {

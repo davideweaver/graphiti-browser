@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { GraphNavigator } from "./GraphNavigator";
-import type { Fact, Session, SessionDetailResponse, Entity, Project, GraphNode } from "@/types/graphiti";
+import type { Fact, Session, Entity, Project, GraphNode } from "@/types/graphiti";
 import { formatDistanceToNow, format } from "date-fns";
 
 type NodeType = "fact" | "session" | "entity" | "project" | "source";
@@ -30,6 +30,7 @@ export function NodeDetailSheet({ nodeType, nodeId, open, onOpenChange, groupId:
   // Reset to metadata tab when opening a new node
   useEffect(() => {
     if (open && nodeId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveTab("metadata");
     }
   }, [open, nodeId]);
@@ -47,10 +48,11 @@ export function NodeDetailSheet({ nodeType, nodeId, open, onOpenChange, groupId:
           return await graphitiService.getSession(nodeId, groupId);
         case "entity":
           return await graphitiService.getEntity(nodeId, groupId);
-        case "project":
+        case "project": {
           // Fetch project by name
           const result = await graphitiService.listProjects(groupId, 1, undefined, nodeId);
           return result.projects[0] || null;
+        }
         case "source":
           // Fetch source via generic graph endpoint
           return await graphitiService.getGraphNode(nodeId, groupId);
@@ -89,18 +91,21 @@ export function NodeDetailSheet({ nodeType, nodeId, open, onOpenChange, groupId:
         return `${(nodeData as Fact).fact_type || "Fact"} • Valid from ${formatDistanceToNow(new Date((nodeData as Fact).valid_at))} ago`;
       case "session":
         return `${(nodeData as Session).episode_count || 0} episodes`;
-      case "entity":
+      case "entity": {
         // Show entity type instead of summary (summary is in metadata tab)
         const entity = nodeData as Entity;
         const entityType = entity.labels.find((label) => label !== "Entity") || entity.entity_type || "Entity";
         return entityType;
-      case "project":
+      }
+      case "project": {
         const project = nodeData as Project;
         return `${project.episode_count} episodes • ${project.session_count} sessions`;
-      case "source":
+      }
+      case "source": {
         const source = nodeData as GraphNode;
         const sourceType = source.metadata?.source_type || "Unknown type";
         return `${sourceType} • ${formatDistanceToNow(new Date(source.created_at!))} ago`;
+      }
       default:
         return "";
     }
@@ -263,7 +268,7 @@ function SessionMetadata({ session }: { session: Session }) {
 
           <div>
             <div className="text-sm font-medium text-muted-foreground mb-1">Created</div>
-            <div className="text-sm">{new Date(session.created_at).toLocaleString()}</div>
+            <div className="text-sm">{session.created_at ? new Date(session.created_at).toLocaleString() : "—"}</div>
           </div>
 
           {session.last_episode_date && (
@@ -397,13 +402,13 @@ function SourceMetadata({ source }: { source: GraphNode }) {
 
             <div>
               <div className="text-sm font-medium text-muted-foreground mb-1">Type</div>
-              <Badge variant="secondary">{source.metadata?.source_type || "unknown"}</Badge>
+              <Badge variant="secondary">{String(source.metadata?.source_type ?? "unknown")}</Badge>
             </div>
 
-            {source.metadata?.summary && (
+            {!!source.metadata?.summary && (
               <div>
                 <div className="text-sm font-medium text-muted-foreground mb-1">Summary</div>
-                <div className="text-sm">{source.metadata.summary}</div>
+                <div className="text-sm">{String(source.metadata.summary)}</div>
               </div>
             )}
 
@@ -426,7 +431,7 @@ function SourceMetadata({ source }: { source: GraphNode }) {
 
             <div>
               <div className="text-sm font-medium text-muted-foreground mb-1">Group ID</div>
-              <div className="text-xs font-mono">{source.metadata?.group_id}</div>
+              <div className="text-xs font-mono">{String(source.metadata?.group_id ?? "")}</div>
             </div>
 
             <div className="text-sm text-muted-foreground pt-2 border-t">

@@ -8,34 +8,35 @@ import { format, parseISO } from "date-fns";
 
 // Inline-only components so line-clamp works on the container
 const mdComponents = {
-  p: ({ children }: { children: React.ReactNode }) => <span>{children} </span>,
-  strong: ({ children }: { children: React.ReactNode }) => (
+  p: ({ children }: { children?: React.ReactNode }) => <span>{children} </span>,
+  strong: ({ children }: { children?: React.ReactNode }) => (
     <strong>{children}</strong>
   ),
-  em: ({ children }: { children: React.ReactNode }) => <em>{children}</em>,
-  code: ({ children }: { children: React.ReactNode }) => (
+  em: ({ children }: { children?: React.ReactNode }) => <em>{children}</em>,
+  code: ({ children }: { children?: React.ReactNode }) => (
     <code className="text-xs bg-white/10 rounded px-0.5">{children}</code>
   ),
   // Collapse block elements to inline
-  h1: ({ children }: { children: React.ReactNode }) => (
+  h1: ({ children }: { children?: React.ReactNode }) => (
     <span className="font-bold">{children} </span>
   ),
-  h2: ({ children }: { children: React.ReactNode }) => (
+  h2: ({ children }: { children?: React.ReactNode }) => (
     <span className="font-bold">{children} </span>
   ),
-  h3: ({ children }: { children: React.ReactNode }) => (
+  h3: ({ children }: { children?: React.ReactNode }) => (
     <span className="font-bold">{children} </span>
   ),
-  ul: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
-  ol: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
-  li: ({ children }: { children: React.ReactNode }) => (
+  ul: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
+  ol: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
+  li: ({ children }: { children?: React.ReactNode }) => (
     <span>• {children} </span>
   ),
-  blockquote: ({ children }: { children: React.ReactNode }) => (
+  blockquote: ({ children }: { children?: React.ReactNode }) => (
     <span className="italic opacity-75">{children}</span>
   ),
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function formatScheduledDate(dateStr: string): string {
   try {
     const date = parseISO(dateStr);
@@ -72,6 +73,7 @@ export function TodoRow({
 
   // Sync with server state when it changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOptimisticCompleted(todo.completed);
   }, [todo.completed]);
 

@@ -48,13 +48,13 @@ export function parseEpisodeMessages(content: string): ParsedMessage[] {
     const parsed = JSON.parse(content);
 
     if (Array.isArray(parsed)) {
-      return parsed.map((msg: any) => {
-        const role = msg.role || msg.name || "Unknown";
+      return parsed.map((msg: Record<string, unknown>) => {
+        const role = String(msg.role || msg.name || "Unknown");
         const isUser = msg.role_type === "user" || role.toLowerCase().includes("user");
 
         return {
           role,
-          content: msg.content || "",
+          content: String(msg.content || ""),
           isUser,
         };
       });

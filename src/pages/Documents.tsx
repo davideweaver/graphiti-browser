@@ -1,10 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import { documentsService } from "@/api/documentsService";
 import Container from "@/components/container/Container";
-import { Button } from "@/components/ui/button";
-import { Folder, FileText, Clock } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
+import { FileText } from "lucide-react";
 
 export default function Documents() {
   return (

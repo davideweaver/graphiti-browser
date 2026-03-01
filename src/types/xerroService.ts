@@ -25,11 +25,15 @@ export interface LogEntry {
   level?: string;
   msg?: string;
   service?: string;
+  timestamp?: string;
+  message?: string;
+  metadata?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
 export interface LogQueryParams {
   service?: string;
+  level?: string;
   limit?: number;
   since?: string; // ISO datetime
 }

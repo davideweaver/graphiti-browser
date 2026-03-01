@@ -23,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { getPinnedGraphs, pinGraph, unpinGraph, isGraphPinned } from "@/lib/graphStorage";
+import { getPinnedGraphs, pinGraph, unpinGraph } from "@/lib/graphStorage";
 import DestructiveConfirmationDialog from "@/components/dialogs/DestructiveConfirmationDialog";
 
 type Props = {

@@ -14,7 +14,7 @@ class WebSocketService {
   private listeners = new Map<string, Set<EventHandler>>();
   private connectionState: ConnectionState = "disconnected";
   private stateListeners = new Set<StateChangeHandler>();
-  private reconnectTimer: NodeJS.Timeout | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private lastConnectTime = 0;
   private currentUrl = "";
   private currentGroupId = "";

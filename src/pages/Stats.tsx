@@ -18,7 +18,6 @@ import {
   FolderKanban,
 } from "lucide-react";
 import { format } from "date-fns";
-import type { Episode } from "@/types/graphiti";
 import PeriodSelector from "@/components/dashboard/PeriodSelector";
 import SessionActivityChart from "@/components/dashboard/SessionActivityChart";
 

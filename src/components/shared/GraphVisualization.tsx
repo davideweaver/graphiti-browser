@@ -10,7 +10,7 @@ export interface ForceGraphNode {
   isCentered: boolean;
   size: number;
   color: string;
-  apiNode: any; // Generic - will be GraphNode in practice
+  apiNode: Record<string, unknown>; // Generic - will be GraphNode in practice
 }
 
 export interface ForceGraphLink {
@@ -19,7 +19,7 @@ export interface ForceGraphLink {
   label: string;
   type: string;
   color: string;
-  apiEdge: any; // Generic - will be GraphEdge in practice
+  apiEdge: Record<string, unknown>; // Generic - will be GraphEdge in practice
 }
 
 interface GraphVisualizationProps {
@@ -54,7 +54,7 @@ export function GraphVisualization({
   // Preserve fixed positions across renders
   useEffect(() => {
     // Reapply fixed positions to nodes that were manually positioned
-    nodes.forEach((node: any) => {
+    nodes.forEach((node: ForceGraphNode & { fx?: number; fy?: number }) => {
       const fixed = fixedPositions.current.get(node.id);
       if (fixed) {
         node.fx = fixed.x;
@@ -83,11 +83,13 @@ export function GraphVisualization({
     }
 
     // Collision force - prevent overlap
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     fg.d3Force(
       "collision",
       d3
         .forceCollide()
-        .radius((node: any) => node.size + 15)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .radius((node: any) => (node.size as number) + 15)
         .strength(1.0) // Strong to prevent overlap
     );
 
@@ -100,10 +102,12 @@ export function GraphVisualization({
         "radial",
         d3
           .forceRadial(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (node: any) => (node.id === centeredNodeId ? 0 : 120), // Centered at 0, others at 120px radius
             width / 2,
             height / 2
           )
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .strength((node: any) => (node.id === centeredNodeId ? 1.0 : 0.8))
       ); // Strong for both center and periphery
     }
@@ -130,7 +134,7 @@ export function GraphVisualization({
 
   // Custom node rendering with selection state and always-visible labels
   const nodeCanvasObject = useCallback(
-    (node: any, ctx: CanvasRenderingContext2D) => {
+    (node: ForceGraphNode & { x: number; y: number }, ctx: CanvasRenderingContext2D) => {
       const { x, y, size, color, label, isCentered, id } = node;
       const isSelected = id === selectedNodeId;
 
@@ -175,7 +179,7 @@ export function GraphVisualization({
 
   // Custom link rendering with selection state and always-visible labels
   const linkCanvasObject = useCallback(
-    (link: any, ctx: CanvasRenderingContext2D) => {
+    (link: ForceGraphLink & { source: { x: number; y: number }; target: { x: number; y: number }; apiEdge?: { uuid?: string } }, ctx: CanvasRenderingContext2D) => {
       const { source, target, color, label, apiEdge } = link;
       const isSelected = apiEdge?.uuid === selectedEdgeId;
 
@@ -245,6 +249,7 @@ export function GraphVisualization({
 
   // Wrapper functions to handle type casting
   const handleNodeClick = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (node: any) => {
       if (onNodeClick) {
         onNodeClick(node as ForceGraphNode);
@@ -254,6 +259,7 @@ export function GraphVisualization({
   );
 
   const handleLinkClick = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (link: any) => {
       if (onLinkClick) {
         onLinkClick(link as ForceGraphLink);
@@ -263,7 +269,7 @@ export function GraphVisualization({
   );
 
   // Fix node position after dragging and save to ref
-  const handleNodeDragEnd = useCallback((node: any) => {
+  const handleNodeDragEnd = useCallback((node: ForceGraphNode & { fx?: number; fy?: number; x: number; y: number }) => {
     node.fx = node.x;
     node.fy = node.y;
     // Save position to ref so it persists across re-renders
@@ -272,7 +278,7 @@ export function GraphVisualization({
 
   // Paint full circle area for easier node clicking
   const nodePointerAreaPaint = useCallback(
-    (node: any, color: string, ctx: CanvasRenderingContext2D) => {
+    (node: ForceGraphNode & { x: number; y: number }, color: string, ctx: CanvasRenderingContext2D) => {
       const { x, y, size } = node;
 
       // Draw full node circle for hit detection
@@ -286,7 +292,7 @@ export function GraphVisualization({
 
   // Paint wider invisible area for easier edge clicking
   const linkPointerAreaPaint = useCallback(
-    (link: any, color: string, ctx: CanvasRenderingContext2D) => {
+    (link: ForceGraphLink & { source: { x: number; y: number }; target: { x: number; y: number } }, color: string, ctx: CanvasRenderingContext2D) => {
       const { source, target } = link;
 
       // Draw thicker invisible line for easier clicking
@@ -311,8 +317,10 @@ export function GraphVisualization({
 
   return (
     <ForceGraph2D
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ref={fgRef as any}
-      graphData={{ nodes: nodes as any, links: links as any }}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      graphData={{ nodes: nodes as any[], links: links as any[] }}
       width={width}
       height={height}
       nodeId="id"

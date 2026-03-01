@@ -29,9 +29,9 @@ export default function ExtractionResults({ sourceUuid, groupId }: Props) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["source-extraction", sourceUuid, groupId],
     queryFn: () => graphitiService.getSourceExtractionResults(sourceUuid, groupId),
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Stop polling if processing is complete
-      return data?.processing_complete ? false : 2000;
+      return query.state.data?.processing_complete ? false : 2000;
     },
     retry: 3,
   });
@@ -162,7 +162,7 @@ export default function ExtractionResults({ sourceUuid, groupId }: Props) {
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="text-xs">
-                {source.attributes?.source_type || "unknown"}
+                {String(source.attributes?.source_type || "unknown")}
               </Badge>
               {source.created_at && (
                 <span className="text-xs text-muted-foreground whitespace-nowrap">

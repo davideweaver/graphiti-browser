@@ -1,6 +1,6 @@
 import { Excalidraw } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 import { isExcalidrawMarkdown, parseExcalidrawMarkdown } from "@/lib/excalidrawParser";
 
@@ -10,13 +10,14 @@ interface ExcalidrawViewerProps {
 }
 
 export function ExcalidrawViewer({ content, onError }: ExcalidrawViewerProps) {
-  const [initialData, setInitialData] = useState<any>(null);
+  const [initialData, setInitialData] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const keyRef = useRef(0);
+  const [mountKey, setMountKey] = useState(0);
 
   useEffect(() => {
     // Increment key to force Excalidraw to re-mount with new data
-    keyRef.current += 1;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMountKey(prev => prev + 1);
 
     try {
       let parsed;
@@ -63,7 +64,7 @@ export function ExcalidrawViewer({ content, onError }: ExcalidrawViewerProps) {
   return (
     <div className="h-[calc(100vh-280px)] min-h-[500px] border rounded-lg overflow-hidden">
       <Excalidraw
-        key={keyRef.current} // Force re-mount when content changes
+        key={mountKey} // Force re-mount when content changes
         initialData={initialData}
         viewModeEnabled={true}
         zenModeEnabled={false}

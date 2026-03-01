@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type React from "react";
 import { cn } from "@/lib/utils";
 
 interface SecondaryNavItemTitleProps {
@@ -21,14 +22,15 @@ export function SecondaryNavItemTitle({ children, className }: SecondaryNavItemT
 interface SecondaryNavItemSubtitleProps {
   children: ReactNode;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 /**
  * Standard subtitle/metadata for secondary nav items.
  */
-export function SecondaryNavItemSubtitle({ children, className }: SecondaryNavItemSubtitleProps): ReactNode {
+export function SecondaryNavItemSubtitle({ children, className, style }: SecondaryNavItemSubtitleProps): ReactNode {
   return (
-    <div className={cn("text-xs text-muted-foreground", className)}>
+    <div className={cn("text-xs text-muted-foreground", className)} style={style}>
       {children}
     </div>
   );

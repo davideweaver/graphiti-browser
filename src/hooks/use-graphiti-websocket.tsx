@@ -17,7 +17,7 @@ import type {
   ProjectDeletedEvent,
   QueueStatusEvent,
 } from "@/types/websocket";
-import type { Entity, Episode } from "@/types/graphiti";
+import type { Episode } from "@/types/graphiti";
 
 // Derive WebSocket URL from Graphiti server URL
 const graphitiServer = import.meta.env.VITE_GRAPHITI_SERVER || "http://localhost:8000";
@@ -65,7 +65,7 @@ export function useGraphitiWebSocket(): UseGraphitiWebSocketReturn {
         handleEdgeCreated(typedEvent, groupId, queryClient);
       }),
       websocketService.addEventListener("edge.updated", (event) => {
-        const typedEvent = event as any; // edge.updated event
+        const typedEvent = event as EdgeCreatedEvent; // edge.updated event
         handleEdgeUpdated(typedEvent, groupId, queryClient);
       }),
       websocketService.addEventListener("edge.deleted", (event) => {
@@ -259,7 +259,7 @@ function handleEdgeCreated(
  * Strategy: Invalidate all queries that might display this fact
  */
 function handleEdgeUpdated(
-  event: any,
+  event: EdgeCreatedEvent,
   groupId: string,
   queryClient: ReturnType<typeof useQueryClient>
 ): void {
@@ -447,12 +447,13 @@ function handleSessionDeleted(
   queryCache.getAll().forEach(query => {
     const key = query.queryKey;
     if ((key[0] === "sessions" || key[0] === "project-sessions") && key[1] === groupId) {
-      queryClient.setQueryData(key, (oldData: any) => {
-        if (!oldData?.sessions) return oldData;
-        const filtered = oldData.sessions.filter(
-          (s: any) => s.session_id !== session_id
+      queryClient.setQueryData(key, (oldData: Record<string, unknown>) => {
+        if (!Array.isArray(oldData?.sessions)) return oldData;
+        const sessions = oldData.sessions as Record<string, unknown>[];
+        const filtered = sessions.filter(
+          (s) => s.session_id !== session_id
         );
-        if (filtered.length !== oldData.sessions.length) {
+        if (filtered.length !== sessions.length) {
           return { ...oldData, sessions: filtered };
         }
         return oldData;

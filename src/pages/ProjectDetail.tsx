@@ -17,7 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { Info, Trash2, Loader2, AlertTriangle, Plus } from "lucide-react";
+import { Info, Trash2, Plus } from "lucide-react";
 import { FactCard } from "@/components/search/FactCard";
 import { SessionRow } from "@/components/episodes/SessionRow";
 import { ProjectTimelineBar } from "@/components/episodes/ProjectTimelineBar";
@@ -106,11 +106,13 @@ export default function ProjectDetail() {
       const previousTodos = queryClient.getQueryData(["project-todos", projectName]);
 
       // Optimistically update to the new value
-      queryClient.setQueryData(["project-todos", projectName], (old: any) => {
+      queryClient.setQueryData(["project-todos", projectName], (old: Record<string, unknown>) => {
         if (!old) return old;
+        const todos = old.todos as Todo[] | undefined;
+        if (!todos) return old;
         return {
           ...old,
-          todos: old.todos.map((todo: Todo) =>
+          todos: todos.map((todo: Todo) =>
             todo.id === id ? { ...todo, completed } : todo
           ),
         };
@@ -141,7 +143,8 @@ export default function ProjectDetail() {
   });
 
   const [editTodo, setEditTodo] = useState<Todo | null>(null);
-  const [hideCompleted, setHideCompleted] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [hideCompleted, _setHideCompleted] = useState(true);
   const [hidingTodoId, setHidingTodoId] = useState<string | null>(null);
 
   const handleTodoSave = async (id: string, input: UpdateTodoInput) => {

@@ -152,7 +152,7 @@ class GraphitiService {
     projectName: string | null;
     sourceName: string;
     sourceType: string;
-    sourceMetadata: Record<string, any>;
+    sourceMetadata: Record<string, unknown>;
     groupId: string;
   }): Promise<AddContentResponse> {
     const response = await this.fetch<AddContentResponse>("/content", {

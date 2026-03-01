@@ -212,7 +212,7 @@ export function TaskExecutionSheet({
                         <CardTitle className="text-sm">Tool Calls ({trace.toolCalls.length})</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        {trace.toolCalls.map((call, idx) => {
+                        {trace.toolCalls.map((call) => {
                           const result = trace.toolResults.find(r => r.toolUseId === call.id);
                           return (
                             <div key={call.id} className="border-l-2 border-muted pl-4 space-y-2">
