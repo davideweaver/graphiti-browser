@@ -86,10 +86,16 @@ export function MobileOverflowMenu({
   const childArray = Array.isArray(children) ? children : [children];
   childArray.forEach(processChild);
 
+  // Desktop: filter out MobileDrawerButton elements (mobile-only, only belong in the drawer)
+  const desktopChildren = childArray.filter(child => {
+    if (!isValidElement(child)) return true;
+    return (child as ReactElement).type !== MobileDrawerButton;
+  });
+
   return (
     <>
-      {/* Desktop: Show children inline */}
-      <div className="hidden md:contents">{children}</div>
+      {/* Desktop: Show children inline, excluding mobile-only MobileDrawerButton items */}
+      <div className="hidden md:contents">{desktopChildren}</div>
 
       {/* Mobile: Show overflow button */}
       <div className="md:hidden">
