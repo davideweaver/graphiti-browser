@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { format } from "date-fns";
+import { CalendarIcon, X } from "lucide-react";
 import type { CreateTodoInput } from "@/types/todos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { BaseDialog } from "@/components/BaseDialog";
 import ProjectSelector from "@/components/memory/ProjectSelector";
 import { useGraphiti } from "@/context/GraphitiContext";
-import { X } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 export interface CreateTodoDialogProps {
   open: boolean;
@@ -30,7 +34,8 @@ export function CreateTodoDialog({
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [projectName, setProjectName] = useState<string | null>(defaultProjectName || null);
-  const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -38,7 +43,8 @@ export function CreateTodoDialog({
       setTitle("");
       setBody("");
       setProjectName(defaultProjectName || null);
-      setScheduledDate("");
+      setScheduledDate(undefined);
+      setCalendarOpen(false);
     }
   }, [open, defaultProjectName]);
 
@@ -48,8 +54,10 @@ export function CreateTodoDialog({
     const input: CreateTodoInput = { title: title.trim() };
     if (body.trim()) input.body = body.trim();
     if (projectName) input.projectName = projectName;
-    if (scheduledDate)
-      input.scheduledDate = new Date(scheduledDate + "T00:00:00").toISOString();
+    if (scheduledDate) {
+      const d = new Date(scheduledDate.getFullYear(), scheduledDate.getMonth(), scheduledDate.getDate());
+      input.scheduledDate = d.toISOString();
+    }
     onSubmit(input);
   };
 
@@ -96,7 +104,7 @@ export function CreateTodoDialog({
             placeholder="Add any additional notes or details..."
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            className="min-h-[100px] resize-y text-base"
+            className="min-h-[100px] resize-y text-lg md:text-sm"
           />
         </div>
         <div className="space-y-4">
@@ -107,29 +115,46 @@ export function CreateTodoDialog({
               onChange={setProjectName}
               groupId={groupId}
               disabled={projectNameDisabled}
+              className="text-lg md:text-sm bg-input"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="todo-date" className="text-base">Scheduled date</Label>
-            <div className="relative">
-              <Input
-                id="todo-date"
-                type="date"
-                value={scheduledDate}
-                onChange={(e) => setScheduledDate(e.target.value)}
-                className="h-10 text-base pr-10"
-              />
-              {scheduledDate && (
+            <Label className="text-base">Scheduled date</Label>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
                 <button
                   type="button"
-                  onClick={() => setScheduledDate("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center rounded hover:bg-muted-foreground/20 transition-colors"
-                  aria-label="Clear date"
+                  className={cn(
+                    "flex h-10 w-full items-center rounded-md border border-input bg-input px-3 py-2 font-sans text-lg md:text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1",
+                    !scheduledDate && "text-muted-foreground"
+                  )}
                 >
-                  <X className="h-4 w-4 text-muted-foreground" />
+                  <span className="flex-1 text-left">
+                    {scheduledDate ? format(scheduledDate, "MMMM d, yyyy") : "Pick a date"}
+                  </span>
+                  {scheduledDate ? (
+                    <span
+                      role="button"
+                      aria-label="Clear date"
+                      onClick={(e) => { e.stopPropagation(); setScheduledDate(undefined); }}
+                      className="flex h-6 w-6 items-center justify-center rounded hover:bg-muted-foreground/20 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </span>
+                  ) : (
+                    <CalendarIcon className="h-4 w-4 opacity-50" />
+                  )}
                 </button>
-              )}
-            </div>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 z-[1010]" align="start">
+                <Calendar
+                  mode="single"
+                  selected={scheduledDate}
+                  onSelect={(date) => { setScheduledDate(date); setCalendarOpen(false); }}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       </form>

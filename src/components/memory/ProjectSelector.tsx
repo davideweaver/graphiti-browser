@@ -14,9 +14,10 @@ interface Props {
   onChange: (projectName: string | null) => void;
   groupId: string;
   disabled?: boolean;
+  className?: string;
 }
 
-export default function ProjectSelector({ value, onChange, groupId, disabled }: Props) {
+export default function ProjectSelector({ value, onChange, groupId, disabled, className }: Props) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["projects", groupId],
     queryFn: () => graphitiService.listProjects(groupId, 100),
@@ -43,13 +44,11 @@ export default function ProjectSelector({ value, onChange, groupId, disabled }: 
       onValueChange={(val) => onChange(val === "__no_project__" ? null : val)}
       disabled={disabled}
     >
-      <SelectTrigger disabled={disabled}>
-        <SelectValue placeholder="Select a project" />
+      <SelectTrigger disabled={disabled} className={className}>
+        <SelectValue />
       </SelectTrigger>
       <SelectContent className="z-[1005]">
-        <SelectItem value="__no_project__">
-          <span className="text-muted-foreground">No project (General)</span>
-        </SelectItem>
+        <SelectItem value="__no_project__">No project</SelectItem>
         {projects.map((project) => (
           <SelectItem key={project.uuid} value={project.name}>
             {project.name}
