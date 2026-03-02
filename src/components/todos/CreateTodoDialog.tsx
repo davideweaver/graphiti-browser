@@ -104,7 +104,7 @@ export function CreateTodoDialog({
             placeholder="Add any additional notes or details..."
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            className="min-h-[100px] resize-y text-lg md:text-sm"
+            className="min-h-[100px] resize-y text-lg"
           />
         </div>
         <div className="space-y-4">

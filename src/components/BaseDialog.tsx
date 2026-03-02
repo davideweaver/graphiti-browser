@@ -20,7 +20,9 @@ export function BaseDialog({
   children,
 }: BaseDialogProps) {
   const headerHeight = 64;
+  const contentRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const footerRef = useRef<HTMLDivElement | null>(null);
   const prevBodyStyle = useRef<{
     overflow?: string;
     position?: string;
@@ -28,70 +30,48 @@ export function BaseDialog({
   } | null>(null);
   const savedScrollY = useRef<number>(0);
 
-  // compute keyboard height via visualViewport (clamped) and set --keyboard-offset
+  // Pin the dialog to the visual viewport.
+  //
+  // On iOS, position:fixed elements are anchored to the layout viewport, not the
+  // visual viewport. When the keyboard appears and iOS pans the visual viewport to
+  // keep a focused input visible, fixed elements shift visually off-screen.
+  //
+  // The fix: directly set the dialog content's `top` and `height` to match the
+  // visual viewport on every resize/scroll event. The inner layout is a simple
+  // flex column — header and footer are flex children that naturally stay at the
+  // visible edges; the scroll area fills whatever space remains.
+  //
+  // visualViewport.resize fires when the keyboard appears/disappears.
+  // visualViewport.scroll fires when iOS pans the viewport (offsetTop changes).
   useEffect(() => {
-    const viewport = window.visualViewport;
-    let raf = 0;
+    if (!open) return;
+    const vv = window.visualViewport;
 
-    function update() {
-      if (!viewport) {
-        document.documentElement.style.setProperty("--keyboard-offset", "0px");
-        return;
+    function layout() {
+      const el = contentRef.current;
+      if (!el) return;
+      const top = vv ? Math.round(vv.offsetTop) : 0;
+      const height = vv ? Math.round(vv.height) : window.innerHeight;
+      el.style.top = `${top}px`;
+      el.style.height = `${height}px`;
+
+      // Apply negative margin only when the keyboard is visible (visual viewport
+      // is meaningfully shorter than the layout viewport).
+      const keyboardVisible = vv ? window.innerHeight - vv.height > 150 : false;
+      if (footerRef.current) {
+        footerRef.current.style.marginBottom = keyboardVisible ? "-40px" : "0px";
       }
-      // keyboard height = difference between layout viewport (window.innerHeight) and visual viewport height
-      const raw = Math.max(0, window.innerHeight - viewport.height);
-      // clamp so garbage/floaty values don't blow things up
-      const clamped = Math.min(raw, Math.floor(window.innerHeight / 2));
-      document.documentElement.style.setProperty(
-        "--keyboard-offset",
-        `${clamped}px`
-      );
     }
 
-    function schedule() {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(update);
-    }
+    vv?.addEventListener("resize", layout);
+    vv?.addEventListener("scroll", layout);
+    window.addEventListener("orientationchange", layout);
+    layout();
 
-    viewport?.addEventListener("resize", schedule);
-    viewport?.addEventListener("scroll", schedule); // some browsers change offset on scroll
-    window.addEventListener("resize", schedule);
-    window.addEventListener("orientationchange", schedule);
-
-    // clear keyboard offset when focus leaves inputs (keyboard closed)
-    function onFocusOut() {
-      setTimeout(() => {
-        const a = document.activeElement;
-        if (
-          !(
-            a &&
-            (a.tagName === "INPUT" ||
-              a.tagName === "TEXTAREA" ||
-              (a as HTMLElement).isContentEditable)
-          )
-        ) {
-          document.documentElement.style.setProperty(
-            "--keyboard-offset",
-            "0px"
-          );
-        } else {
-          schedule();
-        }
-      }, 50);
-    }
-    window.addEventListener("focusout", onFocusOut);
-    window.addEventListener("focusin", schedule);
-
-    update();
     return () => {
-      cancelAnimationFrame(raf);
-      viewport?.removeEventListener("resize", schedule);
-      viewport?.removeEventListener("scroll", schedule);
-      window.removeEventListener("resize", schedule);
-      window.removeEventListener("orientationchange", schedule);
-      window.removeEventListener("focusout", onFocusOut);
-      window.removeEventListener("focusin", schedule);
-      document.documentElement.style.removeProperty("--keyboard-offset");
+      vv?.removeEventListener("resize", layout);
+      vv?.removeEventListener("scroll", layout);
+      window.removeEventListener("orientationchange", layout);
     };
   }, [open]);
 
@@ -147,17 +127,9 @@ export function BaseDialog({
       const scroller = scrollRef.current;
       if (!scroller) return;
 
-      // small delay so browser has updated visualViewport
+      // wait for keyboard to fully settle before adjusting scroll
       setTimeout(() => {
-        // scroll the input into view within the scroller
-        // block: 'nearest' avoids moving header
         try {
-          (target as HTMLElement).scrollIntoView({
-            block: "nearest",
-            inline: "nearest",
-            behavior: "auto",
-          });
-          // as a fallback, ensure scroller scrollTop ensures target is visible
           const rect = target.getBoundingClientRect();
           const scRect = scroller.getBoundingClientRect();
           if (rect.bottom > scRect.bottom) {
@@ -168,7 +140,7 @@ export function BaseDialog({
         } catch {
           /* ignore */
         }
-      }, 50);
+      }, 150);
     }
 
     window.addEventListener("focusin", onFocusIn, true);
@@ -177,81 +149,76 @@ export function BaseDialog({
 
   if (!open) return null;
 
-  // CSS helper — we use CSS vars: --keyboard-offset
-  // layout:
-  // - ReactDialog.Content fills viewport (fixed)
-  // - header fixed top: 0
-  // - footer fixed bottom: calc(env(safe-area-inset-bottom) + var(--keyboard-offset))
-  // - scroll area absolute between header and footer and scrolls with webkit momentum
   return (
     <ReactDialog.Root open={open} onOpenChange={onOpenChange}>
       <ReactDialog.Portal>
         <ReactDialog.Overlay className="fixed inset-0 z-[1000] bg-black/50" />
 
+        {/*
+         * ReactDialog.Content covers the full screen (inset-0) so its bg-background
+         * fills the gap behind the keyboard. The inner wrapper is sized to the visual
+         * viewport via JS (top/height) so the flex layout stays within the visible area.
+         */}
         <ReactDialog.Content
           aria-label="dialog-content"
-          className="fixed inset-0 z-[1001] bg-background max-w-4xl mx-auto"
+          className="fixed inset-0 z-[1001] bg-background max-w-4xl mx-auto overflow-hidden"
         >
-          {/* header: fixed so it never scrolls away */}
           <div
-            aria-label="dialog-header"
-            className="bg-background max-w-4xl mx-auto"
-            style={{
-              position: "fixed",
-              left: 0,
-              right: 0,
-              top: "env(safe-area-inset-top)",
-              height: `${headerHeight}px`,
-              zIndex: 1002,
-              padding: "12px 16px 24px",
-            }}
+            ref={contentRef}
+            className="absolute inset-x-0 flex flex-col overflow-hidden"
+            style={{ top: 0, height: "100dvh" }}
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <ReactDialog.Title className="text-2xl font-bold">
-                  {title}
-                </ReactDialog.Title>
+            {/* header */}
+            <div
+              aria-label="dialog-header"
+              className="bg-background shrink-0"
+              style={{
+                height: `calc(${headerHeight}px + env(safe-area-inset-top))`,
+                paddingTop: `calc(12px + env(safe-area-inset-top))`,
+                paddingLeft: "16px",
+                paddingRight: "16px",
+                paddingBottom: "24px",
+                zIndex: 1002,
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <ReactDialog.Title className="text-2xl font-bold">
+                    {title}
+                  </ReactDialog.Title>
+                </div>
+                <ReactDialog.Close className="rounded hover:bg-muted-foreground/30">
+                  <X className="h-8 w-8" />
+                </ReactDialog.Close>
               </div>
-              <ReactDialog.Close className="rounded hover:bg-muted-foreground/30">
-                <X className="h-8 w-8" />
-              </ReactDialog.Close>
             </div>
-          </div>
 
-          {/* scroll area: positioned between header & footer */}
-          <div
-            ref={scrollRef}
-            aria-label="dialog-scroll"
-            style={{
-              position: "absolute",
-              top: `calc(${headerHeight}px + env(safe-area-inset-top))`,
-              left: 0,
-              right: 0,
-              bottom: `calc((${footerHeight}px + env(safe-area-inset-bottom) + var(--keyboard-offset, 0px)))`,
-              overflowY: "auto",
-              WebkitOverflowScrolling: "touch",
-              padding: "12px 16px",
-            }}
-          >
-            {children}
-          </div>
+            {/* scroll area: fills remaining space between header and footer */}
+            <div
+              ref={scrollRef}
+              aria-label="dialog-scroll"
+              className="flex-1 overflow-y-auto"
+              style={{
+                WebkitOverflowScrolling: "touch",
+                padding: "12px 16px",
+              }}
+            >
+              {children}
+            </div>
 
-          {/* footer: fixed bottom and moved up by keyboard offset + safe area */}
-          <div
-            aria-label="dialog-footer"
-            className="bg-background max-w-4xl mx-auto"
-            style={{
-              position: "fixed",
-              left: 0,
-              right: 0,
-              top: `calc(100dvh - (${footerHeight}px + env(safe-area-inset-bottom) + var(--keyboard-offset, 0px)))`,
-              bottom: 0,
-              zIndex: 1003,
-              padding: "12px 16px",
-              transition: "bottom 150ms cubic-bezier(.2,.8,.2,1)",
-            }}
-          >
-            {footer}
+            {/* footer */}
+            <div
+              ref={footerRef}
+              aria-label="dialog-footer"
+              className="bg-background shrink-0"
+              style={{
+                height: `calc(${footerHeight}px + env(safe-area-inset-bottom))`,
+                padding: `12px 16px env(safe-area-inset-bottom)`,
+                zIndex: 1003,
+              }}
+            >
+              {footer}
+            </div>
           </div>
         </ReactDialog.Content>
       </ReactDialog.Portal>
