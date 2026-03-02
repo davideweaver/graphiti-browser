@@ -34,7 +34,6 @@ export default function DocumentDetail() {
   const [isDeleted, setIsDeleted] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
 
@@ -200,23 +199,29 @@ export default function DocumentDetail() {
   };
 
   const copyToClipboard = (text: string, successMessage: string) => {
-    // Use synchronous execCommand for better mobile compatibility
-    // This works better from portaled content (dropdowns, sheets)
-    const success = copyToClipboardSync(text);
-
-    if (success) {
-      toast.success(successMessage);
-    } else {
-      // If sync method fails, try modern async API
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(text)
-          .then(() => {
+    // On desktop (secure context), prefer the modern async clipboard API —
+    // document.execCommand('copy') is deprecated and unreliable when called
+    // from within a Radix dropdown that is managing focus during close.
+    // Fall back to execCommand for mobile / non-secure contexts where the
+    // async API requires an explicit clipboard-write permission grant.
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text)
+        .then(() => {
+          toast.success(successMessage);
+        })
+        .catch(() => {
+          // Async API failed (e.g. document not focused) — try execCommand
+          const success = copyToClipboardSync(text);
+          if (success) {
             toast.success(successMessage);
-          })
-          .catch((err) => {
-            console.error("Clipboard API also failed:", err);
+          } else {
             toast.error("Failed to copy to clipboard");
-          });
+          }
+        });
+    } else {
+      const success = copyToClipboardSync(text);
+      if (success) {
+        toast.success(successMessage);
       } else {
         toast.error("Failed to copy to clipboard");
       }
@@ -449,18 +454,16 @@ export default function DocumentDetail() {
                 <FolderOpen className="h-4 w-4" />
               </ContainerToolButton>
 
-              <MobileOverflowMenu title="More Options" disabled={!documentData}>
+              {/* Desktop: inline buttons (hidden on mobile) */}
+              <div className="hidden md:flex items-center gap-2">
                 <ContainerToolButton
                   size="icon"
                   onClick={handleRefresh}
                   disabled={!documentPath}
-                  data-drawer-label="Refresh"
                 >
                   <RefreshCw className="h-4 w-4" />
                 </ContainerToolButton>
-
-                {/* Desktop: Dropdown menu */}
-                <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+                <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <ContainerToolButton size="sm" disabled={!documentData}>
                       <Copy className="h-4 w-4" />
@@ -468,75 +471,70 @@ export default function DocumentDetail() {
                     </ContainerToolButton>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem asChild>
-                      <button
-                        onClick={() => {
-                          handleCopyContent();
-                          setDropdownOpen(false);
-                        }}
-                        className="w-full"
-                      >
-                        <Copy className="h-4 w-4 mr-2" />
-                        Copy content
-                      </button>
+                    <DropdownMenuItem onClick={handleCopyContent}>
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy content
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <button
-                        onClick={() => {
-                          handleCopyAbsolutePath();
-                          setDropdownOpen(false);
-                        }}
-                        className="w-full"
-                      >
-                        <Copy className="h-4 w-4 mr-2" />
-                        Copy absolute path
-                      </button>
+                    <DropdownMenuItem onClick={handleCopyAbsolutePath}>
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy absolute path
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <button
-                        onClick={() => {
-                          handleCopyRelativePath();
-                          setDropdownOpen(false);
-                        }}
-                        className="w-full"
-                      >
-                        <Copy className="h-4 w-4 mr-2" />
-                        Copy relative path
-                      </button>
+                    <DropdownMenuItem onClick={handleCopyRelativePath}>
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy relative path
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-
-                {/* Mobile: Flattened drawer menu items */}
-                <MobileDrawerButton
-                  onClick={handleCopyContent}
-                  icon={<Copy className="h-4 w-4" />}
-                >
-                  Copy content
-                </MobileDrawerButton>
-                <MobileDrawerButton
-                  onClick={handleCopyAbsolutePath}
-                  icon={<Copy className="h-4 w-4" />}
-                >
-                  Copy absolute path
-                </MobileDrawerButton>
-                <MobileDrawerButton
-                  onClick={handleCopyRelativePath}
-                  icon={<Copy className="h-4 w-4" />}
-                >
-                  Copy relative path
-                </MobileDrawerButton>
-
                 <ContainerToolButton
                   size="icon"
                   onClick={handleOpenDeleteDialog}
                   disabled={!documentPath}
                   variant="destructive"
-                  data-drawer-label="Delete"
                 >
                   <Trash2 className="h-4 w-4" />
                 </ContainerToolButton>
-              </MobileOverflowMenu>
+              </div>
+
+              {/* Mobile: overflow drawer (hidden on desktop) */}
+              <div className="md:hidden">
+                <MobileOverflowMenu title="More Options" disabled={!documentData}>
+                  <ContainerToolButton
+                    size="icon"
+                    onClick={handleRefresh}
+                    disabled={!documentPath}
+                    data-drawer-label="Refresh"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </ContainerToolButton>
+                  <MobileDrawerButton
+                    onClick={handleCopyContent}
+                    icon={<Copy className="h-4 w-4" />}
+                  >
+                    Copy content
+                  </MobileDrawerButton>
+                  <MobileDrawerButton
+                    onClick={handleCopyAbsolutePath}
+                    icon={<Copy className="h-4 w-4" />}
+                  >
+                    Copy absolute path
+                  </MobileDrawerButton>
+                  <MobileDrawerButton
+                    onClick={handleCopyRelativePath}
+                    icon={<Copy className="h-4 w-4" />}
+                  >
+                    Copy relative path
+                  </MobileDrawerButton>
+                  <ContainerToolButton
+                    size="icon"
+                    onClick={handleOpenDeleteDialog}
+                    disabled={!documentPath}
+                    variant="destructive"
+                    data-drawer-label="Delete"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </ContainerToolButton>
+                </MobileOverflowMenu>
+              </div>
             </>
           )}
         </div>
