@@ -10,9 +10,10 @@ interface NotificationCardProps {
   notification: Notification;
   onClick?: () => void;
   onDelete?: () => void;
+  onMarkAsUnread?: () => void;
 }
 
-export function NotificationCard({ notification, onClick, onDelete }: NotificationCardProps) {
+export function NotificationCard({ notification, onClick, onDelete, onMarkAsUnread }: NotificationCardProps) {
   const isUnread = !notification.read;
   const isMobile = useIsMobile();
 
@@ -26,11 +27,20 @@ export function NotificationCard({ notification, onClick, onDelete }: Notificati
     >
       {/* Content */}
       <div className="flex-1 min-w-0">
-        {/* Title row — dot only appears here */}
+        {/* Title row */}
         <div className="flex items-center gap-2">
-          {isUnread && (
-            <div className="flex-shrink-0 h-2 w-2 rounded-full bg-blue-500" />
-          )}
+          <div
+            className={cn(
+              "flex-shrink-0 h-2.5 w-2.5 rounded-full transition-colors",
+              isUnread
+                ? "bg-blue-500"
+                : onMarkAsUnread
+                  ? "bg-muted-foreground/25 hover:bg-blue-400 cursor-pointer"
+                  : "bg-muted-foreground/25"
+            )}
+            title={!isUnread && onMarkAsUnread ? "Mark as unread" : undefined}
+            onClick={!isUnread && onMarkAsUnread ? (e) => { e.stopPropagation(); onMarkAsUnread(); } : undefined}
+          />
           <span className="text-base font-semibold leading-snug block text-foreground">
             {notification.message}
           </span>

@@ -18,6 +18,7 @@ interface XerroWebSocketContextValue {
   subscribeToTodoDeleted: (callback: (event: TodoChangeEvent) => void) => () => void;
   subscribeToNotificationCreated: (callback: (event: NotificationCreatedEvent) => void) => () => void;
   subscribeToNotificationRead: (callback: (event: NotificationReadEvent) => void) => () => void;
+  subscribeToNotificationUnread: (callback: (event: NotificationReadEvent) => void) => () => void;
   subscribeToNotificationsReadAll: (callback: (event: NotificationsReadAllEvent) => void) => () => void;
 }
 
@@ -41,6 +42,7 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
   const todoDeletedCallbacksRef = useRef<Set<(event: TodoChangeEvent) => void>>(new Set());
   const notificationCreatedCallbacksRef = useRef<Set<(event: NotificationCreatedEvent) => void>>(new Set());
   const notificationReadCallbacksRef = useRef<Set<(event: NotificationReadEvent) => void>>(new Set());
+  const notificationUnreadCallbacksRef = useRef<Set<(event: NotificationReadEvent) => void>>(new Set());
   const notificationsReadAllCallbacksRef = useRef<Set<(event: NotificationsReadAllEvent) => void>>(new Set());
 
   // Track last processed bookmark event to prevent duplicate processing
@@ -235,6 +237,15 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
       });
     });
 
+    socket.on('notifications:notification-unread', (data: NotificationReadEvent) => {
+      console.log('[Xerro WebSocket] Notification unread:', data.id);
+      notificationUnreadCallbacksRef.current.forEach(callback => {
+        try { callback(data); } catch (error) {
+          console.error('[Xerro WebSocket] Error in notification unread callback:', error);
+        }
+      });
+    });
+
     socket.on('notifications:notifications-read-all', (data: NotificationsReadAllEvent) => {
       console.log('[Xerro WebSocket] All notifications read');
       notificationsReadAllCallbacksRef.current.forEach(callback => {
@@ -350,6 +361,11 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
     return () => { notificationReadCallbacksRef.current.delete(callback); };
   }, []);
 
+  const subscribeToNotificationUnread = useCallback((callback: (event: NotificationReadEvent) => void) => {
+    notificationUnreadCallbacksRef.current.add(callback);
+    return () => { notificationUnreadCallbacksRef.current.delete(callback); };
+  }, []);
+
   const subscribeToNotificationsReadAll = useCallback((callback: (event: NotificationsReadAllEvent) => void) => {
     notificationsReadAllCallbacksRef.current.add(callback);
     return () => { notificationsReadAllCallbacksRef.current.delete(callback); };
@@ -370,6 +386,7 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
     subscribeToTodoDeleted,
     subscribeToNotificationCreated,
     subscribeToNotificationRead,
+    subscribeToNotificationUnread,
     subscribeToNotificationsReadAll,
   };
 

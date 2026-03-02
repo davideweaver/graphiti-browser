@@ -120,6 +120,36 @@ class NotificationsService {
     }
   }
 
+  async markAsUnread(id: string): Promise<Notification> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/notifications/${id}/unread`,
+        {
+          method: "PUT",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to mark notification as unread: ${response.statusText}`
+        );
+      }
+
+      return await response.json();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to mark notification as unread";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+      throw error;
+    }
+  }
+
   async markAllAsRead(): Promise<{ success: boolean; count: number }> {
     try {
       const response = await fetch(

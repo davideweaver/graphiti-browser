@@ -11,6 +11,7 @@ export function useUnreadNotificationCount() {
   const {
     subscribeToNotificationCreated,
     subscribeToNotificationRead,
+    subscribeToNotificationUnread,
     subscribeToNotificationsReadAll,
   } = useXerroWebSocketContext();
 
@@ -31,7 +32,12 @@ export function useUnreadNotificationCount() {
     });
 
     const unsubRead = subscribeToNotificationRead((eventData) => {
-      // Update count from WebSocket event
+      queryClient.setQueryData(["notifications", "unread-count"], {
+        unreadCount: eventData.unreadCount,
+      });
+    });
+
+    const unsubUnread = subscribeToNotificationUnread((eventData) => {
       queryClient.setQueryData(["notifications", "unread-count"], {
         unreadCount: eventData.unreadCount,
       });
@@ -47,12 +53,14 @@ export function useUnreadNotificationCount() {
     return () => {
       unsubCreated();
       unsubRead();
+      unsubUnread();
       unsubReadAll();
     };
   }, [
     queryClient,
     subscribeToNotificationCreated,
     subscribeToNotificationRead,
+    subscribeToNotificationUnread,
     subscribeToNotificationsReadAll,
   ]);
 

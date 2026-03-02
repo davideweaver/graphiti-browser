@@ -43,6 +43,9 @@ export default function Notifications() {
   const markAsReadMutation = useMutation({
     mutationFn: (id: string) => notificationsService.markAsRead(id),
     onSuccess: (updatedNotification) => {
+      setSelectedNotification((prev) =>
+        prev?.id === updatedNotification.id ? updatedNotification : prev
+      );
       queryClient.setQueryData<typeof data>(
         ["notifications", showUnreadOnly],
         (old) => {
@@ -71,6 +74,34 @@ export default function Notifications() {
             ...old,
             notifications: old.notifications.filter((n) => n.id !== id),
             total: old.total - 1,
+          };
+        }
+      );
+    },
+  });
+
+  // Mark as unread mutation
+  const markAsUnreadMutation = useMutation({
+    mutationFn: (id: string) => notificationsService.markAsUnread(id),
+    onSuccess: (updatedNotification) => {
+      setSelectedNotification(updatedNotification);
+      queryClient.setQueryData<typeof data>(
+        ["notifications", showUnreadOnly],
+        (old) => {
+          if (!old) return old;
+          if (showUnreadOnly) {
+            // In unread-only view, re-add the notification to the list
+            return {
+              ...old,
+              notifications: [updatedNotification, ...old.notifications.filter((n) => n.id !== updatedNotification.id)],
+              total: old.total + 1,
+            };
+          }
+          return {
+            ...old,
+            notifications: old.notifications.map((n) =>
+              n.id === updatedNotification.id ? updatedNotification : n
+            ),
           };
         }
       );
@@ -256,6 +287,7 @@ export default function Notifications() {
               notification={notification}
               onClick={() => handleNotificationClick(notification)}
               onDelete={() => deleteNotificationMutation.mutate(notification.id)}
+              onMarkAsUnread={() => markAsUnreadMutation.mutate(notification.id)}
             />
           ))}
         </div>
@@ -265,6 +297,7 @@ export default function Notifications() {
         notification={selectedNotification}
         open={isDetailSheetOpen}
         onOpenChange={setIsDetailSheetOpen}
+        onMarkAsUnread={(id) => markAsUnreadMutation.mutate(id)}
       />
 
       <DestructiveConfirmationDialog

@@ -6,13 +6,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow, format } from "date-fns";
-import { Clock, CheckCircle2, MessageSquare, FolderOpen, Activity, Send, ExternalLink } from "lucide-react";
+import { Clock, CheckCircle2, MessageSquare, FolderOpen, Activity, Send, ExternalLink, MailOpen } from "lucide-react";
 import { notificationsService } from "@/api/notificationsService";
+import ReactMarkdown from "react-markdown";
 
 interface NotificationDetailSheetProps {
   notification: Notification | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onMarkAsUnread?: (id: string) => void;
 }
 
 function slackUrlKey(notificationId: string) {
@@ -23,6 +25,7 @@ export function NotificationDetailSheet({
   notification,
   open,
   onOpenChange,
+  onMarkAsUnread,
 }: NotificationDetailSheetProps) {
   const [isSending, setIsSending] = useState(false);
   const [slackThreadUrl, setSlackThreadUrl] = useState<string | null>(null);
@@ -81,15 +84,27 @@ export function NotificationDetailSheet({
                   <MessageSquare className="h-4 w-4 text-muted-foreground mt-0.5" />
                   <div className="text-sm font-medium text-muted-foreground">Context</div>
                 </div>
-                <div className="text-sm whitespace-pre-wrap leading-relaxed">
-                  {notification.context}
+                <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown>{notification.context}</ReactMarkdown>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Send to Slack */}
-          <div>
+          {/* Actions */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {notification.read && onMarkAsUnread && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onMarkAsUnread(notification.id)}
+              >
+                <MailOpen className="h-4 w-4 mr-2" />
+                Mark as unread
+              </Button>
+            )}
+
+            {/* Send to Slack */}
             {slackThreadUrl ? (
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
