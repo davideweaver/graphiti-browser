@@ -57,11 +57,22 @@ export default function ProjectDetail() {
     enabled: !!projectName,
   });
 
-  // Fetch sessions for this project
+  // Fetch sessions for this project (paginate - backend max is 500 per request)
   const { data: sessionsData, isLoading: isLoadingSessions } = useQuery({
     queryKey: ["project-sessions", groupId, projectName],
-    queryFn: () =>
-      graphitiService.getProjectSessions(groupId, projectName, 100),
+    queryFn: async () => {
+      const allSessions = [];
+      let cursor: string | undefined = undefined;
+
+      do {
+        const response = await graphitiService.getProjectSessions(groupId, projectName, 500, cursor);
+        allSessions.push(...response.sessions);
+        cursor = response.cursor ?? undefined;
+        if (!response.has_more) break;
+      } while (cursor);
+
+      return { sessions: allSessions, total: allSessions.length, has_more: false, cursor: null };
+    },
     enabled: !!projectName,
   });
 

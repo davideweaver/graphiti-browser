@@ -89,19 +89,30 @@ export default function Sessions() {
   // Filter by project if projectName is provided from route params
   const { data: sessionsResponse, isLoading } = useQuery({
     queryKey: ["sessions", groupId, decodedProjectName],
-    queryFn: () => {
-      return graphitiService.listSessions(
-        groupId,
-        500,
-        undefined, // cursor
-        undefined, // search
-        decodedProjectName, // projectName - filter when viewing project-specific sessions
-        undefined, // createdAfter
-        undefined, // createdBefore
-        undefined, // validAfter (don't filter - we need true session dates!)
-        undefined, // validBefore (don't filter - we need true session dates!)
-        "desc", // sortOrder
-      );
+    queryFn: async () => {
+      // Paginate through all sessions - backend has a hard max of 500 per request
+      const allSessions: Session[] = [];
+      let cursor: string | undefined = undefined;
+
+      do {
+        const response = await graphitiService.listSessions(
+          groupId,
+          500,
+          cursor,
+          undefined, // search
+          decodedProjectName, // projectName - filter when viewing project-specific sessions
+          undefined, // createdAfter
+          undefined, // createdBefore
+          undefined, // validAfter (don't filter - we need true session dates!)
+          undefined, // validBefore (don't filter - we need true session dates!)
+          "desc", // sortOrder
+        );
+        allSessions.push(...response.sessions);
+        cursor = response.cursor ?? undefined;
+        if (!response.has_more) break;
+      } while (cursor);
+
+      return { sessions: allSessions, total: allSessions.length, has_more: false, cursor: null };
     },
   });
 
