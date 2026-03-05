@@ -39,7 +39,9 @@ const mdComponents = {
 // eslint-disable-next-line react-refresh/only-export-components
 export function formatScheduledDate(dateStr: string): string {
   try {
-    const date = parseISO(dateStr);
+    // Extract just the date portion (YYYY-MM-DD) to avoid timezone issues
+    const datePart = dateStr.split('T')[0];
+    const date = parseISO(datePart);
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);

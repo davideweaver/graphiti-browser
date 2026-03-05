@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { todosService } from "@/api/todosService";
 import type {
@@ -24,7 +24,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Plus, Check, FolderTree, FolderKanban, ChevronDown } from "lucide-react";
+import { Plus, Check, FolderTree, FolderKanban, ChevronDown, CalendarDays, List } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -73,7 +74,9 @@ function getFilterLabel(filter: string): string {
 
 export default function Todos() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [createOpen, setCreateOpen] = useState(false);
   const [editTodo, setEditTodo] = useState<Todo | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -218,6 +221,38 @@ export default function Todos() {
 
   const tools = (
     <div className="flex items-center gap-2">
+      {/* Mobile-only navigation button for Today/All */}
+      {isMobile && (
+        <>
+          {filter === "today" && (
+            <ContainerToolButton
+              variant="default"
+              onClick={() => navigate("/todos?filter=all")}
+            >
+              <List className="mr-1.5 h-4 w-4" />
+              All
+            </ContainerToolButton>
+          )}
+          {filter === "all" && (
+            <ContainerToolButton
+              variant="default"
+              onClick={() => navigate("/todos?filter=today")}
+            >
+              <CalendarDays className="mr-1.5 h-4 w-4" />
+              Today
+            </ContainerToolButton>
+          )}
+          {isProjectFilter && (
+            <ContainerToolButton
+              variant="default"
+              onClick={() => navigate("/todos?filter=all")}
+            >
+              <List className="mr-1.5 h-4 w-4" />
+              All
+            </ContainerToolButton>
+          )}
+        </>
+      )}
       <ContainerToolButton
         variant="primary"
         onClick={() => setCreateOpen(true)}

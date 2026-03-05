@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow, format } from "date-fns";
-import { Clock, MessageSquare, FolderOpen, Activity, Send, ExternalLink } from "lucide-react";
+import { Clock, MessageSquare, FolderOpen, Activity, Send, ExternalLink, CheckCircle2 } from "lucide-react";
 import { notificationsService } from "@/api/notificationsService";
 import ReactMarkdown from "react-markdown";
 
