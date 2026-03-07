@@ -97,6 +97,18 @@ export interface RunAgentProperties {
   settingSources?: ('user' | 'project' | 'local')[];
   /** Tools to always block regardless of permission mode */
   disallowedTools?: string[];
+  /**
+   * Disable the Graphiti memory context injection for this task.
+   * Default: false (memory context is included in the prompt)
+   */
+  disableMemoryContext?: boolean;
+  /**
+   * Override the system prompt sent to the model.
+   * - Plain string: replaces the entire claude_code preset (~27k tokens → near-zero SDK overhead)
+   * - Preset object: keeps claude_code preset and appends extra instructions
+   * - Absent (default): uses the full claude_code preset unchanged
+   */
+  systemPrompt?: string | { type: 'preset'; preset: 'claude_code'; append: string };
 }
 
 /**
@@ -170,6 +182,10 @@ export interface AgentExecutionTrace {
     cacheCreationTokens?: number;
     cacheReadTokens?: number;
   };
+  /** Full constructed prompt sent to the model (only present when executionId exists) */
+  prompt?: string;
+  /** Rough token estimate for our prompt (chars / 4); subtract from usage.inputTokens to see SDK overhead */
+  promptTokenEstimate?: number;
 }
 
 /**

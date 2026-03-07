@@ -209,11 +209,49 @@ export function TaskExecutionSheet({
                                 <span className="ml-1 font-mono">{trace.usage.cacheReadTokens.toLocaleString()}</span>
                               </div>
                             )}
+                            {trace.promptTokenEstimate !== undefined && (
+                              <div>
+                                <span className="text-muted-foreground">Our Prompt Est.:</span>
+                                <span className="ml-1 font-mono">{trace.promptTokenEstimate.toLocaleString()}</span>
+                              </div>
+                            )}
+                            {trace.promptTokenEstimate !== undefined && (
+                              <div>
+                                <span className="text-muted-foreground">SDK Overhead:</span>
+                                <span className="ml-1 font-mono">{(trace.usage.inputTokens - trace.promptTokenEstimate).toLocaleString()}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
                     </CardContent>
                   </Card>
+
+                  {/* Prompt */}
+                  {trace.prompt && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-sm flex items-center justify-between">
+                          <span>Prompt</span>
+                          {trace.promptTokenEstimate !== undefined && (
+                            <Badge variant="outline" className="text-xs font-mono">
+                              ~{trace.promptTokenEstimate.toLocaleString()} tokens
+                            </Badge>
+                          )}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <details>
+                          <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground select-none">
+                            View full prompt
+                          </summary>
+                          <pre className="mt-3 text-xs bg-muted p-3 rounded overflow-auto max-h-96 whitespace-pre-wrap break-words font-mono">
+                            {trace.prompt}
+                          </pre>
+                        </details>
+                      </CardContent>
+                    </Card>
+                  )}
 
                   {/* Tool Calls Timeline */}
                   {trace.toolCalls.length > 0 && (

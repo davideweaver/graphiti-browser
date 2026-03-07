@@ -28,7 +28,12 @@ interface RunAgentConfigFormProps {
   onVersionsClick?: () => void;
 }
 
-export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top", onVersionsClick }: RunAgentConfigFormProps) {
+export function RunAgentConfigForm({
+  task,
+  onSaved,
+  buttonPosition = "top",
+  onVersionsClick,
+}: RunAgentConfigFormProps) {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
 
@@ -37,7 +42,8 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top", onVe
   const currentPermissions = props.permissions;
   const currentPermissionMode =
     !currentPermissions ||
-    (typeof currentPermissions === "string" && currentPermissions === "allow_all")
+    (typeof currentPermissions === "string" &&
+      currentPermissions === "allow_all")
       ? "allow_all"
       : "custom";
   const currentAllowList =
@@ -49,20 +55,46 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top", onVe
   const [prompt, setPrompt] = useState(props.prompt || "");
   const [cwd, setCwd] = useState(props.cwd || "");
   const [permissionMode, setPermissionMode] = useState<"allow_all" | "custom">(
-    currentPermissionMode
+    currentPermissionMode,
   );
   const [allowList, setAllowList] = useState<string[]>(currentAllowList);
   const [additionalDirectories, setAdditionalDirectories] = useState<string[]>(
-    props.additionalDirectories || []
+    props.additionalDirectories || [],
   );
   const [newDirectory, setNewDirectory] = useState("");
   const [local, setLocal] = useState(props.local || false);
   const [localModel, setLocalModel] = useState(props.localModel || "");
-  const [settingSources, setSettingSources] = useState<('user' | 'project' | 'local')[]>(
-    props.settingSources || ['project']
-  );
+  const [settingSources, setSettingSources] = useState<
+    ("user" | "project" | "local")[]
+  >(props.settingSources || ["project"]);
   const [disallowedTools, setDisallowedTools] = useState<string[]>(
-    props.disallowedTools || []
+    props.disallowedTools || [],
+  );
+  const [disableMemoryContext, setDisableMemoryContext] = useState(
+    props.disableMemoryContext ?? false,
+  );
+
+  // System prompt state
+  type SystemPromptMode = "default" | "plain" | "preset_append";
+  const deriveSystemPromptMode = (
+    sp: RunAgentProperties["systemPrompt"],
+  ): SystemPromptMode => {
+    if (!sp) return "default";
+    if (typeof sp === "string") return "plain";
+    return "preset_append";
+  };
+  const deriveSystemPromptText = (
+    sp: RunAgentProperties["systemPrompt"],
+  ): string => {
+    if (!sp) return "";
+    if (typeof sp === "string") return sp;
+    return sp.append;
+  };
+  const [systemPromptMode, setSystemPromptMode] = useState<SystemPromptMode>(
+    deriveSystemPromptMode(props.systemPrompt),
+  );
+  const [systemPromptText, setSystemPromptText] = useState(
+    deriveSystemPromptText(props.systemPrompt),
   );
 
   // Fetch available LLM servers from LlamaCPP Admin API
@@ -74,7 +106,7 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top", onVe
 
   // Filter to only running servers
   const availableServers = (serversData?.servers || []).filter(
-    (server) => server.status === "running"
+    (server) => server.status === "running",
   );
 
   // Split servers into aliased and non-aliased groups
@@ -100,6 +132,21 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top", onVe
         permissions = { allowList };
       }
 
+      // Build systemPrompt value
+      let systemPrompt: RunAgentProperties["systemPrompt"];
+      if (systemPromptMode === "plain" && systemPromptText.trim()) {
+        systemPrompt = systemPromptText.trim();
+      } else if (
+        systemPromptMode === "preset_append" &&
+        systemPromptText.trim()
+      ) {
+        systemPrompt = {
+          type: "preset",
+          preset: "claude_code",
+          append: systemPromptText.trim(),
+        };
+      }
+
       // Build updated properties
       const updatedProperties: RunAgentProperties = {
         prompt: prompt.trim(),
@@ -108,8 +155,11 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top", onVe
         ...(additionalDirectories.length > 0 && { additionalDirectories }),
         local,
         ...(local && localModel && { localModel }),
-        ...(JSON.stringify([...settingSources].sort()) !== JSON.stringify(['project']) && { settingSources }),
+        ...(JSON.stringify([...settingSources].sort()) !==
+          JSON.stringify(["project"]) && { settingSources }),
         ...(disallowedTools.length > 0 && { disallowedTools }),
+        ...(disableMemoryContext && { disableMemoryContext }),
+        ...(systemPrompt !== undefined && { systemPrompt }),
       };
 
       return agentTasksService.updateTask(task.id, {
@@ -139,8 +189,11 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top", onVe
     setNewDirectory("");
     setLocal(props.local || false);
     setLocalModel(props.localModel || "");
-    setSettingSources(props.settingSources || ['project']);
+    setSettingSources(props.settingSources || ["project"]);
     setDisallowedTools(props.disallowedTools || []);
+    setDisableMemoryContext(props.disableMemoryContext ?? false);
+    setSystemPromptMode(deriveSystemPromptMode(props.systemPrompt));
+    setSystemPromptText(deriveSystemPromptText(props.systemPrompt));
     setPromptError("");
     setIsEditing(false);
   };
@@ -161,133 +214,192 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top", onVe
               </ContainerToolButton>
             </CardHeader>
           )}
-          <CardContent className={buttonPosition === "top" ? "space-y-4" : "pt-6 space-y-4"}>
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-1">
-              Prompt
-            </h3>
-            <p className="text-sm whitespace-pre-wrap">{props.prompt}</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent
+            className={
+              buttonPosition === "top" ? "space-y-4" : "pt-6 space-y-4"
+            }
+          >
             <div>
               <h3 className="text-sm font-medium text-muted-foreground mb-1">
-                Working Directory
+                Prompt
               </h3>
-              <p className="text-sm font-mono">
-                {props.cwd || "/Users/dweaver/Projects/ai/xerro-agent"}
-              </p>
+              <p className="text-sm whitespace-pre-wrap">{props.prompt}</p>
             </div>
 
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-1">
-                Permissions
-              </h3>
-              {typeof currentPermissions === "string" &&
-              currentPermissions === "allow_all" ? (
-                <p className="text-sm">Allow All</p>
-              ) : typeof currentPermissions === "object" &&
-                currentPermissions.allowList ? (
-                <div className="flex flex-wrap gap-1">
-                  {currentPermissions.allowList.map((tool, index) => (
-                    <span
-                      key={index}
-                      className="text-xs bg-muted px-2 py-1 rounded"
-                    >
-                      {tool}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Not configured</p>
-              )}
-            </div>
-
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-1">
-                Use Local LLM
-              </h3>
-              <p className="text-sm">{props.local ? "Yes" : "No"}</p>
-            </div>
-
-            {props.local && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">
-                  Model Server
+                  Working Directory
                 </h3>
                 <p className="text-sm font-mono">
-                  {props.localModel || (
-                    <span className="text-muted-foreground">Not selected</span>
-                  )}
+                  {props.cwd || "/Users/dweaver/Projects/ai/xerro-agent"}
                 </p>
               </div>
-            )}
 
-            {props.additionalDirectories && props.additionalDirectories.length > 0 && (
-              <div className="md:col-span-2">
+              <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">
-                  Additional Directories
+                  Permissions
                 </h3>
-                <div className="flex flex-wrap gap-1">
-                  {props.additionalDirectories.map((dir, index) => (
+                {typeof currentPermissions === "string" &&
+                currentPermissions === "allow_all" ? (
+                  <p className="text-sm">Allow All</p>
+                ) : typeof currentPermissions === "object" &&
+                  currentPermissions.allowList ? (
+                  <div className="flex flex-wrap gap-1">
+                    {currentPermissions.allowList.map((tool, index) => (
+                      <span
+                        key={index}
+                        className="text-xs bg-muted px-2 py-1 rounded"
+                      >
+                        {tool}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Not configured
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                  Use Local LLM
+                </h3>
+                <p className="text-sm">{props.local ? "Yes" : "No"}</p>
+              </div>
+
+              {props.local && (
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                    Model Server
+                  </h3>
+                  <p className="text-sm font-mono">
+                    {props.localModel || (
+                      <span className="text-muted-foreground">
+                        Not selected
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
+
+              {props.additionalDirectories &&
+                props.additionalDirectories.length > 0 && (
+                  <div className="md:col-span-2">
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                      Additional Directories
+                    </h3>
+                    <div className="flex flex-wrap gap-1">
+                      {props.additionalDirectories.map((dir, index) => (
+                        <span
+                          key={index}
+                          className="text-xs bg-muted px-2 py-1 rounded font-mono"
+                        >
+                          {dir}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              {/* Settings Sources */}
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                  Settings Sources
+                </h3>
+                <div className="flex gap-1 flex-wrap">
+                  {(props.settingSources || ["project"]).map((s) => (
                     <span
-                      key={index}
-                      className="text-xs bg-muted px-2 py-1 rounded font-mono"
+                      key={s}
+                      className="text-xs bg-muted px-2 py-1 rounded"
                     >
-                      {dir}
+                      {s}
                     </span>
                   ))}
                 </div>
               </div>
-            )}
 
-            {/* Settings Sources */}
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-1">Settings Sources</h3>
-              <div className="flex gap-1 flex-wrap">
-                {(props.settingSources || ['project']).map((s) => (
-                  <span key={s} className="text-xs bg-muted px-2 py-1 rounded">{s}</span>
-                ))}
+              {/* Memory Context */}
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                  Memory Context
+                </h3>
+                <p className="text-sm">
+                  {props.disableMemoryContext ? "Disabled" : "Enabled"}
+                </p>
+              </div>
+
+              {/* Blocked Tools */}
+              {props.disallowedTools && props.disallowedTools.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                    Blocked Tools
+                  </h3>
+                  <div className="flex gap-1 flex-wrap">
+                    {props.disallowedTools.map((t, i) => (
+                      <span
+                        key={i}
+                        className="text-xs bg-muted px-2 py-1 rounded"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* System Prompt */}
+              <div className="md:col-span-2">
+                <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                  System Prompt
+                </h3>
+                {!props.systemPrompt ? (
+                  <p className="text-sm text-muted-foreground">
+                    Default (claude_code preset)
+                  </p>
+                ) : typeof props.systemPrompt === "string" ? (
+                  <div>
+                    <p className="text-xs text-amber-600 dark:text-amber-500 mb-1">
+                      Plain string — replaces claude_code preset
+                    </p>
+                    <p className="text-sm whitespace-pre-wrap font-mono text-xs bg-muted p-2 rounded">
+                      {props.systemPrompt}
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">
+                      Appended to claude_code preset
+                    </p>
+                    <p className="text-sm whitespace-pre-wrap font-mono text-xs bg-muted p-2 rounded">
+                      {props.systemPrompt.append}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
-
-            {/* Blocked Tools */}
-            {props.disallowedTools && props.disallowedTools.length > 0 && (
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-1">Blocked Tools</h3>
-                <div className="flex gap-1 flex-wrap">
-                  {props.disallowedTools.map((t, i) => (
-                    <span key={i} className="text-xs bg-muted px-2 py-1 rounded">{t}</span>
-                  ))}
-                </div>
-              </div>
+          </CardContent>
+        </Card>
+        {buttonPosition === "bottom" && (
+          <div className="flex justify-end gap-2">
+            {onVersionsClick && (
+              <Button onClick={onVersionsClick} variant="outline" size="sm">
+                <History className="h-4 w-4 mr-2" />
+                Versions
+              </Button>
             )}
-          </div>
-        </CardContent>
-      </Card>
-      {buttonPosition === "bottom" && (
-        <div className="flex justify-end gap-2">
-          {onVersionsClick && (
             <Button
-              onClick={onVersionsClick}
+              onClick={() => setIsEditing(true)}
               variant="outline"
               size="sm"
             >
-              <History className="h-4 w-4 mr-2" />
-              Versions
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit Configuration
             </Button>
-          )}
-          <Button
-            onClick={() => setIsEditing(true)}
-            variant="outline"
-            size="sm"
-          >
-            <Pencil className="h-4 w-4 mr-2" />
-            Edit Configuration
-          </Button>
-        </div>
-      )}
-    </div>
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -385,7 +497,8 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top", onVe
                   disabled={updateMutation.isPending}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Select tools the agent is allowed to use. Tools are grouped by category.
+                  Select tools the agent is allowed to use. Tools are grouped by
+                  category.
                 </p>
               </div>
             )}
@@ -393,7 +506,9 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top", onVe
 
           {/* Additional Directories Field */}
           <div className="space-y-2">
-            <Label htmlFor="additionalDirectories">Additional Directories</Label>
+            <Label htmlFor="additionalDirectories">
+              Additional Directories
+            </Label>
             <div className="space-y-2">
               {additionalDirectories.length > 0 && (
                 <div className="flex flex-wrap gap-2">
@@ -408,7 +523,7 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top", onVe
                         className="h-3 w-3 cursor-pointer hover:text-foreground"
                         onClick={() => {
                           setAdditionalDirectories(
-                            additionalDirectories.filter((_, i) => i !== index)
+                            additionalDirectories.filter((_, i) => i !== index),
                           );
                         }}
                       />
@@ -426,8 +541,14 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top", onVe
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      if (newDirectory.trim() && !additionalDirectories.includes(newDirectory.trim())) {
-                        setAdditionalDirectories([...additionalDirectories, newDirectory.trim()]);
+                      if (
+                        newDirectory.trim() &&
+                        !additionalDirectories.includes(newDirectory.trim())
+                      ) {
+                        setAdditionalDirectories([
+                          ...additionalDirectories,
+                          newDirectory.trim(),
+                        ]);
                         setNewDirectory("");
                       }
                     }
@@ -437,8 +558,14 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top", onVe
                   type="button"
                   variant="outline"
                   onClick={() => {
-                    if (newDirectory.trim() && !additionalDirectories.includes(newDirectory.trim())) {
-                      setAdditionalDirectories([...additionalDirectories, newDirectory.trim()]);
+                    if (
+                      newDirectory.trim() &&
+                      !additionalDirectories.includes(newDirectory.trim())
+                    ) {
+                      setAdditionalDirectories([
+                        ...additionalDirectories,
+                        newDirectory.trim(),
+                      ]);
                       setNewDirectory("");
                     }
                   }}
@@ -448,7 +575,8 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top", onVe
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Additional directories the agent is allowed to access beyond the working directory
+                Additional directories the agent is allowed to access beyond the
+                working directory
               </p>
             </div>
           </div>
@@ -456,25 +584,38 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top", onVe
           {/* Settings Sources */}
           <div className="space-y-2">
             <Label>Settings Sources</Label>
-            <div className="flex gap-4">
-              {(['project', 'user', 'local'] as const).map((source) => (
-                <label key={source} className="flex items-center gap-2 text-sm cursor-pointer">
+            <div className="space-y-2">
+              {([
+                { value: 'project', label: 'Project', description: 'Current folder settings', path: '.claude/settings.json' },
+                { value: 'user', label: 'User', description: 'Global user settings', path: '~/.claude/settings.json' },
+              ] as const).map(({ value, label, description, path }) => (
+                <label
+                  key={value}
+                  className="flex items-start gap-3 cursor-pointer"
+                >
                   <input
                     type="checkbox"
-                    checked={settingSources.includes(source)}
+                    checked={settingSources.includes(value)}
                     onChange={(e) => {
-                      if (e.target.checked) setSettingSources([...settingSources, source]);
-                      else setSettingSources(settingSources.filter(s => s !== source));
+                      if (e.target.checked)
+                        setSettingSources([...settingSources, value]);
+                      else
+                        setSettingSources(
+                          settingSources.filter((s) => s !== value),
+                        );
                     }}
                     disabled={updateMutation.isPending}
+                    className="mt-0.5"
                   />
-                  {source.charAt(0).toUpperCase() + source.slice(1)}
+                  <div>
+                    <span className="text-sm">{label}</span>
+                    <p className="text-xs text-muted-foreground">
+                      {description} — <code className="font-mono">{path}</code>
+                    </p>
+                  </div>
                 </label>
               ))}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Controls which settings directories are loaded (skills, hooks, MCP servers). Add "User" to enable global ~/.claude/ skills.
-            </p>
           </div>
 
           {/* Blocked Tools */}
@@ -488,6 +629,87 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top", onVe
             <p className="text-xs text-muted-foreground">
               Tools to always block, regardless of permission mode.
             </p>
+          </div>
+
+          {/* Memory Context */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="disableMemoryContext">Memory Context</Label>
+              <p className="text-xs text-muted-foreground">
+                Inject memory prompt into task
+              </p>
+            </div>
+            <Switch
+              id="disableMemoryContext"
+              checked={!disableMemoryContext}
+              onCheckedChange={(checked) => setDisableMemoryContext(!checked)}
+              disabled={updateMutation.isPending}
+            />
+          </div>
+
+          {/* System Prompt */}
+          <div className="space-y-2">
+            <Label htmlFor="systemPromptMode">System Prompt</Label>
+            <Select
+              value={systemPromptMode}
+              onValueChange={(value: SystemPromptMode) =>
+                setSystemPromptMode(value)
+              }
+              disabled={updateMutation.isPending}
+            >
+              <SelectTrigger id="systemPromptMode">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">
+                  Default (claude_code preset)
+                </SelectItem>
+                <SelectItem value="plain">
+                  Plain string — replace preset
+                </SelectItem>
+                <SelectItem value="preset_append">
+                  Append to claude_code preset
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            {systemPromptMode === "plain" && (
+              <div className="space-y-1">
+                <Textarea
+                  value={systemPromptText}
+                  onChange={(e) => setSystemPromptText(e.target.value)}
+                  placeholder="You are a helpful assistant. Use the available tools to complete the task as instructed."
+                  rows={4}
+                  disabled={updateMutation.isPending}
+                  className="font-mono text-xs"
+                />
+                <p className="text-xs text-amber-600 dark:text-amber-500">
+                  Replaces the entire claude_code preset. Dramatically reduces
+                  SDK token overhead (~27k → near-zero). Recommended for local
+                  models with limited context windows.
+                </p>
+              </div>
+            )}
+            {systemPromptMode === "preset_append" && (
+              <div className="space-y-1">
+                <Textarea
+                  value={systemPromptText}
+                  onChange={(e) => setSystemPromptText(e.target.value)}
+                  placeholder="Always respond in JSON."
+                  rows={3}
+                  disabled={updateMutation.isPending}
+                  className="font-mono text-xs"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Appended to the full claude_code preset. Retains all built-in
+                  tool usage instructions.
+                </p>
+              </div>
+            )}
+            {systemPromptMode === "default" && (
+              <p className="text-xs text-muted-foreground">
+                Uses the full claude_code preset unchanged.
+              </p>
+            )}
           </div>
 
           {/* Local LLM Switch */}
@@ -551,15 +773,20 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top", onVe
                 </Select>
                 {availableServers.length === 0 && (
                   <p className="text-xs text-muted-foreground">
-                    No running servers available. Start a server in System Control.
+                    No running servers available. Start a server in System
+                    Control.
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Select the local LLM server to use for this task. Servers with aliases are recommended for stable task configurations.
+                  Select the local LLM server to use for this task. Servers with
+                  aliases are recommended for stable task configurations.
                 </p>
                 {nonAliasedServers.length > 0 && (
                   <p className="text-xs text-amber-600 dark:text-amber-500">
-                    Tip: Configure aliases for your servers using: <code className="font-mono text-xs">llamacpp server config &lt;id&gt; --alias &lt;name&gt;</code>
+                    Tip: Configure aliases for your servers using:{" "}
+                    <code className="font-mono text-xs">
+                      llamacpp server config &lt;id&gt; --alias &lt;name&gt;
+                    </code>
                   </p>
                 )}
               </div>
@@ -600,10 +827,7 @@ export function RunAgentConfigForm({ task, onSaved, buttonPosition = "top", onVe
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleSave}
-              disabled={updateMutation.isPending}
-            >
+            <Button onClick={handleSave} disabled={updateMutation.isPending}>
               {updateMutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
