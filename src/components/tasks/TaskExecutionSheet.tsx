@@ -44,7 +44,7 @@ export function TaskExecutionSheet({
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="trace">
-                Trace {trace && `(${trace.toolCalls.length})`}
+                Trace {trace && `(${trace.toolCalls.length + (trace.assistantMessages?.length ?? 0)})`}
               </TabsTrigger>
             </TabsList>
 
@@ -162,6 +162,12 @@ export function TaskExecutionSheet({
                             <p className="font-mono break-all">{trace.cwd}</p>
                           </div>
                         )}
+                        {trace.model && (
+                          <div>
+                            <span className="text-muted-foreground">Model:</span>
+                            <p className="font-mono">{trace.model}</p>
+                          </div>
+                        )}
                         {trace.permissionMode && (
                           <div>
                             <span className="text-muted-foreground">Permissions:</span>
@@ -253,59 +259,103 @@ export function TaskExecutionSheet({
                     </Card>
                   )}
 
-                  {/* Tool Calls Timeline */}
-                  {trace.toolCalls.length > 0 && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-sm">Tool Calls ({trace.toolCalls.length})</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        {trace.toolCalls.map((call) => {
-                          const result = trace.toolResults.find(r => r.toolUseId === call.id);
-                          return (
-                            <div key={call.id} className="border-l-2 border-muted pl-4 space-y-2">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="outline" className="font-mono text-xs">{call.name}</Badge>
-                                  {result && (
-                                    result.isError ? (
-                                      <XCircle className="h-3 w-3 text-red-500" />
-                                    ) : (
-                                      <CheckCircle2 className="h-3 w-3 text-green-500" />
-                                    )
+                  {/* Execution Timeline - interleaved assistant messages and tool calls */}
+                  {(trace.toolCalls.length > 0 || (trace.assistantMessages?.length ?? 0) > 0) && (() => {
+                    type TimelineItem =
+                      | { type: 'assistant'; ts: number; data: typeof trace.assistantMessages[number] }
+                      | { type: 'tool'; ts: number; data: typeof trace.toolCalls[number] };
+
+                    const items: TimelineItem[] = [
+                      ...(trace.assistantMessages ?? []).map(m => ({
+                        type: 'assistant' as const,
+                        ts: new Date(m.timestamp).getTime(),
+                        data: m,
+                      })),
+                      ...trace.toolCalls.map(c => ({
+                        type: 'tool' as const,
+                        ts: new Date(c.calledAt).getTime(),
+                        data: c,
+                      })),
+                    ].sort((a, b) => a.ts - b.ts);
+
+                    return (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-sm">
+                            Timeline ({trace.toolCalls.length} tool calls
+                            {(trace.assistantMessages?.length ?? 0) > 0 && `, ${trace.assistantMessages.length} messages`})
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          {items.map((item, idx) => {
+                            if (item.type === 'assistant') {
+                              return (
+                                <div key={`msg-${idx}`} className="border-l-2 border-blue-400/50 pl-4 space-y-1">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-medium text-blue-400">Assistant</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {new Date(item.data.timestamp).toLocaleTimeString()}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs whitespace-pre-wrap break-words text-foreground/90">
+                                    {item.data.content}
+                                  </p>
+                                  {item.data.truncated && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      Truncated ({item.data.originalSizeBytes} bytes)
+                                    </Badge>
                                   )}
                                 </div>
-                                <span className="text-xs text-muted-foreground">
-                                  {new Date(call.calledAt).toLocaleTimeString()}
-                                </span>
-                              </div>
-                              <div>
-                                <p className="text-xs text-muted-foreground mb-1">Input:</p>
-                                <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-32">
-                                  {JSON.stringify(call.input, null, 2)}
-                                </pre>
-                              </div>
-                              {result && (
-                                <div>
-                                  <div className="flex items-center justify-between mb-1">
-                                    <p className="text-xs text-muted-foreground">Output:</p>
-                                    {result.truncated && (
-                                      <Badge variant="secondary" className="text-xs">
-                                        Truncated ({result.originalSizeBytes} bytes)
-                                      </Badge>
-                                    )}
+                              );
+                            } else {
+                              const call = item.data;
+                              const result = trace.toolResults.find(r => r.toolUseId === call.id);
+                              return (
+                                <div key={call.id} className="border-l-2 border-muted pl-4 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <Badge variant="outline" className="font-mono text-xs">{call.name}</Badge>
+                                      {result && (
+                                        result.isError ? (
+                                          <XCircle className="h-3 w-3 text-red-500" />
+                                        ) : (
+                                          <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                        )
+                                      )}
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">
+                                      {new Date(call.calledAt).toLocaleTimeString()}
+                                    </span>
                                   </div>
-                                  <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-48 whitespace-pre-wrap break-words">
-                                    {result.content}
-                                  </pre>
+                                  <div>
+                                    <p className="text-xs text-muted-foreground mb-1">Input:</p>
+                                    <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-32">
+                                      {JSON.stringify(call.input, null, 2)}
+                                    </pre>
+                                  </div>
+                                  {result && (
+                                    <div>
+                                      <div className="flex items-center justify-between mb-1">
+                                        <p className="text-xs text-muted-foreground">Output:</p>
+                                        {result.truncated && (
+                                          <Badge variant="secondary" className="text-xs">
+                                            Truncated ({result.originalSizeBytes} bytes)
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-48 whitespace-pre-wrap break-words">
+                                        {result.content}
+                                      </pre>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </CardContent>
-                    </Card>
-                  )}
+                              );
+                            }
+                          })}
+                        </CardContent>
+                      </Card>
+                    );
+                  })()}
 
                   {/* Permission Decisions */}
                   {trace.permissions.length > 0 && (

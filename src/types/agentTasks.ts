@@ -112,6 +112,17 @@ export interface RunAgentProperties {
 }
 
 /**
+ * Assistant message from agent execution
+ */
+export interface TraceAssistantMessage {
+  content: string;
+  timestamp: string;
+  truncated: boolean;
+  originalSizeBytes: number;
+  hasToolCalls: boolean;
+}
+
+/**
  * Tool information from Claude Code
  */
 export interface ToolInfo {
@@ -172,6 +183,7 @@ export interface AgentExecutionTrace {
   permissionMode?: string;
   /** Settings directories that were loaded for this run */
   settingSources?: string[];
+  assistantMessages: TraceAssistantMessage[];
   toolCalls: TraceToolCall[];
   toolResults: TraceToolResult[];
   permissions: TracePermissionRequest[];

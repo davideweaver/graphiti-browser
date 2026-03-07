@@ -20,8 +20,6 @@ import {
   formatRelativeTime,
 } from "@/lib/cronFormatter";
 import {
-  CheckCircle2,
-  XCircle,
   Play,
   Trash2,
   Copy,
@@ -38,7 +36,6 @@ import { TaskVersionHistorySheet } from "@/components/agent-tasks/TaskVersionHis
 import { RunAgentConfigForm } from "@/components/agent-tasks/RunAgentConfigForm";
 import { useTaskConfigUpdates } from "@/hooks/use-task-config-updates";
 import { useAgentCompletionUpdates } from "@/hooks/use-agent-completion-updates";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import type { TaskExecution } from "@/types/agentTasks";
 
@@ -46,7 +43,6 @@ export default function AgentTaskDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const isMobile = useIsMobile();
   const [selectedExecution, setSelectedExecution] =
     useState<TaskExecution | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -91,12 +87,6 @@ export default function AgentTaskDetail() {
     enabled: !!id,
   });
 
-  const { data: trace, isLoading: isLoadingTrace } = useQuery({
-    queryKey: ["agent-task-trace", id],
-    queryFn: () => agentTasksService.getTrace(id!),
-    enabled: !!id,
-  });
-
   // Mutation to trigger task execution (tracing is always enabled)
   const triggerMutation = useMutation({
     mutationFn: () => agentTasksService.triggerTask(id!, true),
@@ -105,9 +95,6 @@ export default function AgentTaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["agent-task-history", id] });
       queryClient.invalidateQueries({
         queryKey: ["agent-task-scratchpad", id],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["agent-task-trace", id],
       });
     },
     onError: (error) => {
@@ -467,20 +454,12 @@ export default function AgentTaskDetail() {
 
         {/* Tabs */}
         <Tabs defaultValue="config">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="config">
-              {isMobile ? "Config" : "Config"}
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="config">Config</TabsTrigger>
             <TabsTrigger value="history">
-              {isMobile ? "Runs" : "History"}{" "}
-              {history ? `(${history.length})` : ""}
+              History{history ? ` (${history.length})` : ""}
             </TabsTrigger>
-            <TabsTrigger value="scratchpad">
-              {isMobile ? "Scratch" : "Scratchpad"}
-            </TabsTrigger>
-            <TabsTrigger value="trace">
-              {isMobile ? "Trace" : "Last Trace"}
-            </TabsTrigger>
+            <TabsTrigger value="scratchpad">Scratchpad</TabsTrigger>
           </TabsList>
 
           {/* Execution History Tab */}
@@ -617,201 +596,6 @@ export default function AgentTaskDetail() {
             )}
           </TabsContent>
 
-          {/* Trace Tab */}
-          <TabsContent value="trace" className="mt-6">
-            {isLoadingTrace ? (
-              <div className="space-y-2">
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-16 w-full" />
-              </div>
-            ) : trace && !trace.isEmpty && trace.trace ? (
-              <div className="space-y-4">
-                {/* Execution Metadata */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Execution Details</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2 text-xs">
-                    <div className="grid grid-cols-2 gap-4">
-                      {trace.trace.toolCalls.length > 0 && (
-                        <div>
-                          <span className="text-muted-foreground">
-                            Executed At:
-                          </span>
-                          <p>
-                            {formatTimestamp(trace.trace.toolCalls[0].calledAt)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatRelativeTime(
-                              trace.trace.toolCalls[0].calledAt,
-                            )}
-                          </p>
-                        </div>
-                      )}
-                      <div>
-                        <span className="text-muted-foreground">
-                          Execution ID:
-                        </span>
-                        <p className="font-mono">{trace.trace.executionId}</p>
-                      </div>
-                      {trace.trace.sessionId && (
-                        <div>
-                          <span className="text-muted-foreground">
-                            Session ID:
-                          </span>
-                          <p className="font-mono">{trace.trace.sessionId}</p>
-                        </div>
-                      )}
-                      {trace.trace.cwd && (
-                        <div>
-                          <span className="text-muted-foreground">
-                            Working Dir:
-                          </span>
-                          <p className="font-mono">{trace.trace.cwd}</p>
-                        </div>
-                      )}
-                      {trace.trace.permissionMode && (
-                        <div>
-                          <span className="text-muted-foreground">
-                            Permissions:
-                          </span>
-                          <p className="font-mono">
-                            {trace.trace.permissionMode}
-                          </p>
-                        </div>
-                      )}
-                      {trace.trace.totalCostUsd !== undefined && (
-                        <div>
-                          <span className="text-muted-foreground">Cost:</span>
-                          <p className="font-mono">
-                            ${trace.trace.totalCostUsd.toFixed(4)}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Tool Calls Timeline */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">
-                      Tool Calls ({trace.trace.toolCalls.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {trace.trace.toolCalls.map((call) => {
-                      const result = trace.trace!.toolResults.find(
-                        (r) => r.toolUseId === call.id,
-                      );
-                      return (
-                        <div
-                          key={call.id}
-                          className="border-l-2 border-muted pl-4 space-y-2"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Badge
-                                variant="outline"
-                                className="font-mono text-xs"
-                              >
-                                {call.name}
-                              </Badge>
-                              {result &&
-                                (result.isError ? (
-                                  <XCircle className="h-3 w-3 text-red-500" />
-                                ) : (
-                                  <CheckCircle2 className="h-3 w-3 text-green-500" />
-                                ))}
-                            </div>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(call.calledAt).toLocaleTimeString()}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">
-                              Input:
-                            </p>
-                            <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-32">
-                              {JSON.stringify(call.input, null, 2)}
-                            </pre>
-                          </div>
-                          {result && (
-                            <div>
-                              <div className="flex items-center justify-between mb-1">
-                                <p className="text-xs text-muted-foreground">
-                                  Output:
-                                </p>
-                                {result.truncated && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-xs"
-                                  >
-                                    Truncated ({result.originalSizeBytes} bytes)
-                                  </Badge>
-                                )}
-                              </div>
-                              <pre className="text-xs bg-muted p-2 rounded overflow-auto max-h-48 whitespace-pre-wrap break-words">
-                                {result.content}
-                              </pre>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </CardContent>
-                </Card>
-
-                {/* Permission Decisions */}
-                {trace.trace.permissions.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm">
-                        Permission Decisions
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {trace.trace.permissions.map((perm, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center justify-between text-xs border-b pb-2 last:border-0"
-                          >
-                            <div className="flex items-center gap-2">
-                              <Badge
-                                variant={
-                                  perm.decision === "allow"
-                                    ? "default"
-                                    : "destructive"
-                                }
-                              >
-                                {perm.decision}
-                              </Badge>
-                              <span className="font-mono">{perm.toolName}</span>
-                            </div>
-                            {perm.reason && (
-                              <span className="text-muted-foreground">
-                                {perm.reason}
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="p-12 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    No trace data available. Trace data is collected
-                    automatically on each run.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
         </Tabs>
       </div>
 
