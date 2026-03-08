@@ -184,6 +184,34 @@ export function CreateTodoDialog({
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 z-[1010]" align="start">
+                <div className="flex gap-1 p-2 border-b border-border">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => {
+                      setScheduledDate(new Date());
+                      setCalendarOpen(false);
+                    }}
+                  >
+                    Today
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => {
+                      const tomorrow = new Date();
+                      tomorrow.setDate(tomorrow.getDate() + 1);
+                      setScheduledDate(tomorrow);
+                      setCalendarOpen(false);
+                    }}
+                  >
+                    Tomorrow
+                  </Button>
+                </div>
                 <Calendar
                   mode="single"
                   selected={scheduledDate}

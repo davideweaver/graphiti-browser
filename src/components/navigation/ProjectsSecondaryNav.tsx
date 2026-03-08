@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { graphitiService } from "@/api/graphitiService";
-import { useGraphiti } from "@/context/GraphitiContext";
+import { useSearchParams } from "react-router-dom";
+import { xerroProjectsService } from "@/api/xerroProjectsService";
 import { Input } from "@/components/ui/input";
 import { SecondaryNavItem } from "@/components/navigation/SecondaryNavItem";
 import { SecondaryNavItemTitle, SecondaryNavItemSubtitle } from "@/components/navigation/SecondaryNavItemContent";
@@ -13,7 +13,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 interface ProjectsSecondaryNavProps {
   selectedProject: string | null;
   onNavigate: (path: string) => void;
-  onProjectSelect?: (path: string) => void; // Optional: for user clicks that should close sidebar
+  onProjectSelect?: (path: string) => void;
 }
 
 export function ProjectsSecondaryNav({
@@ -21,56 +21,35 @@ export function ProjectsSecondaryNav({
   onNavigate,
   onProjectSelect,
 }: ProjectsSecondaryNavProps) {
-  const { groupId } = useGraphiti();
   const [searchInput, setSearchInput] = useState("");
   const [viewMode, setViewMode] = useState<"recent" | "all">("recent");
+  const [searchParams] = useSearchParams();
+  const currentTab = searchParams.get("tab");
   const debouncedSearch = useDebounce(searchInput, 300);
 
-  // Note: WebSocket is managed globally in Layout.tsx
+  const after = viewMode === "recent" && !debouncedSearch
+    ? (() => { const d = new Date(); d.setDate(d.getDate() - 3); return d.toISOString(); })()
+    : undefined;
 
-  // Fetch projects with search filter
   const { data, isLoading } = useQuery({
-    queryKey: ["projects-nav-list", groupId, debouncedSearch],
+    queryKey: ["projects-nav-list", debouncedSearch, viewMode],
     queryFn: () =>
-      graphitiService.listProjects(
-        groupId,
-        100,
-        undefined,
-        debouncedSearch || undefined,
-        undefined,
-        "desc",
-      ),
-    select: (data) => ({
-      ...data,
-      // Filter out '_general' project from list
-      projects: data.projects.filter((p) => p.name !== "_general"),
-    }),
+      xerroProjectsService.listProjects({
+        limit: 100,
+        q: debouncedSearch || undefined,
+        after,
+      }),
   });
 
-  // Filter projects based on view mode
-  const projects = useMemo(() => {
-    const allProjects = data?.projects || [];
-
-    if (viewMode === "all") {
-      return allProjects;
-    }
-
-    // Filter to show only recent projects (last 5 days)
-    const fiveDaysAgo = new Date();
-    fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
-
-    return allProjects.filter((project) => {
-      const lastEpisodeDate = new Date(project.last_episode_date);
-      return lastEpisodeDate >= fiveDaysAgo;
-    });
-  }, [data?.projects, viewMode]);
+  const projects = data?.items || [];
 
   // Auto-select first project if none selected
   useEffect(() => {
     if (!selectedProject && projects.length > 0 && !isLoading) {
-      onNavigate(`/project/${encodeURIComponent(projects[0].name)}`);
+      const tabQuery = currentTab ? `?tab=${currentTab}` : "";
+      onNavigate(`/project/${encodeURIComponent(projects[0].name)}${tabQuery}`);
     }
-  }, [selectedProject, projects, isLoading, onNavigate]);
+  }, [selectedProject, projects, isLoading, onNavigate, currentTab]);
 
   return (
     <SecondaryNavContainer
@@ -111,48 +90,38 @@ export function ProjectsSecondaryNav({
         {isLoading ? (
           <div className="space-y-1">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-16 bg-accent/50 rounded-lg animate-pulse"
-              />
+              <div key={i} className="h-16 bg-accent/50 rounded-lg animate-pulse" />
             ))}
           </div>
         ) : projects.length === 0 ? (
           <div className="text-sm text-muted-foreground text-center py-8">
-            {searchInput
+            {debouncedSearch
               ? "No projects found"
               : viewMode === "recent"
-                ? "No recent projects (last 5 days)"
+                ? "No recent projects (last 3 days)"
                 : "No projects available"}
           </div>
         ) : (
           <div className="space-y-1">
-            {projects.map((project) => {
-              const isActive = selectedProject === project.name;
-              return (
-                <SecondaryNavItem
-                  key={project.name}
-                  isActive={isActive}
-                  onClick={() => {
-                    const path = `/project/${encodeURIComponent(project.name)}`;
-                    // Use onProjectSelect for user clicks (closes sidebar), or onNavigate as fallback
-                    if (onProjectSelect) {
-                      onProjectSelect(path);
-                    } else {
-                      onNavigate(path);
-                    }
-                  }}
-                >
-                  <div className="flex flex-col items-start w-full">
-                    <SecondaryNavItemTitle>{project.name}</SecondaryNavItemTitle>
-                    <SecondaryNavItemSubtitle>
-                      {project.session_count} sessions • {project.episode_count}{" "}
-                      episodes
-                    </SecondaryNavItemSubtitle>
-                  </div>
-                </SecondaryNavItem>
-              );
-            })}
+            {projects.map((project) => (
+              <SecondaryNavItem
+                key={project.name}
+                isActive={selectedProject === project.name}
+                onClick={() => {
+                  const tabQuery = currentTab ? `?tab=${currentTab}` : "";
+                  const path = `/project/${encodeURIComponent(project.name)}${tabQuery}`;
+                  if (onProjectSelect) onProjectSelect(path);
+                  else onNavigate(path);
+                }}
+              >
+                <div className="flex flex-col items-start w-full">
+                  <SecondaryNavItemTitle>{project.name}</SecondaryNavItemTitle>
+                  <SecondaryNavItemSubtitle>
+                    {project.sessionCount} sessions
+                  </SecondaryNavItemSubtitle>
+                </div>
+              </SecondaryNavItem>
+            ))}
           </div>
         )}
       </div>

@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Badge } from "@/components/ui/badge";
 
 interface ChatMessageProps {
   role: string;
@@ -8,6 +9,7 @@ interface ChatMessageProps {
   isUser: boolean;
   preview?: boolean;
   showRole?: boolean;
+  permissionMode?: string;
 }
 
 export function ChatMessage({
@@ -15,7 +17,8 @@ export function ChatMessage({
   content,
   isUser,
   preview = false,
-  showRole = true
+  showRole = true,
+  permissionMode,
 }: ChatMessageProps) {
   return (
     <div
@@ -25,8 +28,13 @@ export function ChatMessage({
       )}
     >
       {showRole && (
-        <div className="text-xs text-muted-foreground px-1">
-          {role}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+          <span>{role}</span>
+          {permissionMode && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-amber-500/50 text-amber-500">
+              plan mode
+            </Badge>
+          )}
         </div>
       )}
       <div
@@ -42,6 +50,7 @@ export function ChatMessage({
         <div className={cn(
           "text-sm prose prose-sm max-w-none",
           "[&_h1]:text-[16px] [&_h1]:font-medium [&_h2]:text-[16px] [&_h2]:font-medium [&_h3]:text-[16px] [&_h3]:font-medium [&_h4]:text-[16px] [&_h4]:font-medium [&_h5]:text-[16px] [&_h5]:font-medium [&_h6]:text-[16px] [&_h6]:font-medium",
+          "[&_hr]:my-2",
           isUser && !preview ? "prose-invert [&_p]:text-white [&_code]:text-white [&_li]:text-white [&_strong]:text-white [&_em]:text-white [&_a]:text-white" : "dark:prose-invert"
         )}>
           <ReactMarkdown remarkPlugins={[remarkGfm]}>

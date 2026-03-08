@@ -2,32 +2,38 @@ import { useMemo } from "react";
 import { format, differenceInDays, parseISO, startOfDay } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import type { Session } from "@/types/graphiti";
+import type { XerroSession } from "@/types/xerroProjects";
 
 interface ProjectTimelineBarProps {
-  sessions: Session[];
-  projectStartDate: string; // ISO timestamp
-  projectEndDate: string; // ISO timestamp
+  sessions?: XerroSession[];
+  projectName: string;
+  projectStartDate?: string | null;
+  projectEndDate?: string | null;
   className?: string;
 }
 
 interface DaySession {
   date: Date;
-  sessions: Session[];
+  sessions: XerroSession[];
   position: number; // Percentage position on timeline
   hasNextDay: boolean; // True if next day also has sessions
   hasPrevDay: boolean; // True if previous day also has sessions
 }
 
 export function ProjectTimelineBar({
-  sessions,
+  sessions = [],
+  projectName,
   projectStartDate,
   projectEndDate,
   className = "",
 }: ProjectTimelineBarProps) {
   const navigate = useNavigate();
 
+  const isEmpty = !projectStartDate || !projectEndDate || sessions.length === 0;
+
   const timelineData = useMemo(() => {
+    if (!projectStartDate || !projectEndDate) return null;
+
     const projectStart = startOfDay(parseISO(projectStartDate));
     const projectEnd = startOfDay(parseISO(projectEndDate));
     const actualDays = differenceInDays(projectEnd, projectStart) + 1;
@@ -40,10 +46,10 @@ export function ProjectTimelineBar({
       ? new Date(projectStart.getTime() + (6 * 24 * 60 * 60 * 1000)) // Add 6 days to start
       : projectEnd;
 
-    // Group sessions by day
-    const sessionsByDay = new Map<string, Session[]>();
+    // Group sessions by day using startedAt
+    const sessionsByDay = new Map<string, XerroSession[]>();
     sessions.forEach((session) => {
-      const sessionDate = startOfDay(parseISO(session.first_episode_date));
+      const sessionDate = startOfDay(parseISO(session.startedAt));
       const dateKey = format(sessionDate, "yyyy-MM-dd");
 
       if (!sessionsByDay.has(dateKey)) {
@@ -132,30 +138,15 @@ export function ProjectTimelineBar({
   }, [sessions, projectStartDate, projectEndDate]);
 
   const handleDayClick = (daySession: DaySession) => {
-    // If only one session, navigate directly to it
-    if (daySession.sessions.length === 1) {
-      navigate(`/session/${daySession.sessions[0].session_id}`);
-    } else {
-      // Navigate to the first session (could be enhanced with a picker)
-      navigate(`/session/${daySession.sessions[0].session_id}`);
-    }
+    const session = daySession.sessions[0];
+    navigate(`/project/${encodeURIComponent(projectName)}/sessions/${encodeURIComponent(session.id)}`);
   };
 
   const formatMarkerDate = (date: Date) => {
-    if (timelineData.totalDays <= 7) {
-      return format(date, "MMM d");
-    } else if (timelineData.totalDays <= 31) {
-      return format(date, "MMM d");
-    } else if (timelineData.totalDays <= 90) {
-      return format(date, "MMM d");
-    } else {
-      return format(date, "MMM");
-    }
+    if (!timelineData) return format(date, "MMM d");
+    if (timelineData.totalDays <= 90) return format(date, "MMM d");
+    return format(date, "MMM");
   };
-
-  if (timelineData.daySessions.length === 0) {
-    return null; // Don't show timeline if no sessions
-  }
 
   return (
     <div className={`mt-6 ${className}`}>
@@ -165,28 +156,31 @@ export function ProjectTimelineBar({
 
       {/* Date markers */}
       <div className="flex justify-between text-[10px] text-muted-foreground mb-1 px-1">
-        {timelineData.dateMarkers.map((marker, i) => (
-          <span key={i} className="whitespace-nowrap">
-            {formatMarkerDate(marker.date)}
-          </span>
-        ))}
+        {isEmpty || !timelineData
+          ? Array.from({ length: 5 }).map((_, i) => (
+              <span key={i} className="whitespace-nowrap invisible">0</span>
+            ))
+          : timelineData.dateMarkers.map((marker, i) => (
+              <span key={i} className="whitespace-nowrap">
+                {formatMarkerDate(marker.date)}
+              </span>
+            ))}
       </div>
 
       {/* Timeline track */}
       <div className="relative h-3 bg-muted/30 rounded-full overflow-visible">
         {/* Day session bars */}
-        {timelineData.daySessions.map((daySession, i) => {
+        {!isEmpty && timelineData && timelineData.daySessions.map((daySession, i) => {
           const sessionCount = daySession.sessions.length;
 
-          // Determine rounded corners based on adjacent days
           const roundedClass =
             daySession.hasPrevDay && daySession.hasNextDay
-              ? "" // No rounded corners (middle of continuous bar)
+              ? ""
               : daySession.hasPrevDay
-              ? "rounded-r-full" // Only round right side (end of continuous bar)
+              ? "rounded-r-full"
               : daySession.hasNextDay
-              ? "rounded-l-full" // Only round left side (start of continuous bar)
-              : "rounded-full"; // Round both sides (isolated bar)
+              ? "rounded-l-full"
+              : "rounded-full";
 
           return (
             <div
@@ -199,14 +193,10 @@ export function ProjectTimelineBar({
               onClick={() => handleDayClick(daySession)}
               title={`${format(daySession.date, "MMM d, yyyy")} - ${sessionCount} session${sessionCount > 1 ? "s" : ""}`}
             >
-              {/* Bar with blue color */}
-              <div
-                className={`h-full bg-[#0EA5E9] ${roundedClass} transition-all`}
-              >
+              <div className={`h-full bg-[#0EA5E9] ${roundedClass} transition-all`}>
                 <div className={`absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity ${roundedClass}`} />
               </div>
 
-              {/* Badge for session count (if > 1) */}
               {sessionCount > 1 && (
                 <Badge
                   variant="secondary"
@@ -222,11 +212,15 @@ export function ProjectTimelineBar({
 
       {/* Stats below */}
       <div className="flex justify-between items-center text-[10px] text-muted-foreground mt-2 px-1">
-        <span>{format(parseISO(projectStartDate), "MMM d, yyyy")}</span>
-        <span>
-          {timelineData.daySessions.length} active day{timelineData.daySessions.length !== 1 ? "s" : ""}
+        <span className={isEmpty || !projectStartDate ? "invisible" : undefined}>
+          {isEmpty || !projectStartDate ? "Jan 1, 2000" : format(parseISO(projectStartDate), "MMM d, yyyy")}
         </span>
-        <span>{format(parseISO(projectEndDate), "MMM d, yyyy")}</span>
+        <span className={isEmpty || !timelineData ? "invisible" : undefined}>
+          {isEmpty || !timelineData ? "0 active days" : `${timelineData.daySessions.length} active day${timelineData.daySessions.length !== 1 ? "s" : ""}`}
+        </span>
+        <span className={isEmpty || !projectEndDate ? "invisible" : undefined}>
+          {isEmpty || !projectEndDate ? "Jan 1, 2000" : format(parseISO(projectEndDate), "MMM d, yyyy")}
+        </span>
       </div>
     </div>
   );

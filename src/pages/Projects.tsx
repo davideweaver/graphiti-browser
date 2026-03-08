@@ -1,32 +1,23 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { graphitiService } from "@/api/graphitiService";
-import { useGraphiti } from "@/context/GraphitiContext";
+import { xerroProjectsService } from "@/api/xerroProjectsService";
 import Container from "@/components/container/Container";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Projects() {
-  const { groupId } = useGraphiti();
   const navigate = useNavigate();
 
   // Fetch first project to redirect to
   const { data, isLoading } = useQuery({
-    queryKey: ["projects-redirect", groupId],
-    queryFn: async () => {
-      return await graphitiService.listProjects(groupId, 1, undefined, undefined, undefined, "desc");
-    },
-    select: (data) => ({
-      ...data,
-      // Filter out '_general' project from list
-      projects: data.projects.filter((p) => p.name !== "_general"),
-    }),
+    queryKey: ["projects-redirect"],
+    queryFn: () => xerroProjectsService.listProjects({ limit: 1 }),
   });
 
   // Redirect to first project when data loads
   useEffect(() => {
-    if (data && data.projects.length > 0) {
-      navigate(`/project/${encodeURIComponent(data.projects[0].name)}`, { replace: true });
+    if (data && data.items?.length > 0) {
+      navigate(`/project/${encodeURIComponent(data.items[0].name)}`, { replace: true });
     }
   }, [data, navigate]);
 
@@ -40,7 +31,7 @@ export default function Projects() {
     );
   }
 
-  if (!data || data.projects.length === 0) {
+  if (!data || (data.items?.length ?? 0) === 0) {
     return (
       <Container title="Projects" description="No projects found">
         <div className="flex items-center justify-center h-64">
