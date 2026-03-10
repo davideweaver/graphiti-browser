@@ -196,9 +196,12 @@ class TodosService {
     }
   }
 
-  async getProjects(): Promise<TodosProjectsResult> {
+  async getProjects(completed?: boolean): Promise<TodosProjectsResult> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/v1/todos/projects`);
+      const params = new URLSearchParams();
+      if (completed !== undefined) params.append("completed", String(completed));
+      const qs = params.toString();
+      const response = await fetch(`${this.baseUrl}/api/v1/todos/projects${qs ? `?${qs}` : ""}`);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch projects: ${response.statusText}`);

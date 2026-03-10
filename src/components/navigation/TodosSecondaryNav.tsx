@@ -26,8 +26,8 @@ export function TodosSecondaryNav({
   const currentFilter = searchParams.get("filter") || "today";
 
   const { data: projectsData, isLoading: projectsLoading } = useQuery({
-    queryKey: ["todos-projects"],
-    queryFn: () => todosService.getProjects(),
+    queryKey: ["todos-projects", false],
+    queryFn: () => todosService.getProjects(false),
   });
 
   const projects = projectsData?.projects || [];
