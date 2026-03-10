@@ -13,7 +13,8 @@ import {
   Settings,
   Calendar,
   BarChart3,
-  Bell
+  Bell,
+  BookMarked,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -62,13 +63,14 @@ export const navigationConfig: PrimaryNavItem[] = [
     key: 'memory',
     icon: Brain,
     label: 'Memory',
-    defaultPath: '/memory/search',
+    defaultPath: '/memory/blocks',
     secondaryItems: [
       { path: '/memory/search', icon: Search, label: 'Search' },
       { path: '/memory/chat', icon: MessageSquare, label: 'Chat' },
       { path: '/memory/entities', icon: Users, label: 'Entities' },
       { path: '/memory/sessions', icon: Clock, label: 'Sessions' },
-      { path: '/memory/add', icon: Plus, label: 'Add Memory' }
+      { path: '/memory/add', icon: Plus, label: 'Add Memory' },
+      { path: '/memory/blocks', icon: BookMarked, label: 'Blocks' }
     ]
   },
   {

@@ -16,6 +16,7 @@ import { DocumentsSecondaryNav } from "@/components/navigation/DocumentsSecondar
 import { AgentTasksSecondaryNav } from "@/components/navigation/AgentTasksSecondaryNav";
 import { TodosSecondaryNav } from "@/components/navigation/TodosSecondaryNav";
 import { SystemSecondaryNav } from "@/components/navigation/SystemSecondaryNav";
+import { MemoryBlocksSecondaryNav } from "@/components/navigation/MemoryBlocksSecondaryNav";
 import { MobileNavTrigger } from "@/components/navigation/MobileNavTrigger";
 import { DraggableMobileNav } from "@/components/navigation/DraggableMobileNav";
 import { PrimaryNavFooter } from "@/components/navigation/PrimaryNavFooter";
@@ -203,6 +204,11 @@ const Layout = () => {
   // System section flag
   const isSystemSection = activePrimary === "system";
 
+  // Memory Blocks section flag (sub-section of memory)
+  const isMemoryBlocksSection = pathname.startsWith("/memory/blocks");
+  const currentMemoryBlockLabel = isMemoryBlocksSection ? (params["*"] || null) : null;
+  const [currentMemoryFolder, setCurrentMemoryFolder] = useState<string>("");
+
   // Determine current view for Agent Tasks section
   const getAgentTasksView = (): "history" | "task" | "activity" => {
     if (pathname === "/agent-tasks/activity") return "activity";
@@ -305,6 +311,13 @@ const Layout = () => {
             onFolderChange={setCurrentFolderPath}
             onNavigate={handleNavigate}
           />
+        ) : isMemoryBlocksSection ? (
+          <MemoryBlocksSecondaryNav
+            currentBlockLabel={currentMemoryBlockLabel}
+            currentFolder={currentMemoryFolder}
+            onFolderChange={setCurrentMemoryFolder}
+            onNavigate={handleNavigate}
+          />
         ) : isProjectsSection ? (
           <ProjectsSecondaryNav
             selectedProject={selectedProject}
@@ -362,6 +375,13 @@ const Layout = () => {
                   onFolderChange={setCurrentFolderPath}
                   onNavigate={() => {}}
                 />
+              ) : isMemoryBlocksSection ? (
+                <MemoryBlocksSecondaryNav
+                  currentBlockLabel={currentMemoryBlockLabel}
+                  currentFolder={currentMemoryFolder}
+                  onFolderChange={setCurrentMemoryFolder}
+                  onNavigate={() => {}}
+                />
               ) : isProjectsSection ? (
                 <ProjectsSecondaryNav
                   selectedProject={selectedProject}
@@ -405,6 +425,14 @@ const Layout = () => {
                 onFolderChange={setCurrentFolderPath}
                 onNavigate={handleNavigate}
                 onDocumentSelect={handleMobileNavigate}
+              />
+            ) : isMemoryBlocksSection ? (
+              <MemoryBlocksSecondaryNav
+                currentBlockLabel={currentMemoryBlockLabel}
+                currentFolder={currentMemoryFolder}
+                onFolderChange={setCurrentMemoryFolder}
+                onNavigate={handleNavigate}
+                onBlockSelect={handleMobileNavigate}
               />
             ) : isProjectsSection ? (
               <ProjectsSecondaryNav

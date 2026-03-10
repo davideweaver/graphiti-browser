@@ -1,7 +1,7 @@
 import { formatTimestamp, formatDuration } from "@/lib/cronFormatter";
 import { CheckCircle2, XCircle, X } from "lucide-react";
 import type { TaskExecution } from "@/types/agentTasks";
-import ReactMarkdown from "react-markdown";
+import { ExcerptMarkdown } from "@/components/markdown/ExcerptMarkdown";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface TaskExecutionRowProps {
@@ -75,11 +75,10 @@ export function TaskExecutionRow({
           {formatTimestamp(execution.timestamp)}
         </div>
         {(execution.normalizedResult?.display.summary || execution.message) && (
-          <div className="text-sm text-muted-foreground pl-6 max-w-2xl prose prose-sm dark:prose-invert prose-p:inline prose-strong:font-semibold">
-            <ReactMarkdown>
-              {execution.normalizedResult?.display.summary || execution.message}
-            </ReactMarkdown>
-          </div>
+          <ExcerptMarkdown
+            content={execution.normalizedResult?.display.summary || execution.message || ""}
+            className="pl-6 max-w-2xl line-clamp-3"
+          />
         )}
         <div className="text-xs text-muted-foreground/60 pl-6 font-mono">
           {formatDuration(execution.durationMs)}

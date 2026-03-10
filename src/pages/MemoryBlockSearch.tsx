@@ -1,7 +1,14 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { documentsService } from "@/api/documentsService";
+import { memoryBlocksService } from "@/api/memoryBlocksService";
+import {
+  getSearchQuery,
+  setSearchQuery,
+  getClickedResults,
+  setClickedResults,
+  addClickedResult,
+} from "@/lib/memoryBlocksSearchStorage";
 import Container from "@/components/container/Container";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,20 +17,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, FileText, ArrowRight, X, Loader2 } from "lucide-react";
 import { ExcerptMarkdown } from "@/components/markdown/ExcerptMarkdown";
-import {
-  getSearchQuery,
-  setSearchQuery,
-  setSearchResults,
-  setLastClickedResult,
-  getClickedResults,
-  setClickedResults,
-} from "@/lib/documentsSearchStorage";
-import type { SearchResult } from "@/types/documents";
+import type { MemoryBlockSearchResult } from "@/types/memoryBlocks";
 
-export default function DocumentSearch() {
+export default function MemoryBlockSearch() {
   const navigate = useNavigate();
 
-  // Initialize from localStorage
   const [searchInput, setSearchInput] = useState(() => getSearchQuery());
   const [searchQuery, setSearchQueryState] = useState(() => getSearchQuery());
   const [clickedResults, setClickedResultsState] = useState<Set<string>>(
@@ -32,34 +30,27 @@ export default function DocumentSearch() {
   const [searchDuration, setSearchDuration] = useState<number | null>(null);
   const searchStartTime = useRef<number | null>(null);
 
-  // Fetch search results
   const { data, isLoading } = useQuery({
-    queryKey: ["documents-search", searchQuery],
-    queryFn: () => documentsService.searchDocuments(searchQuery, 50),
+    queryKey: ["memory-blocks-search", searchQuery],
+    queryFn: () => memoryBlocksService.searchBlocks(searchQuery, undefined, 30),
     enabled: searchQuery.length > 0,
   });
 
-  const results = useMemo(() => data?.results || [], [data?.results]);
+  const results = useMemo(() => data?.results ?? [], [data?.results]);
 
-  // Save results and record duration when results arrive
   useEffect(() => {
-    if (results.length > 0) {
-      setSearchResults(results);
-      if (searchStartTime.current !== null) {
-        setSearchDuration((Date.now() - searchStartTime.current) / 1000);
-        searchStartTime.current = null;
-      }
+    if (results.length > 0 && searchStartTime.current !== null) {
+      setSearchDuration((Date.now() - searchStartTime.current) / 1000);
+      searchStartTime.current = null;
     }
   }, [results]);
 
-  // Handle search submit
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchInput.trim()) {
-      const query = searchInput.trim();
+    const query = searchInput.trim();
+    if (query) {
       setSearchQueryState(query);
       setSearchQuery(query);
-      // Clear clicked results and duration on new search
       setClickedResultsState(new Set());
       setClickedResults([]);
       setSearchDuration(null);
@@ -67,33 +58,28 @@ export default function DocumentSearch() {
     }
   };
 
-  // Handle result click
-  const handleResultClick = (result: SearchResult) => {
-    // Mark this result as clicked
-    const newClickedSet = new Set(clickedResults).add(result.filePath);
-    setClickedResultsState(newClickedSet);
-    setClickedResults(Array.from(newClickedSet));
-    setLastClickedResult(result);
-    navigate(`/documents/${result.filePath}`);
+  const handleResultClick = (result: MemoryBlockSearchResult) => {
+    const newClicked = new Set(clickedResults).add(result.label);
+    setClickedResultsState(newClicked);
+    addClickedResult(result);
+    navigate(`/memory/blocks/${result.label}`);
   };
 
-  // Clear search
-  const handleClearSearch = () => {
+  const handleClear = () => {
     setSearchInput("");
     setSearchQueryState("");
     setSearchQuery("");
-    // Clear clicked results when search is cleared
     setClickedResultsState(new Set());
     setClickedResults([]);
+    setSearchDuration(null);
   };
 
   return (
     <Container
-      title="Search Documents"
-      description="Search your Obsidian vault using semantic search"
+      title="Search Memory"
+      description="Search memory blocks using semantic search"
     >
       <div className="space-y-6">
-        {/* Search Input */}
         <form onSubmit={handleSearch}>
           <div className="space-y-2">
             <Label htmlFor="search">Search Query</Label>
@@ -102,7 +88,7 @@ export default function DocumentSearch() {
                 <Input
                   id="search"
                   type="text"
-                  placeholder="Search for documents, facts, or memories..."
+                  placeholder="Search memory blocks..."
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   className="focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -115,7 +101,7 @@ export default function DocumentSearch() {
                     variant="ghost"
                     size="sm"
                     className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                    onClick={handleClearSearch}
+                    onClick={handleClear}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -132,46 +118,37 @@ export default function DocumentSearch() {
           </div>
         </form>
 
-        {/* Results */}
         <div className="mt-8">
-          {/* Loading State */}
           {isLoading && (
             <div className="space-y-3">
               {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="h-32 bg-accent/50 rounded-lg animate-pulse" />
+                <div key={i} className="h-24 bg-accent/50 rounded-lg animate-pulse" />
               ))}
             </div>
           )}
 
-          {/* Empty State - No Results */}
-          {!isLoading && results.length === 0 && searchQuery && (
+          {!isLoading && searchQuery && results.length === 0 && (
             <Card>
               <CardContent className="p-12 text-center">
                 <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                 <h3 className="text-lg font-semibold mb-2">No results found</h3>
-                <p className="text-muted-foreground">
-                  No documents found for "{searchQuery}"
-                </p>
+                <p className="text-muted-foreground">No blocks found for "{searchQuery}"</p>
               </CardContent>
             </Card>
           )}
 
-          {/* Initial State - No Query */}
           {!searchQuery && (
             <Card>
               <CardContent className="p-12 text-center">
                 <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">
-                  Start searching your documents
-                </h3>
+                <h3 className="text-lg font-semibold mb-2">Search your memory</h3>
                 <p className="text-muted-foreground">
-                  Enter a search query and click the search button to find documents.
+                  Enter a query to find relevant memory blocks.
                 </p>
               </CardContent>
             </Card>
           )}
 
-          {/* Results */}
           {!isLoading && results.length > 0 && (
             <div>
               <div className="mb-4 text-sm text-muted-foreground">
@@ -179,48 +156,35 @@ export default function DocumentSearch() {
                 {searchDuration !== null && ` in ${searchDuration.toFixed(1)}s`}
               </div>
               <div className="space-y-3">
-                {results.map((result, index) => {
-                  const isClicked = clickedResults.has(result.filePath);
-                  return (
-                    <Card
-                      key={`${result.filePath}-${index}`}
-                      className="cursor-pointer hover:bg-accent/50 transition-colors"
-                      onClick={() => handleResultClick(result)}
-                    >
+                {results.map((result) => (
+                  <Card
+                    key={result.label}
+                    className="cursor-pointer hover:bg-accent/50 transition-colors"
+                    onClick={() => handleResultClick(result)}
+                  >
                     <CardContent className="pt-4">
                       <div className="flex items-start gap-4">
                         <FileText className="h-5 w-5 mt-1 text-muted-foreground flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          {/* File name and match score */}
                           <div className="flex items-center gap-2 mb-1">
                             <span className="font-medium truncate">
-                              {result.fileName}
+                              {result.label.split("/").pop()}
                             </span>
-                            {result.hybridScore && (
+                            {result.score > 0 && (
                               <span className="text-xs text-muted-foreground">
-                                {(result.hybridScore * 100).toFixed(0)}% match
+                                {(result.score * 100).toFixed(0)}% match
                               </span>
                             )}
                           </div>
-
-                          {/* Heading */}
-                          {result.heading && (
-                            <div className="text-sm text-muted-foreground mb-2">
-                              {result.heading}
-                            </div>
+                          {result.excerpt && (
+                            <ExcerptMarkdown content={result.excerpt} className="line-clamp-2 [&>*]:my-0" />
                           )}
-
-                          {/* Content preview */}
-                          <ExcerptMarkdown content={result.content} className="line-clamp-2 [&>*]:my-0" />
-
-                          {/* File path */}
-                          <div className="text-xs text-muted-foreground mt-2 truncate">
-                            {result.filePath}
+                          <div className="text-xs text-muted-foreground mt-2">
+                            {result.label}
                           </div>
                         </div>
-
                         <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-1">
-                          {isClicked && (
+                          {clickedResults.has(result.label) && (
                             <Badge variant="secondary" className="text-xs">
                               VIEWED
                             </Badge>
@@ -230,8 +194,7 @@ export default function DocumentSearch() {
                       </div>
                     </CardContent>
                   </Card>
-                  );
-                })}
+                ))}
               </div>
             </div>
           )}

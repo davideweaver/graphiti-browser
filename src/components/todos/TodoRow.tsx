@@ -1,40 +1,11 @@
 import { useState, useEffect } from "react";
-import ReactMarkdown from "react-markdown";
+import { ExcerptMarkdown } from "@/components/markdown/ExcerptMarkdown";
 import type { Todo } from "@/types/todos";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CalendarDays, X, FolderOpen } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format, parseISO } from "date-fns";
 
-// Inline-only components so line-clamp works on the container
-const mdComponents = {
-  p: ({ children }: { children?: React.ReactNode }) => <span>{children} </span>,
-  strong: ({ children }: { children?: React.ReactNode }) => (
-    <strong>{children}</strong>
-  ),
-  em: ({ children }: { children?: React.ReactNode }) => <em>{children}</em>,
-  code: ({ children }: { children?: React.ReactNode }) => (
-    <code className="text-xs bg-white/10 rounded px-0.5">{children}</code>
-  ),
-  // Collapse block elements to inline
-  h1: ({ children }: { children?: React.ReactNode }) => (
-    <span className="font-bold">{children} </span>
-  ),
-  h2: ({ children }: { children?: React.ReactNode }) => (
-    <span className="font-bold">{children} </span>
-  ),
-  h3: ({ children }: { children?: React.ReactNode }) => (
-    <span className="font-bold">{children} </span>
-  ),
-  ul: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
-  ol: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
-  li: ({ children }: { children?: React.ReactNode }) => (
-    <span>• {children} </span>
-  ),
-  blockquote: ({ children }: { children?: React.ReactNode }) => (
-    <span className="italic opacity-75">{children}</span>
-  ),
-};
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function formatScheduledDate(dateStr: string): string {
@@ -110,9 +81,7 @@ export function TodoRow({
           {todo.title}
         </span>
         {todo.body && (
-          <div className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
-            <ReactMarkdown components={mdComponents}>{todo.body}</ReactMarkdown>
-          </div>
+          <ExcerptMarkdown content={todo.body} inline className="mt-0.5 line-clamp-2" />
         )}
         <div className="flex flex-wrap items-center gap-3 mt-1">
           {showProject && todo.projectName && (

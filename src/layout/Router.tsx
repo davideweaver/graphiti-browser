@@ -51,6 +51,20 @@ const Router = createBrowserRouter(
         lazy={lazyImportComponent(() => import("@/pages/DocumentDetail"))}
       />
 
+      {/* Memory Blocks routes */}
+      <Route
+        path="/memory/blocks"
+        lazy={lazyImportComponent(() => import("@/pages/MemoryBlocks"))}
+      />
+      <Route
+        path="/memory/blocks/search"
+        lazy={lazyImportComponent(() => import("@/pages/MemoryBlockSearch"))}
+      />
+      <Route
+        path="/memory/blocks/*"
+        lazy={lazyImportComponent(() => import("@/pages/MemoryBlockDetail"))}
+      />
+
       {/* Memory sub-routes */}
       <Route
         path="/memory/search"
