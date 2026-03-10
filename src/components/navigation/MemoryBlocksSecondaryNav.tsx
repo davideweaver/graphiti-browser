@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "react-router-dom";
 import { memoryBlocksService } from "@/api/memoryBlocksService";
 import { Button } from "@/components/ui/button";
 import { SecondaryNavItem } from "@/components/navigation/SecondaryNavItem";
 import { SecondaryNavItemTitle } from "@/components/navigation/SecondaryNavItemContent";
 import { SecondaryNavContainer } from "@/components/navigation/SecondaryNavContainer";
 import { SecondaryNavToolButton } from "@/components/navigation/SecondaryNavToolButton";
-import { ChevronLeft, Folder, FileText, RefreshCw, Search } from "lucide-react";
+import { ChevronLeft, Folder, FileText, RefreshCw, Search, History } from "lucide-react";
 import { toast } from "sonner";
 
 interface MemoryBlocksSecondaryNavProps {
@@ -23,6 +24,8 @@ export function MemoryBlocksSecondaryNav({
   onNavigate,
   onBlockSelect,
 }: MemoryBlocksSecondaryNavProps) {
+  const { pathname } = useLocation();
+  const isSessionsActive = pathname.startsWith("/memory/sessions");
   const isRoot = !currentFolder;
 
   // At root: fetch system files and reference subfolders in parallel
@@ -64,10 +67,13 @@ export function MemoryBlocksSecondaryNav({
     }
   };
 
-  // Back button: from reference/xxx go to root (skip the "reference" level)
+  // Back button: from reference/xxx or system go to root (skip top-level sections)
   const rawSegments = currentFolder.split("/").filter(Boolean);
   const handleBackClick = () => {
-    if (rawSegments.length <= 2 && rawSegments[0] === "reference") {
+    if (
+      (rawSegments.length <= 2 && rawSegments[0] === "reference") ||
+      (rawSegments.length === 1 && rawSegments[0] === "system")
+    ) {
       onFolderChange("");
     } else {
       onFolderChange(rawSegments.slice(0, -1).join("/"));
@@ -140,6 +146,22 @@ export function MemoryBlocksSecondaryNav({
         </>
       }
     >
+      {/* Sessions link - always visible, above breadcrumbs */}
+      <div className="px-4 pb-1">
+        <div className="space-y-1">
+          <SecondaryNavItem
+            isActive={isSessionsActive}
+            onClick={() => onNavigate("/memory/sessions")}
+          >
+            <History className="h-4 w-4 mr-3 flex-shrink-0 text-muted-foreground" />
+            <SecondaryNavItemTitle>Sessions</SecondaryNavItemTitle>
+          </SecondaryNavItem>
+        </div>
+      </div>
+      <div className="px-6 pb-2">
+        <div className="border-t border-border" />
+      </div>
+
       {/* Breadcrumbs */}
       {displaySegments.length > 0 && (
         <div className="px-6 pb-2">
@@ -185,34 +207,42 @@ export function MemoryBlocksSecondaryNav({
 
       {/* Items list */}
       <div className="flex-1 overflow-auto px-4 pb-4">
-        {isRoot ? (
-          <div className="space-y-1">
-            {/* System files */}
-            {systemData && renderItems(systemData)}
+        <div className="space-y-1">
+          {isRoot ? (
+            <>
+              {/* System folder */}
+              <SecondaryNavItem
+                isActive={currentFolder === "system"}
+                onClick={() => onFolderChange("system")}
+              >
+                <Folder className="h-4 w-4 mr-3 flex-shrink-0 text-muted-foreground" />
+                <SecondaryNavItemTitle>system</SecondaryNavItemTitle>
+              </SecondaryNavItem>
 
-            {/* Divider between system and reference */}
-            {systemData && referenceData && (
-              <div className="py-2 px-2">
-                <div className="border-t border-border" />
-              </div>
-            )}
+              {/* Divider between system and reference */}
+              {referenceData && (
+                <div className="py-2 px-2">
+                  <div className="border-t border-border" />
+                </div>
+              )}
 
-            {/* Reference subfolders */}
-            {referenceData && renderItems(referenceData)}
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {subfolderData ? (
-              renderItems(subfolderData)
-            ) : (
-              <div className="space-y-1">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="h-10 bg-accent/50 rounded-lg animate-pulse" />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+              {/* Reference subfolders */}
+              {referenceData && renderItems(referenceData)}
+            </>
+          ) : (
+            <>
+              {subfolderData ? (
+                renderItems(subfolderData)
+              ) : (
+                <div className="space-y-1">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="h-10 bg-accent/50 rounded-lg animate-pulse" />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </SecondaryNavContainer>
   );

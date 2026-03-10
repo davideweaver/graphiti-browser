@@ -63,7 +63,7 @@ export const navigationConfig: PrimaryNavItem[] = [
     key: 'memory',
     icon: Brain,
     label: 'Memory',
-    defaultPath: '/memory/blocks',
+    defaultPath: '/memory/sessions',
     secondaryItems: [
       { path: '/memory/search', icon: Search, label: 'Search' },
       { path: '/memory/chat', icon: MessageSquare, label: 'Chat' },
