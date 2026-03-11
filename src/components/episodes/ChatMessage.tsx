@@ -30,7 +30,7 @@ export function ChatMessage({
       {showRole && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
           <span>{role}</span>
-          {permissionMode && (
+          {permissionMode === 'plan' && (
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-amber-500/50 text-amber-500">
               plan mode
             </Badge>
