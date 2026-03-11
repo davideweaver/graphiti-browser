@@ -41,6 +41,28 @@ import {
 } from "date-fns";
 import type { XerroSession } from "@/types/xerroProjects";
 
+const EXPANDED_STATE_KEY = "sessions-expanded-state";
+const MAX_EXPANDED_DAYS = 20;
+
+function loadExpandedState(): Record<string, string[]> {
+  try {
+    return JSON.parse(localStorage.getItem(EXPANDED_STATE_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveExpandedState(dateKey: string, openProjects: Set<string>) {
+  const state = loadExpandedState();
+  state[dateKey] = Array.from(openProjects);
+  // Prune to max 20 days — remove oldest entries first
+  const keys = Object.keys(state).sort(); // yyyy-MM-dd sorts lexicographically
+  while (keys.length > MAX_EXPANDED_DAYS) {
+    delete state[keys.shift()!];
+  }
+  localStorage.setItem(EXPANDED_STATE_KEY, JSON.stringify(state));
+}
+
 export default function Sessions() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -50,18 +72,21 @@ export default function Sessions() {
     : undefined;
   const queryClient = useQueryClient();
 
-  // Initialize selected date from query string or default to today
+  // Initialize selected date from query string, then localStorage, then today
   const [selectedDate, setSelectedDate] = useState(() => {
     const dateParam = searchParams.get("date");
     if (dateParam) {
       try {
         const parsed = parse(dateParam, "yyyy-MM-dd", new Date());
-        return isNaN(parsed.getTime())
-          ? startOfDay(new Date())
-          : startOfDay(parsed);
-      } catch {
-        return startOfDay(new Date());
-      }
+        if (!isNaN(parsed.getTime())) return startOfDay(parsed);
+      } catch {}
+    }
+    const saved = localStorage.getItem("sessions-selected-date");
+    if (saved) {
+      try {
+        const parsed = parse(saved, "yyyy-MM-dd", new Date());
+        if (!isNaN(parsed.getTime())) return startOfDay(parsed);
+      } catch {}
     }
     return startOfDay(new Date());
   });
@@ -73,14 +98,33 @@ export default function Sessions() {
   const [sourceFilter, setSourceFilter] = useState<string>(
     () => localStorage.getItem("sessions-source-filter") ?? "all",
   );
-  const [openProjects, setOpenProjects] = useState<Set<string>>(new Set());
+  const [openProjects, setOpenProjects] = useState<Set<string>>(() => {
+    const dateKey = format(selectedDate, "yyyy-MM-dd");
+    const state = loadExpandedState();
+    return new Set(state[dateKey] ?? []);
+  });
   const [deletedSessionIds, setDeletedSessionIds] = useState<Set<string>>(new Set());
 
-  // Update query string when date changes
-  useEffect(() => {
-    const dateString = format(selectedDate, "yyyy-MM-dd");
+  // Atomically update selected date, URL, and localStorage — avoids async URL race with v7_startTransition
+  const selectDate = useCallback((date: Date) => {
+    const normalized = startOfDay(date);
+    const dateString = format(normalized, "yyyy-MM-dd");
+    setSelectedDate(normalized);
     setSearchParams({ date: dateString }, { replace: true });
-  }, [selectedDate, setSearchParams]);
+    localStorage.setItem("sessions-selected-date", dateString);
+  }, [setSearchParams]);
+
+  // Restore saved expanded state when day changes; if no saved state, reset to empty
+  // (auto-init below will open the first project once groupedSessions is available)
+  useEffect(() => {
+    const dateKey = format(selectedDate, "yyyy-MM-dd");
+    const state = loadExpandedState();
+    if (state[dateKey] !== undefined) {
+      setOpenProjects(new Set(state[dateKey]));
+    } else {
+      setOpenProjects(new Set());
+    }
+  }, [selectedDate]);
 
   const rangeStartDate = startOfDay(subDays(selectedDate, 30)).toISOString();
   const rangeEndDate = endOfDay(addDays(selectedDate, 30)).toISOString();
@@ -128,15 +172,13 @@ export default function Sessions() {
 
   const handleCalendarSelect = (date: Date | undefined) => {
     if (date) {
-      const normalizedDate = startOfDay(date);
-      setSelectedDate(normalizedDate);
+      selectDate(date);
       setCalendarOpen(false);
     }
   };
 
   const handleTodayClick = () => {
-    const today = startOfDay(new Date());
-    setSelectedDate(today);
+    selectDate(new Date());
     setCalendarOpen(false);
   };
 
@@ -165,6 +207,8 @@ export default function Sessions() {
       } else {
         next.add(project);
       }
+      const dateKey = format(selectedDate, "yyyy-MM-dd");
+      saveExpandedState(dateKey, next);
       return next;
     });
   };
@@ -229,15 +273,19 @@ export default function Sessions() {
     });
   }, [filteredSessions, groupByProject]);
 
-  // Initialize first project as open on first load only (not on every WS-triggered refetch)
+  // Auto-open first project for days with no saved expanded state
   useEffect(() => {
     if (groupedSessions && groupedSessions.length > 0) {
-      setOpenProjects((prev) => {
-        if (prev.size > 0) return prev; // already initialized, don't reset
-        return new Set([groupedSessions[0][0]]);
-      });
+      const dateKey = format(selectedDate, "yyyy-MM-dd");
+      const state = loadExpandedState();
+      if (state[dateKey] === undefined) {
+        const firstProject = groupedSessions[0][0];
+        const next = new Set([firstProject]);
+        setOpenProjects(next);
+        saveExpandedState(dateKey, next);
+      }
     }
-  }, [groupedSessions]);
+  }, [groupedSessions, selectedDate]);
 
   const calendarTools = (
     <div className="flex gap-2">
@@ -312,7 +360,7 @@ export default function Sessions() {
         {sessionsResponse && sessionsResponse.sessions.length > 0 && (
           <DayNavigation
             selectedDate={selectedDate}
-            onDateSelect={setSelectedDate}
+            onDateSelect={selectDate}
             dateRange={{ start: rangeStartDate, end: rangeEndDate }}
             localStats={localSessionStats}
           />
