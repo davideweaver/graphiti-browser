@@ -18,6 +18,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
@@ -62,6 +69,9 @@ export default function Sessions() {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [groupByProject, setGroupByProject] = useState(
     () => localStorage.getItem("sessions-group-by-project") !== "false",
+  );
+  const [sourceFilter, setSourceFilter] = useState<string>(
+    () => localStorage.getItem("sessions-source-filter") ?? "all",
   );
   const [openProjects, setOpenProjects] = useState<Set<string>>(new Set());
   const [deletedSessionIds, setDeletedSessionIds] = useState<Set<string>>(new Set());
@@ -173,6 +183,15 @@ export default function Sessions() {
     return stats;
   }, [sessionsResponse]);
 
+  const getSessionSource = (session: XerroSession): string => {
+    const src = session.externalSource;
+    if (!src) return "other";
+    if (src === "claude-code") return "claude-code";
+    if (src.startsWith("scheduled-task")) return "scheduled-agent";
+    if (src === "slack-bot") return "slack";
+    return "other";
+  };
+
   // Filter sessions to only show the selected date, excluding locally deleted sessions
   const filteredSessions = useMemo(() => {
     if (!sessionsResponse?.sessions) return [];
@@ -183,9 +202,11 @@ export default function Sessions() {
       if (deletedSessionIds.has(session.id)) return false;
       const lastMessageDate = new Date(session.lastMessageAt);
       const localDateString = format(lastMessageDate, "yyyy-MM-dd");
-      return localDateString === selectedDateString;
+      if (localDateString !== selectedDateString) return false;
+      if (sourceFilter !== "all" && getSessionSource(session) !== sourceFilter) return false;
+      return true;
     });
-  }, [sessionsResponse, selectedDate, deletedSessionIds]);
+  }, [sessionsResponse, selectedDate, deletedSessionIds, sourceFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Group sessions by project when enabled
   const groupedSessions = useMemo(() => {
@@ -220,6 +241,24 @@ export default function Sessions() {
 
   const calendarTools = (
     <div className="flex gap-2">
+      <Select
+        value={sourceFilter}
+        onValueChange={(val) => {
+          setSourceFilter(val);
+          localStorage.setItem("sessions-source-filter", val);
+        }}
+      >
+        <SelectTrigger className="h-8 w-[140px] text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Sources</SelectItem>
+          <SelectItem value="claude-code">Claude Code</SelectItem>
+          <SelectItem value="scheduled-agent">Scheduled Agent</SelectItem>
+          <SelectItem value="slack">Slack</SelectItem>
+          <SelectItem value="other">Other</SelectItem>
+        </SelectContent>
+      </Select>
       <ContainerToolToggle
         size="sm"
         pressed={groupByProject}
