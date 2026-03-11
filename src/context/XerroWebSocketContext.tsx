@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import type { AgentStatusEvent, DocumentChangeEvent, TaskConfigEvent, BookmarkChangeEvent, TodoChangeEvent, MemorySessionPayload, MemorySessionDeletedPayload, MemoryProjectPayload } from '@/types/websocket';
-import type { NotificationCreatedEvent, NotificationReadEvent, NotificationsReadAllEvent } from '@/types/notifications';
+import type { NotificationCreatedEvent, NotificationReadEvent, NotificationsReadAllEvent, NotificationDeletedEvent } from '@/types/notifications';
 
 interface XerroWebSocketContextValue {
   isConnected: boolean;
@@ -20,6 +20,7 @@ interface XerroWebSocketContextValue {
   subscribeToNotificationRead: (callback: (event: NotificationReadEvent) => void) => () => void;
   subscribeToNotificationUnread: (callback: (event: NotificationReadEvent) => void) => () => void;
   subscribeToNotificationsReadAll: (callback: (event: NotificationsReadAllEvent) => void) => () => void;
+  subscribeToNotificationDeleted: (callback: (event: NotificationDeletedEvent) => void) => () => void;
   subscribeToMemorySessionCreated: (callback: (event: MemorySessionPayload) => void) => () => void;
   subscribeToMemorySessionUpdated: (callback: (event: MemorySessionPayload) => void) => () => void;
   subscribeToMemorySessionDeleted: (callback: (event: MemorySessionDeletedPayload) => void) => () => void;
@@ -50,6 +51,7 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
   const notificationReadCallbacksRef = useRef<Set<(event: NotificationReadEvent) => void>>(new Set());
   const notificationUnreadCallbacksRef = useRef<Set<(event: NotificationReadEvent) => void>>(new Set());
   const notificationsReadAllCallbacksRef = useRef<Set<(event: NotificationsReadAllEvent) => void>>(new Set());
+  const notificationDeletedCallbacksRef = useRef<Set<(event: NotificationDeletedEvent) => void>>(new Set());
   const memorySessionCreatedCallbacksRef = useRef<Set<(event: MemorySessionPayload) => void>>(new Set());
   const memorySessionUpdatedCallbacksRef = useRef<Set<(event: MemorySessionPayload) => void>>(new Set());
   const memorySessionDeletedCallbacksRef = useRef<Set<(event: MemorySessionDeletedPayload) => void>>(new Set());
@@ -267,6 +269,15 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
       });
     });
 
+    socket.on('notifications:notification-deleted', (data: NotificationDeletedEvent) => {
+      console.log('[Xerro WebSocket] Notification deleted:', data.id);
+      notificationDeletedCallbacksRef.current.forEach(callback => {
+        try { callback(data); } catch (error) {
+          console.error('[Xerro WebSocket] Error in notification deleted callback:', error);
+        }
+      });
+    });
+
     // Memory events
     socket.on('memory:session-created', (data: MemorySessionPayload) => {
       console.log('[Xerro WebSocket] Memory session created:', data.sessionId);
@@ -438,6 +449,11 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
     return () => { notificationsReadAllCallbacksRef.current.delete(callback); };
   }, []);
 
+  const subscribeToNotificationDeleted = useCallback((callback: (event: NotificationDeletedEvent) => void) => {
+    notificationDeletedCallbacksRef.current.add(callback);
+    return () => { notificationDeletedCallbacksRef.current.delete(callback); };
+  }, []);
+
   const subscribeToMemorySessionCreated = useCallback((callback: (event: MemorySessionPayload) => void) => {
     memorySessionCreatedCallbacksRef.current.add(callback);
     return () => { memorySessionCreatedCallbacksRef.current.delete(callback); };
@@ -485,6 +501,7 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
     subscribeToNotificationRead,
     subscribeToNotificationUnread,
     subscribeToNotificationsReadAll,
+    subscribeToNotificationDeleted,
     subscribeToMemorySessionCreated,
     subscribeToMemorySessionUpdated,
     subscribeToMemorySessionDeleted,

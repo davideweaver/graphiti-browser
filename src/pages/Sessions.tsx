@@ -208,12 +208,13 @@ export default function Sessions() {
     });
   }, [filteredSessions, groupByProject]);
 
-  // Initialize only first project as open when groupedSessions changes
+  // Initialize first project as open on first load only (not on every WS-triggered refetch)
   useEffect(() => {
     if (groupedSessions && groupedSessions.length > 0) {
-      const firstProject = groupedSessions[0][0];
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setOpenProjects(new Set([firstProject]));
+      setOpenProjects((prev) => {
+        if (prev.size > 0) return prev; // already initialized, don't reset
+        return new Set([groupedSessions[0][0]]);
+      });
     }
   }, [groupedSessions]);
 

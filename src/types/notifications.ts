@@ -40,6 +40,12 @@ export interface NotificationsReadAllEvent {
   timestamp: string;
 }
 
+export interface NotificationDeletedEvent {
+  id: string;
+  unreadCount: number;
+  timestamp: string;
+}
+
 export interface DirectMessageResponse {
   success: boolean;
   channelId: string;

@@ -147,6 +147,7 @@ export default function Todos() {
     const invalidate = () => {
       queryClient.invalidateQueries({ queryKey: ["todos"] });
       queryClient.invalidateQueries({ queryKey: ["todos-projects"] });
+      queryClient.invalidateQueries({ queryKey: ["project-todos"] });
     };
     const unsubCreated = subscribeToTodoCreated(invalidate);
     const unsubUpdated = subscribeToTodoUpdated(invalidate);

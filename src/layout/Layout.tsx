@@ -3,6 +3,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { useGraphitiWebSocket } from "@/hooks/use-graphiti-websocket";
 import { useTasksRunning } from "@/hooks/use-tasks-running";
 import { useUnreadNotificationCount } from "@/hooks/use-unread-notification-count";
+import { useDocumentQueryUpdates } from "@/hooks/use-document-query-updates";
+import { useMemoryQueryUpdates } from "@/hooks/use-memory-query-updates";
 import { useXerroWebSocketContext } from "@/context/XerroWebSocketContext";
 import { WifiOff } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
@@ -38,6 +40,8 @@ const Layout = () => {
   const { isConnected: xerroIsConnected } = useXerroWebSocketContext();
   const isTasksRunning = useTasksRunning();
   const { unreadCount } = useUnreadNotificationCount();
+  useDocumentQueryUpdates();
+  useMemoryQueryUpdates();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   const [currentFolderPath, setCurrentFolderPath] = useState<string>(() =>

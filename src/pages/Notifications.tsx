@@ -27,7 +27,7 @@ export default function Notifications() {
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false);
   const [isClearAllDialogOpen, setIsClearAllDialogOpen] = useState(false);
-  const { subscribeToNotificationCreated, subscribeToNotificationRead, subscribeToNotificationsReadAll } = useXerroWebSocketContext();
+  const { subscribeToNotificationCreated, subscribeToNotificationRead, subscribeToNotificationsReadAll, subscribeToNotificationDeleted } = useXerroWebSocketContext();
 
   // Fetch notifications
   const { data, isLoading, error, refetch } = useQuery({
@@ -176,12 +176,27 @@ export default function Notifications() {
       refetch();
     });
 
+    const unsubDeleted = subscribeToNotificationDeleted((eventData) => {
+      queryClient.setQueryData<typeof data>(
+        ["notifications", showUnreadOnly],
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            notifications: old.notifications.filter((n) => n.id !== eventData.id),
+            total: Math.max(0, old.total - 1),
+          };
+        }
+      );
+    });
+
     return () => {
       unsubCreated();
       unsubRead();
       unsubReadAll();
+      unsubDeleted();
     };
-  }, [showUnreadOnly, queryClient, refetch, subscribeToNotificationCreated, subscribeToNotificationRead, subscribeToNotificationsReadAll]);
+  }, [showUnreadOnly, queryClient, refetch, subscribeToNotificationCreated, subscribeToNotificationRead, subscribeToNotificationsReadAll, subscribeToNotificationDeleted]);
 
   const handleNotificationClick = useCallback(
     (notification: Notification) => {
