@@ -1,7 +1,8 @@
 // From GET /api/v1/projects/
 export interface XerroProject {
   name: string;
-  folder: string;
+  folder: string;         // encoded storage key (slashes → dashes) — do NOT use as cwd
+  path?: string;          // actual filesystem path — use this as cwd
   sessionCount: number;
   lastTurnAt: string; // ISO timestamp
   reflectionCounter: number;

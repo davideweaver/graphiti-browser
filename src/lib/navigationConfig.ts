@@ -15,6 +15,7 @@ import {
   BarChart3,
   Bell,
   BookMarked,
+  MessagesSquare,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -81,6 +82,14 @@ export const navigationConfig: PrimaryNavItem[] = [
     secondaryItems: []
   },
   {
+    key: 'chat',
+    icon: MessagesSquare,
+    iconClassName: '[&_svg]:!size-6',
+    label: 'Chat',
+    defaultPath: '/chat',
+    secondaryItems: []
+  },
+  {
     key: 'agent-tasks',
     icon: Bot,
     iconClassName: '[&_svg]:!size-6',
@@ -108,6 +117,7 @@ export function getActivePrimary(pathname: string): string | null {
   // Todos routes
   if (pathname.startsWith('/todos')) return 'todos';
   // Agent Tasks routes
+  if (pathname.startsWith('/chat')) return 'chat';
   if (pathname.startsWith('/agent-tasks')) return 'agent-tasks';
   // System routes
   if (pathname.startsWith('/system')) return 'system';

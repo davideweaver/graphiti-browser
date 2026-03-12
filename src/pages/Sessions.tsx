@@ -233,6 +233,7 @@ export default function Sessions() {
     if (src === "claude-code") return "claude-code";
     if (src.startsWith("scheduled-task")) return "scheduled-agent";
     if (src === "slack-bot") return "slack";
+    if (src === "xerro-chat") return "chat";
     return "other";
   };
 
@@ -302,6 +303,7 @@ export default function Sessions() {
         <SelectContent>
           <SelectItem value="all">All Sources</SelectItem>
           <SelectItem value="claude-code">Claude Code</SelectItem>
+          <SelectItem value="chat">Chat</SelectItem>
           <SelectItem value="scheduled-agent">Scheduled Agent</SelectItem>
           <SelectItem value="slack">Slack</SelectItem>
           <SelectItem value="other">Other</SelectItem>

@@ -16,6 +16,7 @@ import { SecondaryNav } from "@/components/navigation/SecondaryNav";
 import { ProjectsSecondaryNav } from "@/components/navigation/ProjectsSecondaryNav";
 import { DocumentsSecondaryNav } from "@/components/navigation/DocumentsSecondaryNav";
 import { AgentTasksSecondaryNav } from "@/components/navigation/AgentTasksSecondaryNav";
+import { ChatSecondaryNav } from "@/components/navigation/ChatSecondaryNav";
 import { TodosSecondaryNav } from "@/components/navigation/TodosSecondaryNav";
 import { SystemSecondaryNav } from "@/components/navigation/SystemSecondaryNav";
 import { MemoryBlocksSecondaryNav } from "@/components/navigation/MemoryBlocksSecondaryNav";
@@ -202,6 +203,10 @@ const Layout = () => {
   const selectedTaskId = params.id || null;
   const isAgentTasksSection = activePrimary === "agent-tasks";
 
+  // Chat section flag
+  const isChatSection = activePrimary === "chat";
+  const selectedChatSessionId = params.sessionId || null;
+
   // Todos section flag
   const isTodosSection = activePrimary === "todos";
 
@@ -333,6 +338,11 @@ const Layout = () => {
             currentView={agentTasksView}
             onNavigate={handleNavigate}
           />
+        ) : isChatSection ? (
+          <ChatSecondaryNav
+            selectedSessionId={selectedChatSessionId}
+            onNavigate={handleNavigate}
+          />
         ) : isTodosSection ? (
           <TodosSecondaryNav onNavigate={handleNavigate} />
         ) : isSystemSection ? (
@@ -397,6 +407,11 @@ const Layout = () => {
                   currentView={agentTasksView}
                   onNavigate={() => {}}
                 />
+              ) : isChatSection ? (
+                <ChatSecondaryNav
+                  selectedSessionId={selectedChatSessionId}
+                  onNavigate={() => {}}
+                />
               ) : isTodosSection ? (
                 <TodosSecondaryNav onNavigate={() => {}} />
               ) : isSystemSection ? (
@@ -450,6 +465,12 @@ const Layout = () => {
                 currentView={agentTasksView}
                 onNavigate={handleNavigate}
                 onTaskSelect={handleMobileNavigate}
+              />
+            ) : isChatSection ? (
+              <ChatSecondaryNav
+                selectedSessionId={selectedChatSessionId}
+                onNavigate={handleNavigate}
+                onSessionSelect={handleMobileNavigate}
               />
             ) : isTodosSection ? (
               <TodosSecondaryNav

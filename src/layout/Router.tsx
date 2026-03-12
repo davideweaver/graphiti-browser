@@ -107,6 +107,16 @@ const Router = createBrowserRouter(
         lazy={lazyImportComponent(() => import("@/pages/ProcessingResults"))}
       />
 
+      {/* Chat routes */}
+      <Route
+        path="/chat"
+        lazy={lazyImportComponent(() => import("@/pages/ChatSessions"))}
+      />
+      <Route
+        path="/chat/:sessionId"
+        lazy={lazyImportComponent(() => import("@/pages/ChatSession"))}
+      />
+
       {/* Todos route */}
       <Route
         path="/todos"
