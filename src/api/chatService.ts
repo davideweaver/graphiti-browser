@@ -107,14 +107,36 @@ class ChatService {
     sessionId: string,
     content: string,
     signal: AbortSignal,
-    planMode?: boolean
+    planMode?: boolean,
+    files?: File[],
+    attachedImages?: string[]
   ): Promise<ReadableStreamDefaultReader<Uint8Array>> {
-    const body: Record<string, unknown> = { content };
-    if (planMode) body.planMode = true;
+    let body: BodyInit;
+    let headers: Record<string, string> = {};
+
+    if (files && files.length > 0) {
+      const formData = new FormData();
+      formData.append("content", content);
+      if (planMode) formData.append("planMode", "true");
+      for (const file of files) {
+        formData.append("files", file);
+      }
+      if (attachedImages && attachedImages.length > 0) {
+        formData.append("imageData", JSON.stringify(attachedImages));
+      }
+      body = formData;
+      // Don't set Content-Type — browser sets it with boundary
+    } else {
+      const json: Record<string, unknown> = { content };
+      if (planMode) json.planMode = true;
+      body = JSON.stringify(json);
+      headers["Content-Type"] = "application/json";
+    }
+
     const response = await fetch(`${this.baseUrl}/sessions/${sessionId}/messages`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      headers,
+      body,
       signal,
     });
 

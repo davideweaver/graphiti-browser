@@ -19,14 +19,10 @@ export interface ChatSessionConfig {
   disableMemoryContext?: boolean;
 }
 
-export interface XerroToolCall {
-  toolName: string;
-  toolCallId: string;
-  parentToolUseId?: string | null;
-  toolInput?: string;
-  toolResult?: string;
-  isToolError?: boolean;
-}
+export type XerroMessageContentBlock =
+  | { type: 'thinking'; text: string }
+  | { type: 'text'; text: string }
+  | { type: 'tool_use'; toolName: string; toolCallId: string; parentToolUseId?: string | null; toolInput?: string; toolResult?: string; isToolError?: boolean };
 
 export interface XerroChatMessage {
   id: string;
@@ -35,6 +31,7 @@ export interface XerroChatMessage {
   content: string;
   createdAt: string;
   metadata?: {
+    attachedImages?: string[];    // base64 data URLs for inline image preview (user messages)
     durationMs?: number;
     costUsd?: number;
     toolCallCount?: number;
@@ -43,8 +40,7 @@ export interface XerroChatMessage {
     executionId?: string;
     resultType?: 'completed' | 'cancelled' | 'error';
     error?: string;
-    toolCalls?: XerroToolCall[];
-    thinkingText?: string;
+    contentBlocks?: XerroMessageContentBlock[];
   };
 }
 

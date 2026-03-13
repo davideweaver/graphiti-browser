@@ -17,7 +17,7 @@ export function useChatStream(
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const sendMessage = useCallback(
-    async (content: string, planMode?: boolean) => {
+    async (content: string, planMode?: boolean, files?: File[], attachedImages?: string[]) => {
       if (!sessionId || isStreaming) return;
 
       const controller = new AbortController();
@@ -25,7 +25,7 @@ export function useChatStream(
       setIsStreaming(true);
 
       try {
-        const reader = await chatService.sendMessage(sessionId, content, controller.signal, planMode);
+        const reader = await chatService.sendMessage(sessionId, content, controller.signal, planMode, files, attachedImages);
         const decoder = new TextDecoder();
         let buffer = "";
 

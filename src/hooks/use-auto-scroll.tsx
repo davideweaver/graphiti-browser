@@ -32,12 +32,14 @@ export function useAutoScroll<T>(dependency: T) {
     lastScrollHeight.current = scrollHeight;
   }, [dependency, shouldAutoScroll]);
 
-  // Force scroll to bottom (for when user sends a message)
+  // Force scroll to bottom (for when user sends a message or switches sessions)
   const scrollToBottom = useCallback(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-      setShouldAutoScroll(true);
-    }
+    setShouldAutoScroll(true);
+    requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    });
   }, []);
 
   return { scrollRef, handleScroll, scrollToBottom };

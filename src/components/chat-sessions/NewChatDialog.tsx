@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { chatService } from "@/api/chatService";
 import { llamacppAdminService } from "@/api/llamacppAdminService";
@@ -70,6 +70,27 @@ export function NewChatDialog({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  // Reset form state whenever the dialog opens
+  useEffect(() => {
+    if (open) {
+      setName(initialName);
+      setCwd(initialConfig?.cwd ?? "/Users/dweaver/Projects/ai/xerro-agent");
+      setPermissions(
+        !initialConfig?.permissions || initialConfig.permissions === "allow_all"
+          ? "allow_all"
+          : "restricted"
+      );
+      setUseLocal(initialConfig?.local ?? false);
+      setLocalModel(initialConfig?.localModel ?? "");
+      setSettingSources(initialConfig?.settingSources ?? [...DEFAULT_SETTINGS_SOURCES]);
+      setMemoryContext(!initialConfig?.disableMemoryContext);
+      setSystemPrompt(
+        typeof initialConfig?.systemPrompt === "string" ? initialConfig.systemPrompt : ""
+      );
+      setAdvancedOpen(false);
+    }
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch available LLM servers when local mode is on
   const { data: serversData } = useQuery({

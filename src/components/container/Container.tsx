@@ -27,7 +27,7 @@ const Container: React.FC<Props> = ({
   description,
   tools = null,
   bodyHorzPadding: bodyPadding,
-  bodyTopOffset: topOffset = 40,
+  bodyTopOffset: topOffset,
   maintainScrollPosition = false,
   loading = false,
   content = "full",
@@ -63,7 +63,7 @@ const Container: React.FC<Props> = ({
 
   // Header classes and styles based on fullHeight prop
   const headerClasses = isFixed
-    ? "flex max-w-screen-lg flex-col lg:flex-row justify-between items-start w-full mb-4 lg:mb-6 lg:flex-shrink-0"
+    ? `flex max-w-screen-lg flex-col lg:flex-row justify-between items-start w-full mb-4 lg:mb-6 lg:flex-shrink-0`
     : "flex max-w-screen-lg flex-col lg:flex-row justify-between items-start w-full mb-4 lg:mb-10";
 
   const headerStyle = isFixed
@@ -74,7 +74,7 @@ const Container: React.FC<Props> = ({
     : {
         paddingLeft: DEFAULT_PADDING,
         paddingRight: DEFAULT_PADDING,
-        marginBottom: topOffset,
+        marginBottom: topOffset ?? 40,
       };
 
   const titleClasses = isFixed ? "pb-2 lg:pb-0" : "pb-2 lg:pb-0";
@@ -89,14 +89,8 @@ const Container: React.FC<Props> = ({
     ? {
         paddingLeft: isMobile ? 0 : bodyHorzPadding,
         paddingRight: isMobile ? 0 : bodyHorzPadding,
-        paddingBottom: isMobile
-          ? isScrollable
-            ? 0
-            : 80
-          : isScrollable
-            ? 0
-            : 50,
-        marginBottom: isMobile ? 64 : 20, // Add bottom margin for mobile navbar (64px)
+        paddingBottom: 0,
+        marginBottom: 0,
         overflow: "hidden",
       }
     : {

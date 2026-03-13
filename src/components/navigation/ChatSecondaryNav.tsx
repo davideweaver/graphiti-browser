@@ -10,7 +10,7 @@ import {
 import { SecondaryNavContainer } from "@/components/navigation/SecondaryNavContainer";
 import { SecondaryNavToolButton } from "@/components/navigation/SecondaryNavToolButton";
 import { NewChatDialog } from "@/components/chat-sessions/NewChatDialog";
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus, RefreshCw, MessageSquare } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface ChatSecondaryNavProps {
@@ -99,7 +99,8 @@ export function ChatSecondaryNav({
                     isActive={isActive}
                     onClick={() => handleNavigation(`/chat/${session.id}`)}
                   >
-                    <div className="flex flex-col items-start w-full gap-0.5">
+                    <MessageSquare className="h-4 w-4 mr-3 flex-shrink-0 text-muted-foreground self-start mt-0.5" />
+                    <div className="flex flex-col items-start min-w-0 flex-1 gap-0.5">
                       <SecondaryNavItemTitle className="flex-1">
                         {session.name}
                       </SecondaryNavItemTitle>
@@ -108,8 +109,20 @@ export function ChatSecondaryNav({
                         {session.messageCount > 0 && ` • ${session.messageCount} msgs`}
                       </SecondaryNavItemSubtitle>
                       {session.config.cwd && (
-                        <SecondaryNavItemSubtitle className="truncate w-full text-left opacity-60 font-mono text-[10px]">
-                          {session.config.cwd}
+                        <SecondaryNavItemSubtitle className="w-full text-left opacity-60 font-mono text-[10px]">
+                          <div className="truncate w-full">
+                            {(() => {
+                              const parts = session.config.cwd.split('/').filter(Boolean);
+                              const folderName = parts[parts.length - 1];
+                              const parentFolder = parts.length > 1 ? parts[parts.length - 2] : null;
+                              return (
+                                <>
+                                  {parentFolder && `${parentFolder}/`}
+                                  <span className="text-white opacity-100">{folderName}</span>
+                                </>
+                              );
+                            })()}
+                          </div>
                         </SecondaryNavItemSubtitle>
                       )}
                     </div>

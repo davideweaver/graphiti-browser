@@ -6,13 +6,13 @@ import { chatService } from "@/api/chatService";
 import { useChatStream } from "@/hooks/use-chat-stream";
 import type { ChatSSEEvent, XerroChatMessage } from "@/types/xerroChat";
 import Container from "@/components/container/Container";
-import { ContainerToolButton } from "@/components/container/ContainerToolButton";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { NewChatDialog } from "@/components/chat-sessions/NewChatDialog";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import ClickableImage from "@/components/chat/ClickableImage";
 import {
   Settings,
   Trash2,
@@ -25,6 +25,9 @@ import {
   Brain,
   ClipboardList,
   Play,
+  Paperclip,
+  X,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import DestructiveConfirmationDialog from "@/components/dialogs/DestructiveConfirmationDialog";
@@ -55,6 +58,7 @@ interface ExecutionData {
   model?: string;
   isLocal?: boolean;
   thinkingText?: string;
+  thinkingDurationMs?: number;
 }
 
 export default function ChatSession() {
@@ -63,12 +67,16 @@ export default function ChatSession() {
   const queryClient = useQueryClient();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState("");
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [planMode, setPlanMode] = useState(false);
   const [planReady, setPlanReady] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [streamingEvents, setStreamingEvents] = useState<ChatSSEEvent[]>([]);
-  const [toolEvents, setToolEvents] = useState<Map<string, ToolEvent>>(new Map());
+  const [streamingExecutionId, setStreamingExecutionId] = useState<string | null>(null);
+  const [isReconnecting, setIsReconnecting] = useState(false);
   const [optimisticUserMsg, setOptimisticUserMsg] = useState<string | null>(null);
   const [optimisticIsPlanMode, setOptimisticIsPlanMode] = useState(false);
+  const [optimisticAttachedImages, setOptimisticAttachedImages] = useState<string[]>([]);
   // Tracks which sessionId the current streaming state belongs to.
   // Prevents tool calls from one session appearing in another when navigating.
   const [streamingSessionId, setStreamingSessionId] = useState<string | null>(null);
@@ -76,19 +84,17 @@ export default function ChatSession() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Persists tool events and completion metadata after streaming ends, keyed by executionId.
-  // This allows thinking/tool cards to remain visible after the agent responds.
+  // Single data model for both live streaming and persisted messages, keyed by executionId.
   const [executionData, setExecutionData] = useState<Map<string, ExecutionData>>(new Map());
 
-  const [streamingSegments, setStreamingSegments] = useState<StreamSegment[]>([]);
-
-  // Refs for capturing data during streaming without adding to callback deps
+  // Refs for non-rendering bookkeeping during streaming
   const currentExecutionIdRef = useRef<string | null>(null);
-  const toolEventsRef = useRef<Map<string, ToolEvent>>(new Map());
   const completedEventRef = useRef<ChatSSEEvent | null>(null);
-  const streamingSegmentsRef = useRef<StreamSegment[]>([]);
   // Tracks the toolCallId of the current active agent-type tool (for child grouping)
   const currentAgentParentRef = useRef<string | null>(null);
+  // Tracks thinking phase duration
+  const thinkingStartMsRef = useRef<number | null>(null);
+  const thinkingDurationMsRef = useRef<number | null>(null);
 
   // Load session metadata
   const { data: session } = useQuery({
@@ -116,63 +122,157 @@ export default function ChatSession() {
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages.length, streamingEvents.length, toolEvents.size]);
+    const frame = requestAnimationFrame(() => scrollToBottom());
+    return () => cancelAnimationFrame(frame);
+  }, [sessionId, messagesData, streamingEvents.length]);
 
   // Hydrate executionData from loaded messages to restore tool cards after page refresh
   useEffect(() => {
     const newExecutionData = new Map<string, ExecutionData>();
 
     for (const msg of messages) {
-      if (msg.role === 'assistant' && msg.metadata?.executionId && msg.metadata.toolCalls) {
+      if (msg.role === 'assistant' && msg.metadata?.executionId && msg.metadata.contentBlocks?.length) {
         const toolEventsMap = new Map<string, ToolEvent>();
+        const segments: StreamSegment[] = [];
 
-        // Convert persisted toolCalls to ToolEvent objects
-        for (const toolCall of msg.metadata.toolCalls) {
-          toolEventsMap.set(toolCall.toolCallId, {
-            toolCallId: toolCall.toolCallId,
-            toolName: toolCall.toolName,
-            toolInput: toolCall.toolInput,
-            toolResult: toolCall.toolResult,
-            isToolError: toolCall.isToolError,
-            isComplete: true,
-            parentToolCallId: toolCall.parentToolUseId ?? undefined,
-          });
+        // Reconstruct ordered segments + toolEventsMap from persisted contentBlocks
+        for (const block of msg.metadata.contentBlocks) {
+          if (block.type === 'tool_use') {
+            toolEventsMap.set(block.toolCallId, {
+              toolCallId: block.toolCallId,
+              toolName: block.toolName,
+              toolInput: block.toolInput,
+              toolResult: block.toolResult,
+              isToolError: block.isToolError,
+              isComplete: true,
+              parentToolCallId: block.parentToolUseId ?? undefined,
+            });
+            const last = segments[segments.length - 1];
+            if (last?.kind === 'tools') {
+              last.toolIds.push(block.toolCallId);
+            } else {
+              segments.push({ kind: 'tools', toolIds: [block.toolCallId] });
+            }
+          } else if (block.type === 'thinking') {
+            const last = segments[segments.length - 1];
+            if (last?.kind === 'thinking') {
+              last.text += '\n\n' + block.text;
+            } else {
+              segments.push({ kind: 'thinking', text: block.text });
+            }
+          } else if (block.type === 'text') {
+            const last = segments[segments.length - 1];
+            if (last?.kind === 'text') {
+              last.text += block.text;
+            } else {
+              segments.push({ kind: 'text', text: block.text });
+            }
+          }
         }
 
         newExecutionData.set(msg.metadata.executionId, {
           toolEvents: toolEventsMap,
+          segments,
           durationMs: msg.metadata.durationMs,
           costUsd: msg.metadata.costUsd,
           model: msg.metadata.model,
           isLocal: msg.metadata.isLocal,
-          thinkingText: msg.metadata.thinkingText,
         });
       }
     }
 
-    // Merge: preserve in-memory segments/thinking for entries already in state
+    // Merge: start from prev so in-memory entries (segments, thinking) aren't wiped by refetch.
     setExecutionData((prev) => {
-      const next = new Map(newExecutionData);
+      const next = new Map(prev);
       for (const [id, incoming] of newExecutionData) {
         const existing = prev.get(id);
-        if (existing) {
-          next.set(id, {
-            ...incoming,
-            segments: existing.segments ?? incoming.segments,
-            thinkingText: existing.thinkingText ?? incoming.thinkingText,
-          });
-        }
+        next.set(id, {
+          ...incoming,
+          segments: existing?.segments ?? incoming.segments,
+          thinkingDurationMs: existing?.thinkingDurationMs ?? incoming.thinkingDurationMs,
+        });
       }
       return next;
     });
   }, [messages]);
 
+  // On mount (or session change), try to reconnect to any active stream
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const XERRO_URL = (import.meta as any).env?.VITE_XERRO_SERVICE_URL || 'http://localhost:9205';
+    const controller = new AbortController();
+    let mounted = true;
+
+    (async () => {
+      try {
+        const response = await fetch(
+          `${XERRO_URL}/api/v1/chat/sessions/${sessionId}/stream`,
+          { signal: controller.signal }
+        );
+
+        if (!response.ok || !response.body) return; // 404 = no active stream
+
+        if (!mounted) return;
+        setIsReconnecting(true);
+        setStreamingSessionId(sessionId);
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n\n');
+          buffer = lines.pop() ?? '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const event = JSON.parse(line.slice(6)) as ChatSSEEvent;
+                handleEvent(event);
+                if (event.type === 'completed' || event.type === 'cancelled') {
+                  await handleComplete();
+                } else if (event.type === 'error') {
+                  handleError(event.error ?? 'Stream error');
+                }
+              } catch {
+                // ignore parse errors
+              }
+            }
+          }
+        }
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        // Network or other error — silently ignore for reconnect
+      } finally {
+        if (mounted) {
+          setIsReconnecting(false);
+        }
+      }
+    })();
+
+    return () => {
+      mounted = false;
+      controller.abort();
+    };
+  }, [sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleEvent = useCallback((event: ChatSSEEvent) => {
     setStreamingEvents((prev) => [...prev, event]);
+    const execId = event.executionId;
 
     if (event.type === "started") {
-      currentExecutionIdRef.current = event.executionId;
+      currentExecutionIdRef.current = execId;
+      setStreamingExecutionId(execId);
+      setExecutionData((prev) => {
+        const next = new Map(prev);
+        next.set(execId, { toolEvents: new Map(), segments: [] });
+        return next;
+      });
     }
 
     if (event.type === "completed") {
@@ -180,121 +280,136 @@ export default function ChatSession() {
     }
 
     if (event.type === "tool_use" && event.toolCallId && event.toolName) {
-      // Use SDK-provided parentToolUseId when available, fall back to heuristic tracking
       const parentId = event.parentToolUseId ?? currentAgentParentRef.current ?? undefined;
-      setToolEvents((prev) => {
+      setExecutionData((prev) => {
         const next = new Map(prev);
-        next.set(event.toolCallId!, {
+        const ed = next.get(execId) ?? { toolEvents: new Map(), segments: [] };
+        const newToolEvents = new Map(ed.toolEvents);
+        newToolEvents.set(event.toolCallId!, {
           toolCallId: event.toolCallId!,
           toolName: event.toolName!,
           toolInput: event.toolInput,
           isComplete: false,
           parentToolCallId: parentId || undefined,
         });
-        toolEventsRef.current = next;
+        const segs = [...(ed.segments ?? [])];
+        const last = segs[segs.length - 1];
+        if (last?.kind === "tools") {
+          segs[segs.length - 1] = { kind: "tools", toolIds: [...last.toolIds, event.toolCallId!] };
+        } else {
+          segs.push({ kind: "tools", toolIds: [event.toolCallId!] });
+        }
+        next.set(execId, { ...ed, toolEvents: newToolEvents, segments: segs });
         return next;
       });
-      // Heuristic fallback: if this is an agent-type tool and SDK didn't provide parent info
       if (AGENT_TOOL_NAMES.has(event.toolName!) && !currentAgentParentRef.current && !event.parentToolUseId) {
         currentAgentParentRef.current = event.toolCallId!;
       }
-      // Add toolCallId to segments — append to last tools segment, or start a new one
-      setStreamingSegments((prev) => {
-        const last = prev[prev.length - 1];
-        const next = last?.kind === "tools"
-          ? [...prev.slice(0, -1), { kind: "tools" as const, toolIds: [...last.toolIds, event.toolCallId!] }]
-          : [...prev, { kind: "tools" as const, toolIds: [event.toolCallId!] }];
-        streamingSegmentsRef.current = next;
-        return next;
-      });
     }
 
     if (event.type === "tool_result" && event.toolCallId) {
-      setToolEvents((prev) => {
+      setExecutionData((prev) => {
         const next = new Map(prev);
-        const existing = next.get(event.toolCallId!);
+        const ed = next.get(execId);
+        if (!ed) return prev;
+        const newToolEvents = new Map(ed.toolEvents);
+        const existing = newToolEvents.get(event.toolCallId!);
         if (existing) {
-          next.set(event.toolCallId!, {
+          newToolEvents.set(event.toolCallId!, {
             ...existing,
             toolResult: event.toolResult,
             isToolError: event.isToolError,
             isComplete: true,
           });
         }
-        toolEventsRef.current = next;
+        next.set(execId, { ...ed, toolEvents: newToolEvents });
         return next;
       });
-      // If this was the active parent agent, clear it
       if (currentAgentParentRef.current === event.toolCallId) {
         currentAgentParentRef.current = null;
       }
     }
 
     if (event.type === "assistant_text" && event.text) {
-      setStreamingSegments((prev) => {
-        const last = prev[prev.length - 1];
-        const next = last?.kind === "text"
-          ? [...prev.slice(0, -1), { kind: "text" as const, text: last.text + event.text! }]
-          : [...prev, { kind: "text" as const, text: event.text! }];
-        streamingSegmentsRef.current = next;
+      if (thinkingStartMsRef.current !== null && thinkingDurationMsRef.current === null) {
+        thinkingDurationMsRef.current = Date.now() - thinkingStartMsRef.current;
+      }
+      setExecutionData((prev) => {
+        const next = new Map(prev);
+        const ed = next.get(execId);
+        if (!ed) return prev;
+        const segs = [...(ed.segments ?? [])];
+        const last = segs[segs.length - 1];
+        if (last?.kind === "text") {
+          segs[segs.length - 1] = { kind: "text", text: last.text + event.text! };
+        } else {
+          segs.push({ kind: "text", text: event.text! });
+        }
+        next.set(execId, { ...ed, segments: segs });
         return next;
       });
     }
 
     if (event.type === "thinking" && event.thinking) {
-      setStreamingSegments((prev) => {
-        const last = prev[prev.length - 1];
-        const next = last?.kind === "thinking"
-          ? [...prev.slice(0, -1), { kind: "thinking" as const, text: last.text + "\n\n" + event.thinking! }]
-          : [...prev, { kind: "thinking" as const, text: event.thinking! }];
-        streamingSegmentsRef.current = next;
+      if (thinkingStartMsRef.current === null) {
+        thinkingStartMsRef.current = Date.now();
+      }
+      setExecutionData((prev) => {
+        const next = new Map(prev);
+        const ed = next.get(execId);
+        if (!ed) return prev;
+        const segs = [...(ed.segments ?? [])];
+        const last = segs[segs.length - 1];
+        if (last?.kind === "thinking") {
+          segs[segs.length - 1] = { kind: "thinking", text: last.text + "\n\n" + event.thinking! };
+        } else {
+          segs.push({ kind: "thinking", text: event.thinking! });
+        }
+        next.set(execId, { ...ed, segments: segs });
         return next;
       });
     }
   }, []);
 
   const handleComplete = useCallback(async () => {
-    // Capture current execution data before clearing streaming state
     const executionId = currentExecutionIdRef.current;
-    const capturedTools = new Map(toolEventsRef.current);
     const completed = completedEventRef.current;
-    const capturedSegments = streamingSegmentsRef.current;
-    const capturedThinking = capturedSegments
-      .filter((s) => s.kind === "thinking")
-      .map((s) => (s as { kind: "thinking"; text: string }).text)
-      .join("\n\n") || undefined;
+    const capturedThinkingDuration =
+      thinkingDurationMsRef.current ??
+      (thinkingStartMsRef.current !== null ? Date.now() - thinkingStartMsRef.current : undefined);
 
-    // Reset refs
-    currentExecutionIdRef.current = null;
-    toolEventsRef.current = new Map();
-    completedEventRef.current = null;
-    streamingSegmentsRef.current = [];
-    currentAgentParentRef.current = null;
-
-    setStreamingSessionId(null);
-    setOptimisticUserMsg(null);
-    setStreamingEvents([]);
-    setToolEvents(new Map());
-    setStreamingSegments([]);
-
-    await refetchMessages();
-
-    // Persist execution data so tool/thinking cards remain visible after the agent responds
+    // Stamp completion metadata onto the existing executionData entry
     if (executionId) {
       setExecutionData((prev) => {
         const next = new Map(prev);
-        next.set(executionId, {
-          toolEvents: capturedTools,
-          segments: capturedSegments,
-          durationMs: completed?.durationMs,
-          costUsd: completed?.costUsd,
-          model: completed?.model,
-          isLocal: completed?.isLocal,
-          thinkingText: capturedThinking,
-        });
+        const ed = next.get(executionId);
+        if (ed) {
+          next.set(executionId, {
+            ...ed,
+            durationMs: completed?.durationMs,
+            costUsd: completed?.costUsd,
+            model: completed?.model,
+            isLocal: completed?.isLocal,
+            thinkingDurationMs: capturedThinkingDuration,
+          });
+        }
         return next;
       });
     }
+
+    // Reset refs
+    currentExecutionIdRef.current = null;
+    completedEventRef.current = null;
+    currentAgentParentRef.current = null;
+    thinkingStartMsRef.current = null;
+    thinkingDurationMsRef.current = null;
+
+    setStreamingExecutionId(null);
+    setStreamingSessionId(null);
+    setOptimisticUserMsg(null);
+    setStreamingEvents([]);
+
+    await refetchMessages();
 
     queryClient.invalidateQueries({ queryKey: ["chat-sessions"] });
     queryClient.invalidateQueries({ queryKey: ["chat-session", sessionId] });
@@ -307,15 +422,14 @@ export default function ChatSession() {
 
   const handleError = useCallback((error: string) => {
     currentExecutionIdRef.current = null;
-    toolEventsRef.current = new Map();
     completedEventRef.current = null;
-    streamingSegmentsRef.current = [];
     currentAgentParentRef.current = null;
+    thinkingStartMsRef.current = null;
+    thinkingDurationMsRef.current = null;
+    setStreamingExecutionId(null);
     setStreamingSessionId(null);
     setOptimisticUserMsg(null);
     setStreamingEvents([]);
-    setToolEvents(new Map());
-    setStreamingSegments([]);
     toast.error(`Chat error: ${error}`);
   }, []);
 
@@ -326,24 +440,44 @@ export default function ChatSession() {
     onError: handleError,
   });
 
-  // True only when streaming is active for the session currently being viewed
-  const isActiveSession = isStreaming && streamingSessionId === sessionId;
+  // True when streaming (POST) or reconnected stream is active for this session
+  const isActiveSession = (isStreaming || isReconnecting) && streamingSessionId === sessionId;
 
   const handleSend = async () => {
     const content = input.trim();
     if (!content || isStreaming || !sessionId) return;
 
+    const filesToSend = [...attachedFiles];
+
+    // Convert image files to base64 data URLs for inline preview
+    const imageFiles = filesToSend.filter((f) => f.type.startsWith("image/"));
+    const base64Images = await Promise.all(
+      imageFiles.map(
+        (f) =>
+          new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(f);
+          })
+      )
+    );
+
     setPlanReady(false);
     setInput("");
+    setAttachedFiles([]);
     setStreamingSessionId(sessionId);
     setOptimisticUserMsg(content);
     setOptimisticIsPlanMode(planMode);
+    setOptimisticAttachedImages(base64Images);
     setStreamingEvents([]);
-    setToolEvents(new Map());
-    setStreamingSegments([]);
     scrollToBottom();
 
-    await sendMessage(content, planMode);
+    await sendMessage(
+      content,
+      planMode,
+      filesToSend.length > 0 ? filesToSend : undefined,
+      base64Images.length > 0 ? base64Images : undefined
+    );
   };
 
   const handleProceed = async () => {
@@ -354,8 +488,6 @@ export default function ChatSession() {
     setOptimisticUserMsg("Looks good, proceed");
     setOptimisticIsPlanMode(false);
     setStreamingEvents([]);
-    setToolEvents(new Map());
-    setStreamingSegments([]);
     scrollToBottom();
     await sendMessage("Looks good, proceed", false);
   };
@@ -366,6 +498,35 @@ export default function ChatSession() {
       handleSend();
     }
   };
+
+  const addFiles = useCallback((newFiles: File[]) => {
+    setAttachedFiles((prev) => {
+      const existing = new Set(prev.map((f) => f.name + f.size));
+      const unique = newFiles.filter((f) => !existing.has(f.name + f.size));
+      return [...prev, ...unique].slice(0, 10);
+    });
+  }, []);
+
+  const removeFile = useCallback((index: number) => {
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      addFiles(Array.from(e.target.files));
+      e.target.value = "";
+    }
+  };
+
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const imageFiles = Array.from(e.clipboardData.items)
+      .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+      .map((item) => item.getAsFile())
+      .filter((f): f is File => f !== null);
+    if (imageFiles.length > 0) {
+      addFiles(imageFiles);
+    }
+  }, [addFiles]);
 
   const handleDelete = async () => {
     if (!sessionId) return;
@@ -396,31 +557,13 @@ export default function ChatSession() {
         title={session?.name ?? "Chat"}
         description={sessionLabel}
         content="fixed"
-        tools={
-          <div className="flex gap-2">
-            <ContainerToolButton
-              size="icon"
-              onClick={() => setSettingsOpen(true)}
-              title="Session settings"
-            >
-              <Settings />
-            </ContainerToolButton>
-            <ContainerToolButton
-              size="icon"
-              variant="destructive"
-              onClick={() => setDeleteOpen(true)}
-              title="Delete session"
-            >
-              <Trash2 />
-            </ContainerToolButton>
-          </div>
-        }
+        bodyHorzPadding={0}
       >
         <div className="flex flex-col h-full">
           {/* Messages area */}
           <div
             ref={scrollRef}
-            className="flex-1 overflow-y-auto p-4 space-y-4 font-mono" style={{ fontSize: "13px" }}
+            className="flex-1 overflow-y-auto px-6 py-4 space-y-4 font-mono" style={{ fontSize: "13px" }}
           >
             {messages.length === 0 && !isActiveSession && !optimisticUserMsg && (
               <div className="text-center text-muted-foreground py-12">
@@ -442,17 +585,31 @@ export default function ChatSession() {
                   {msg.role === "assistant" && execData && (
                     <div className="space-y-0.5 mb-1.5">
                       {execData.segments ? (
-                        execData.segments.filter((s) => s.kind !== "text").map((seg, i) => {
-                          if (seg.kind === "tools") {
-                            const segTools = new Map(
-                              seg.toolIds
-                                .filter((id) => execData.toolEvents.has(id))
-                                .map((id) => [id, execData.toolEvents.get(id)!])
-                            );
-                            return <ToolEventsSection key={i} toolEvents={segTools} />;
-                          }
-                          return <ThinkingSegmentCard key={i} text={seg.text} />;
-                        })
+                        <>
+                          {execData.segments.map((seg, i) => {
+                            if (seg.kind === "tools") {
+                              const segTools = new Map(
+                                seg.toolIds
+                                  .filter((id) => execData.toolEvents.has(id))
+                                  .map((id) => [id, execData.toolEvents.get(id)!])
+                              );
+                              return <ToolEventsSection key={i} toolEvents={segTools} />;
+                            }
+                            if (seg.kind === "thinking") {
+                              return <ThinkingSegmentCard key={i} text={seg.text} />;
+                            }
+                            return null;
+                          })}
+                          {(() => {
+                            const durationMs = execData.thinkingDurationMs ?? execData.durationMs;
+                            return durationMs != null ? (
+                              <div className="flex items-center gap-1.5 text-muted-foreground text-[13px]">
+                                <Brain className="h-3 w-3" />
+                                <span>Thought for {formatThinkingDuration(durationMs)}</span>
+                              </div>
+                            ) : null;
+                          })()}
+                        </>
                       ) : (
                         <>
                           <ThinkingCard execData={execData} />
@@ -471,6 +628,13 @@ export default function ChatSession() {
               <div className="space-y-1">
                 <div className="bg-accent/40 px-4 py-2.5 rounded-md">
                   <div className="whitespace-pre-wrap">{optimisticUserMsg}</div>
+                  {optimisticAttachedImages.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {optimisticAttachedImages.map((src, i) => (
+                        <ClickableImage key={i} src={src} alt={`attached image ${i + 1}`} className="max-h-20 max-w-[120px] rounded object-contain cursor-zoom-in" />
+                      ))}
+                    </div>
+                  )}
                 </div>
                 {optimisticIsPlanMode && (
                   <div className="px-1">
@@ -499,59 +663,108 @@ export default function ChatSession() {
               </div>
             )}
 
-            {/* Live streaming: interleaved segments in arrival order */}
-            {isActiveSession && (
-              <div className="space-y-1.5">
-                {streamingSegments.map((seg, i) => {
-                  const isLast = i === streamingSegments.length - 1;
-                  if (seg.kind === "tools") {
-                    const segTools = new Map(
-                      seg.toolIds
-                        .filter((id) => toolEvents.has(id))
-                        .map((id) => [id, toolEvents.get(id)!])
-                    );
-                    return <ToolEventsSection key={i} toolEvents={segTools} />;
-                  }
-                  if (seg.kind === "thinking") {
-                    return <ThinkingSegmentCard key={i} text={seg.text} isLive={isLast} />;
-                  }
-                  // text segment
-                  return (
-                    <div key={i} className="py-2">
-                      <div className="prose prose-sm dark:prose-invert max-w-none font-mono opacity-80">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{seg.text}</ReactMarkdown>
+            {/* Live streaming: uses the same executionData model as persisted messages */}
+            {isActiveSession && (() => {
+              const ed = streamingExecutionId ? executionData.get(streamingExecutionId) : undefined;
+              const segments = ed?.segments ?? [];
+              const hasText = segments.some((s) => s.kind === "text");
+              return (
+                <div className="space-y-1.5">
+                  {segments.map((seg, i) => {
+                    if (seg.kind === "tools") {
+                      const segTools = new Map(
+                        seg.toolIds
+                          .filter((id) => ed!.toolEvents.has(id))
+                          .map((id) => [id, ed!.toolEvents.get(id)!])
+                      );
+                      return <ToolEventsSection key={i} toolEvents={segTools} />;
+                    }
+                    if (seg.kind === "thinking") {
+                      return <ThinkingSegmentCard key={i} text={seg.text} />;
+                    }
+                    return (
+                      <div key={i} className="py-2">
+                        <div className="prose prose-sm dark:prose-invert max-w-none font-mono opacity-80" style={{ fontSize: "13px" }}>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ img: ({ src, alt }) => <ClickableImage src={src} alt={alt} /> }}>{seg.text}</ReactMarkdown>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    );
+                  })}
+                  {!hasText && <ThinkingStatusLine />}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Input area */}
-          <div className="border-t p-4 space-y-2 bg-background">
+          <div className="px-4 pt-4 space-y-2 bg-background" style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom))" }}>
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,.txt,.md,.json,.csv,.pdf,.js,.ts,.tsx,.jsx,.py,.rb,.go,.rs,.java,.c,.cpp,.h,.sh"
+              className="hidden"
+              onChange={handleFileInput}
+            />
+
+            {/* Attachment preview strip */}
+            {attachedFiles.length > 0 && (
+              <div className="flex flex-wrap gap-2 pb-1">
+                {attachedFiles.map((file, i) => (
+                  <AttachmentChip key={i} file={file} onRemove={() => removeFile(i)} />
+                ))}
+              </div>
+            )}
+
             <Textarea
-              placeholder="Type your message… (Shift+Enter for new line)"
+              placeholder="Type your message… (Shift+Enter for new line, paste images)"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
               disabled={isActiveSession}
               rows={3}
               className="resize-none"
             />
             <div className="flex items-center justify-between gap-2">
-              <button
-                className={`h-8 w-8 flex items-center justify-center rounded-md transition-colors ${
-                  planMode
-                    ? "text-amber-500 bg-amber-500/10 hover:bg-amber-500/20"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                }`}
-                onClick={() => setPlanMode((v) => !v)}
-                title={planMode ? "Plan mode on — click to disable" : "Plan mode — agent will plan before executing"}
-                disabled={isActiveSession}
-              >
-                <ClipboardList className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  className={`h-8 w-8 flex items-center justify-center rounded-md transition-colors ${
+                    planMode
+                      ? "text-amber-500 bg-amber-500/10 hover:bg-amber-500/20"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  }`}
+                  onClick={() => setPlanMode((v) => !v)}
+                  title={planMode ? "Plan mode on — click to disable" : "Plan mode — agent will plan before executing"}
+                  disabled={isActiveSession}
+                >
+                  <ClipboardList className="h-4 w-4" />
+                </button>
+                <button
+                  className="h-8 w-8 flex items-center justify-center rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-accent"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Attach files"
+                  disabled={isActiveSession}
+                >
+                  <Paperclip className="h-4 w-4" />
+                </button>
+                <div className="w-px h-5 bg-border mx-1" />
+                <button
+                  className="h-8 w-8 flex items-center justify-center rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-accent"
+                  onClick={() => setSettingsOpen(true)}
+                  title="Session settings"
+                >
+                  <Settings className="h-4 w-4" />
+                </button>
+                <button
+                  className="h-8 w-8 flex items-center justify-center rounded-md transition-colors text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => setDeleteOpen(true)}
+                  title="Delete session"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
               <div className="flex gap-2">
                 {isActiveSession ? (
                   <Button variant="destructive" size="sm" onClick={cancelStream}>
@@ -609,9 +822,17 @@ function MessageBubble({ message }: { message: XerroChatMessage }) {
   const timestamp = format(new Date(message.createdAt), "h:mm a");
 
   if (isUser) {
+    const attachedImages = message.metadata?.attachedImages;
     return (
       <div className="bg-accent/40 px-4 py-2.5 rounded-md">
         <div className="whitespace-pre-wrap">{message.content}</div>
+        {attachedImages && attachedImages.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {attachedImages.map((src, i) => (
+              <ClickableImage key={i} src={src} alt={`attached image ${i + 1}`} className="max-h-20 max-w-[120px] rounded object-contain cursor-zoom-in" />
+            ))}
+          </div>
+        )}
         <div className="text-xs text-muted-foreground mt-1 opacity-60">{timestamp}</div>
       </div>
     );
@@ -631,7 +852,7 @@ function MessageBubble({ message }: { message: XerroChatMessage }) {
   return (
     <div className="py-2">
       <div className="prose prose-sm dark:prose-invert max-w-none font-mono prose-p:my-1 prose-pre:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-h4:text-sm" style={{ fontSize: "13px" }}>
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+        <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ img: ({ src, alt }) => <ClickableImage src={src} alt={alt} /> }}>
           {message.content || "*(no response)*"}
         </ReactMarkdown>
       </div>
@@ -640,71 +861,84 @@ function MessageBubble({ message }: { message: XerroChatMessage }) {
   );
 }
 
-function ThinkingCard({ execData }: { execData: ExecutionData }) {
-  const [expanded, setExpanded] = useState(false);
+function formatThinkingDuration(ms: number): string {
+  if (ms < 60000) return `${Math.round(ms / 1000)}s`;
+  return `${(ms / 60000).toFixed(1)}m`;
+}
 
-  const label = [
-    execData.durationMs && `${(execData.durationMs / 1000).toFixed(1)}s`,
-    execData.model,
-  ]
-    .filter(Boolean)
-    .join(", ");
+function ThinkingCard({ execData }: { execData: ExecutionData }) {
+  const label = execData.thinkingDurationMs != null
+    ? `Thought for ${formatThinkingDuration(execData.thinkingDurationMs)}`
+    : "Thought";
 
   return (
-    <div className="text-muted-foreground">
-      <button
-        className="flex items-center gap-1.5 hover:opacity-80"
-        onClick={() => setExpanded((v) => !v)}
-      >
-        <Brain className="h-3 w-3" />
-        <span>Thinking{label ? ` (${label})` : ""}</span>
-        {expanded ? (
-          <ChevronDown className="h-3 w-3" />
-        ) : (
-          <ChevronRight className="h-3 w-3" />
-        )}
-      </button>
-      {expanded && (
-        <div className="mt-1 ml-4 whitespace-pre-wrap opacity-70 max-h-48 overflow-y-auto border-l pl-2">
-          {execData.thinkingText || (
-            <span className="italic">
-              {[
-                execData.model && `Model: ${execData.model}${execData.isLocal ? " (local)" : ""}`,
-                execData.durationMs && `Duration: ${(execData.durationMs / 1000).toFixed(2)}s`,
-                execData.costUsd != null && execData.costUsd > 0 && `Cost: $${execData.costUsd.toFixed(4)}`,
-              ]
-                .filter(Boolean)
-                .join(" • ")}
-            </span>
-          )}
-        </div>
-      )}
+    <div className="text-muted-foreground text-[13px] flex items-center gap-1.5">
+      <Brain className="h-3 w-3" />
+      <span>{label}</span>
     </div>
   );
 }
 
-function ThinkingSegmentCard({ text, isLive }: { text: string; isLive?: boolean }) {
-  const [expanded, setExpanded] = useState(false);
+function ThinkingStatusLine() {
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const startTimeRef = useRef(Date.now());
+
+  useEffect(() => {
+    startTimeRef.current = Date.now();
+    setElapsedMs(0);
+    const interval = setInterval(() => {
+      setElapsedMs(Date.now() - startTimeRef.current);
+    }, 100);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
-    <div className="text-muted-foreground">
-      <button
-        className="flex items-center gap-1.5 hover:opacity-80"
-        onClick={() => setExpanded((v) => !v)}
-      >
-        <Brain className={`h-3 w-3 ${isLive ? "animate-pulse" : ""}`} />
-        <span>Thinking{isLive ? "…" : ""}</span>
-        {expanded ? (
-          <ChevronDown className="h-3 w-3" />
-        ) : (
-          <ChevronRight className="h-3 w-3" />
+    <div className="text-muted-foreground text-[13px] flex items-center gap-1.5">
+      <Brain className="h-3 w-3 animate-pulse" />
+      <span>
+        Thinking…
+        {elapsedMs > 0 && (
+          <span className="ml-1 opacity-60">{(elapsedMs / 1000).toFixed(1)}s</span>
         )}
-      </button>
-      {expanded && text && (
-        <div className="mt-1 ml-4 whitespace-pre-wrap opacity-70 max-h-48 overflow-y-auto border-l pl-2">
-          {text}
-        </div>
+      </span>
+    </div>
+  );
+}
+
+function ThinkingSegmentCard({ text }: { text: string; durationMs?: number }) {
+  return (
+    <div className="text-[13px] text-muted-foreground/70 whitespace-pre-wrap font-mono leading-relaxed border-l-2 border-muted pl-3 py-0.5">
+      {text}
+    </div>
+  );
+}
+
+function AttachmentChip({ file, onRemove }: { file: File; onRemove: () => void }) {
+  const isImage = file.type.startsWith("image/");
+  const [preview, setPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isImage) return;
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file, isImage]);
+
+  return (
+    <div className="relative flex items-center gap-1.5 bg-muted rounded-md px-2 py-1 text-xs max-w-[160px] group">
+      {isImage && preview ? (
+        <img src={preview} alt={file.name} className="h-6 w-6 rounded object-cover flex-shrink-0" />
+      ) : (
+        <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
       )}
+      <span className="truncate text-muted-foreground">{file.name}</span>
+      <button
+        className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+        onClick={onRemove}
+        title="Remove"
+      >
+        <X className="h-3 w-3" />
+      </button>
     </div>
   );
 }
@@ -899,9 +1133,13 @@ function ToolEventCard({
   allToolEvents: Map<string, ToolEvent>;
   expanded?: boolean;
 }) {
+  const [childrenExpanded, setChildrenExpanded] = useState(false);
+
   const children = Array.from(allToolEvents.values()).filter(
     (te) => te.parentToolCallId === toolEvent.toolCallId
   );
+  const hiddenChildCount = Math.max(0, children.length - 3);
+  const visibleChildren = (expanded || childrenExpanded) ? children : children.slice(-3);
 
   return (
     <div>
@@ -913,7 +1151,7 @@ function ToolEventCard({
       </div>
       {children.length > 0 && (
         <div className="ml-4 mt-0.5 space-y-0.5">
-          {children.map((child) => (
+          {visibleChildren.map((child) => (
             <div key={child.toolCallId} className="flex items-start gap-1.5 text-muted-foreground">
               <span className="mt-0.5">└</span>
               <div className="flex-1">
@@ -921,6 +1159,24 @@ function ToolEventCard({
               </div>
             </div>
           ))}
+          {!expanded && hiddenChildCount > 0 && (
+            <button
+              className="text-muted-foreground pl-4 opacity-60 hover:opacity-100 transition-opacity flex items-center gap-1"
+              onClick={() => setChildrenExpanded((v) => !v)}
+            >
+              {childrenExpanded ? (
+                <>
+                  <ChevronDown className="h-3 w-3" />
+                  <span>Show less</span>
+                </>
+              ) : (
+                <>
+                  <ChevronRight className="h-3 w-3" />
+                  <span>+{hiddenChildCount} more tool use{hiddenChildCount !== 1 ? "s" : ""}</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       )}
     </div>

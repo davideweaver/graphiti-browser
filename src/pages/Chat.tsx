@@ -39,6 +39,11 @@ export default function Chat() {
   });
   const { scrollRef, handleScroll, scrollToBottom } = useAutoScroll(messages.length);
 
+  // Scroll to bottom whenever the session (groupId) changes
+  useEffect(() => {
+    scrollToBottom();
+  }, [groupId, scrollToBottom]);
+
   // Persist model selection to localStorage
   useEffect(() => {
     localStorage.setItem(MODEL_STORAGE_KEY, selectedModel);

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import TraceDrawer from "./TraceDrawer";
+import ClickableImage from "./ClickableImage";
 import type { ChatMessage } from "@/types/chat";
 import { User, Bot, Loader2, Search, ListTree, RotateCcw } from "lucide-react";
 
@@ -44,7 +45,7 @@ export default function ChatMessage({ message, userMessage, onRepeat }: Props) {
       >
         {/* Message card */}
         <Card
-          className={`p-3 ${isUser ? "bg-primary text-primary-foreground" : ""}`}
+          className={`p-3 ${isUser ? "bg-primary text-primary-foreground -mr-6" : ""}`}
         >
           <div className="flex items-start gap-2">
             {!isUser && <Bot className="h-5 w-5 mt-0.5 flex-shrink-0" />}
@@ -58,7 +59,7 @@ export default function ChatMessage({ message, userMessage, onRepeat }: Props) {
                     : "dark:prose-invert"
                 }`}
               >
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ img: ({ src, alt }) => <ClickableImage src={src} alt={alt} /> }}>
                   {message.content}
                 </ReactMarkdown>
               </div>
