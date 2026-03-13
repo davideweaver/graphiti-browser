@@ -10,7 +10,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { NewChatDialog } from "@/components/chat-sessions/NewChatDialog";
+import { SessionSettingsDialog } from "@/components/chat-sessions/SessionSettingsDialog";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import ClickableImage from "@/components/chat/ClickableImage";
@@ -600,6 +600,17 @@ export default function ChatSession() {
                             if (seg.kind === "thinking") {
                               return <ThinkingSegmentCard key={i} text={seg.text} />;
                             }
+                            if (seg.kind === "text") {
+                              return (
+                                <div key={i} className="py-2">
+                                  <div className="prose prose-sm dark:prose-invert max-w-none font-mono opacity-80" style={{ fontSize: "13px" }}>
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ img: ({ src, alt }) => <ClickableImage src={src} alt={alt} /> }}>
+                                      {seg.text}
+                                    </ReactMarkdown>
+                                  </div>
+                                </div>
+                              );
+                            }
                             return null;
                           })}
                           {(() => {
@@ -795,16 +806,15 @@ export default function ChatSession() {
 
       {/* Settings dialog */}
       {session && (
-        <NewChatDialog
+        <SessionSettingsDialog
           open={settingsOpen}
           onOpenChange={setSettingsOpen}
-          onCreated={() => {
+          onSaved={() => {
             queryClient.invalidateQueries({ queryKey: ["chat-session", sessionId] });
             queryClient.invalidateQueries({ queryKey: ["chat-sessions"] });
           }}
           sessionId={sessionId}
           initialName={session.name}
-          initialConfig={session.config}
         />
       )}
 

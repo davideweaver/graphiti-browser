@@ -3,13 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { chatService } from "@/api/chatService";
 import { llamacppAdminService } from "@/api/llamacppAdminService";
 import type { ChatSessionConfig } from "@/types/xerroChat";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { BaseDialog } from "@/components/BaseDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -146,13 +140,28 @@ export function NewChatDialog({
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? "Session Settings" : "New Chat"}</DialogTitle>
-        </DialogHeader>
+  const footer = (
+    <div className="flex gap-2 justify-end">
+      <Button variant="outline" onClick={() => onOpenChange(false)}>
+        Cancel
+      </Button>
+      <Button
+        onClick={handleSubmit}
+        disabled={(!isEdit && !name.trim()) || isSubmitting}
+      >
+        {isSubmitting ? "Creating..." : isEdit ? "Save" : "Create"}
+      </Button>
+    </div>
+  );
 
+  return (
+    <BaseDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEdit ? "Session Settings" : "New Chat"}
+      footer={footer}
+      footerHeight={64}
+    >
         <div className="space-y-4 py-2">
           {/* Session Name */}
           <div className="space-y-1.5">
@@ -302,19 +311,6 @@ export function NewChatDialog({
             </CollapsibleContent>
           </Collapsible>
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={(!isEdit && !name.trim()) || isSubmitting}
-          >
-            {isSubmitting ? "Creating..." : isEdit ? "Save" : "Create"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </BaseDialog>
   );
 }

@@ -47,6 +47,14 @@ export const navigationConfig: PrimaryNavItem[] = [
     ]
   },
   {
+    key: 'chat',
+    icon: MessagesSquare,
+    iconClassName: '[&_svg]:!size-6',
+    label: 'Chat',
+    defaultPath: '/chat',
+    secondaryItems: []
+  },
+  {
     key: 'projects',
     icon: FolderKanban,
     label: 'Projects',
@@ -79,14 +87,6 @@ export const navigationConfig: PrimaryNavItem[] = [
     icon: ListTodo,
     label: 'Todos',
     defaultPath: '/todos',
-    secondaryItems: []
-  },
-  {
-    key: 'chat',
-    icon: MessagesSquare,
-    iconClassName: '[&_svg]:!size-6',
-    label: 'Chat',
-    defaultPath: '/chat',
     secondaryItems: []
   },
   {
