@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DayCard } from "./DayCard";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 interface DayNavigationProps {
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
+  onWeekChange?: (weekStart: Date) => void;
   dateRange: { start: string; end: string };
   localStats?: Map<string, number>; // Optional: pre-computed stats in local timezone
 }
@@ -18,6 +19,7 @@ interface DayNavigationProps {
 export function DayNavigation({
   selectedDate,
   onDateSelect,
+  onWeekChange,
   dateRange,
   localStats,
 }: DayNavigationProps) {
@@ -47,6 +49,11 @@ export function DayNavigation({
   const days = Array.from({ length: visibleDays }, (_, i) =>
     addDays(weekStartDate, i)
   );
+
+  // Notify parent when visible week changes
+  useEffect(() => {
+    onWeekChange?.(weekStartDate);
+  }, [weekStartDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Get session count for a specific day
   const getSessionCountForDay = (date: Date) => {

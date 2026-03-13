@@ -79,6 +79,8 @@ class XerroProjectsService {
     cursor?: string;
     hasDescription?: boolean;
     order?: "asc" | "desc";
+    after?: string;
+    before?: string;
   }): Promise<XerroSessionListResponse> {
     try {
       const query = new URLSearchParams();
@@ -88,6 +90,8 @@ class XerroProjectsService {
       if (params?.hasDescription !== undefined)
         query.append("hasDescription", String(params.hasDescription));
       if (params?.order) query.append("order", params.order);
+      if (params?.after) query.append("after", params.after);
+      if (params?.before) query.append("before", params.before);
 
       const url = `${this.baseUrl}/api/v1/sessions/${query.toString() ? `?${query.toString()}` : ""}`;
       const response = await fetch(url);

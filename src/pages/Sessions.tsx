@@ -26,7 +26,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { DayNavigation } from "@/components/episodes/DayNavigation";
 import { SessionRow } from "@/components/episodes/SessionRow";
@@ -38,6 +37,7 @@ import {
   addDays,
   subDays,
   parse,
+  startOfWeek,
 } from "date-fns";
 import type { XerroSession } from "@/types/xerroProjects";
 
@@ -129,34 +129,50 @@ export default function Sessions() {
   const rangeStartDate = startOfDay(subDays(selectedDate, 30)).toISOString();
   const rangeEndDate = endOfDay(addDays(selectedDate, 30)).toISOString();
 
-  const queryKey = ["sessions", decodedProjectName];
+  const selectedDateString = format(selectedDate, "yyyy-MM-dd");
+  const dayQueryKey = ["sessions-day", decodedProjectName, selectedDateString];
 
-  const { data: sessionsResponse, isLoading } = useQuery({
-    queryKey,
-    queryFn: async () => {
-      const allSessions: XerroSession[] = [];
-      let cursor: string | undefined = undefined;
+  // Track which week is visible in DayNavigation so stats fetch covers those days
+  const [visibleWeekStart, setVisibleWeekStart] = useState(() =>
+    startOfWeek(selectedDate, { weekStartsOn: 1 })
+  );
+  const visibleWeekKey = format(visibleWeekStart, "yyyy-MM-dd");
+  const statsQueryKey = ["sessions-stats", decodedProjectName, visibleWeekKey];
 
-      do {
-        const response = await xerroProjectsService.listSessions({
-          projectName: decodedProjectName,
-          limit: 500,
-          cursor,
-          order: "desc",
-        });
-        allSessions.push(...response.sessions);
-        cursor = response.nextCursor;
-        if (!response.hasMore) break;
-      } while (cursor);
+  // Fast query: only sessions for the selected date
+  const { data: daySessionsResponse, isLoading } = useQuery({
+    queryKey: dayQueryKey,
+    queryFn: () =>
+      xerroProjectsService.listSessions({
+        projectName: decodedProjectName,
+        limit: 500,
+        order: "desc",
+        after: startOfDay(selectedDate).toISOString(),
+        before: endOfDay(selectedDate).toISOString(),
+      }),
+    staleTime: Infinity,
+  });
 
-      return { sessions: allSessions };
-    },
+  // Stats query: fetch only the visible week's sessions for dot indicators.
+  // Keyed by week start — each week cached separately, instant on return visit.
+  const { data: allSessionsResponse } = useQuery({
+    queryKey: statsQueryKey,
+    queryFn: () =>
+      xerroProjectsService.listSessions({
+        projectName: decodedProjectName,
+        limit: 500,
+        order: "desc",
+        after: startOfDay(visibleWeekStart).toISOString(),
+        before: endOfDay(addDays(visibleWeekStart, 6)).toISOString(),
+      }),
+    staleTime: Infinity,
   });
 
   // Invalidate sessions when xerro WS events arrive
   const invalidateSessions = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey });
-  }, [queryClient, queryKey]); // eslint-disable-line react-hooks/exhaustive-deps
+    queryClient.invalidateQueries({ queryKey: dayQueryKey });
+    queryClient.invalidateQueries({ queryKey: statsQueryKey });
+  }, [queryClient]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useMemorySessionChanges({
     onSessionCreated: invalidateSessions,
@@ -213,19 +229,19 @@ export default function Sessions() {
     });
   };
 
-  // Compute session counts by local date (for calendar)
+  // Compute session counts by local date (for calendar) — uses background stats query
   const localSessionStats = useMemo(() => {
-    if (!sessionsResponse?.sessions) return new Map<string, number>();
+    if (!allSessionsResponse?.sessions) return new Map<string, number>();
 
     const stats = new Map<string, number>();
-    sessionsResponse.sessions.forEach((session) => {
+    allSessionsResponse.sessions.forEach((session) => {
       const lastMessageDate = new Date(session.lastMessageAt);
       const localDateString = format(lastMessageDate, "yyyy-MM-dd");
       stats.set(localDateString, (stats.get(localDateString) || 0) + 1);
     });
 
     return stats;
-  }, [sessionsResponse]);
+  }, [allSessionsResponse]);
 
   const getSessionSource = (session: XerroSession): string => {
     const src = session.externalSource;
@@ -237,21 +253,16 @@ export default function Sessions() {
     return "other";
   };
 
-  // Filter sessions to only show the selected date, excluding locally deleted sessions
+  // Filter sessions — date scoping is done by the API, just apply local filters
   const filteredSessions = useMemo(() => {
-    if (!sessionsResponse?.sessions) return [];
+    if (!daySessionsResponse?.sessions) return [];
 
-    const selectedDateString = format(selectedDate, "yyyy-MM-dd");
-
-    return sessionsResponse.sessions.filter((session) => {
+    return daySessionsResponse.sessions.filter((session) => {
       if (deletedSessionIds.has(session.id)) return false;
-      const lastMessageDate = new Date(session.lastMessageAt);
-      const localDateString = format(lastMessageDate, "yyyy-MM-dd");
-      if (localDateString !== selectedDateString) return false;
       if (sourceFilter !== "all" && getSessionSource(session) !== sourceFilter) return false;
       return true;
     });
-  }, [sessionsResponse, selectedDate, deletedSessionIds, sourceFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [daySessionsResponse, deletedSessionIds, sourceFilter]);
 
   // Group sessions by project when enabled
   const groupedSessions = useMemo(() => {
@@ -354,41 +365,21 @@ export default function Sessions() {
           ? `Sessions for ${decodedProjectName} project`
           : "Browse your conversation sessions"
       }
-      loading={isLoading}
       tools={calendarTools}
     >
       <div className="max-w-4xl space-y-6">
-        {/* Day Navigation */}
-        {sessionsResponse && sessionsResponse.sessions.length > 0 && (
-          <DayNavigation
-            selectedDate={selectedDate}
-            onDateSelect={selectDate}
-            dateRange={{ start: rangeStartDate, end: rangeEndDate }}
-            localStats={localSessionStats}
-          />
-        )}
+        <DayNavigation
+          selectedDate={selectedDate}
+          onDateSelect={selectDate}
+          onWeekChange={setVisibleWeekStart}
+          dateRange={{ start: rangeStartDate, end: rangeEndDate }}
+          localStats={localSessionStats}
+        />
 
         {/* Session Groups */}
-        <div className="mt-8">
-          {isLoading && (
-            <div className="space-y-6">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i}>
-                  <Skeleton className="h-6 w-32 mb-3" />
-                  <Card>
-                    <CardContent className="p-4">
-                      <Skeleton className="h-4 w-3/4 mb-2" />
-                      <Skeleton className="h-3 w-1/4" />
-                    </CardContent>
-                  </Card>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {!isLoading &&
-            sessionsResponse &&
-            sessionsResponse.sessions.length === 0 && (
+        <div className={`mt-8 transition-opacity duration-200 ${isLoading ? "opacity-40 pointer-events-none" : "opacity-100"}`}>
+          {daySessionsResponse &&
+            filteredSessions.length === 0 && (
               <Card>
                 <CardContent className="p-12 text-center">
                   <h3 className="text-lg font-semibold mb-2">
@@ -401,8 +392,7 @@ export default function Sessions() {
               </Card>
             )}
 
-          {!isLoading &&
-            filteredSessions.length > 0 &&
+          {filteredSessions.length > 0 &&
             groupByProject &&
             groupedSessions && (
               <div className="space-y-6">
@@ -453,7 +443,7 @@ export default function Sessions() {
               </div>
             )}
 
-          {!isLoading && filteredSessions.length > 0 && !groupByProject && (
+          {filteredSessions.length > 0 && !groupByProject && (
             <div className="space-y-4">
               {filteredSessions.map((session, sessionIndex) => (
                 <div key={session.id}>

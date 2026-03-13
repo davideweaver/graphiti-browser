@@ -42,14 +42,15 @@ export function DayCard({
         <div className={cn("font-bold", compact ? "text-lg mt-0" : "text-2xl mt-1")}>
           {dayNumber}
         </div>
-        {sessionCount > 0 && (
-          <Badge
-            variant={isSelected ? "secondary" : "default"}
-            className={cn(compact ? "mt-0.5 text-[9px] px-1 py-0 h-3.5" : "mt-2 text-xs")}
-          >
-            {sessionCount}
-          </Badge>
-        )}
+        <Badge
+          variant={isSelected ? "secondary" : "default"}
+          className={cn(
+            compact ? "mt-0.5 text-[9px] px-1 py-0 h-3.5" : "mt-2 text-xs",
+            sessionCount === 0 && "invisible"
+          )}
+        >
+          {sessionCount || 0}
+        </Badge>
       </CardContent>
     </Card>
   );
