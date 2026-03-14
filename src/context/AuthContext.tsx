@@ -1,10 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { clearToken, isTokenValid, setToken } from "@/lib/authStorage";
 
-const API_URL =
-  import.meta.env.VITE_XERRO_API_URL ||
-  import.meta.env.VITE_XERRO_SERVICE_URL ||
-  "http://localhost:9205";
+const API_URL = import.meta.env.VITE_XERRO_API_URL || "";
 
 interface AuthContextValue {
   isAuthenticated: boolean;

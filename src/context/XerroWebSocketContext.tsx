@@ -63,7 +63,7 @@ export function XerroWebSocketProvider({ children }: { children: React.ReactNode
   const lastBookmarkEventTimestampRef = useRef<string>('');
 
   useEffect(() => {
-    const url = import.meta.env.VITE_XERRO_SERVICE_URL || 'http://localhost:9205';
+    const url = import.meta.env.VITE_XERRO_API_URL || '';
 
     // Create socket connection
     const socket = io(url, {

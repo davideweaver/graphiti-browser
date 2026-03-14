@@ -33,11 +33,9 @@ The application works with four main data types from the Graphiti API:
 - **Facts** - Searchable knowledge units connecting entities and episodes
 - **Entity Edges** - Relationships between entities with temporal validity
 
-All data is scoped by `group_id` (managed via UI graph selector, stored in localStorage) and stored in an external Graphiti server.
+All data is scoped by `group_id` (managed via UI graph selector, stored in localStorage).
 
 ### API Integration
-
-**Base URL**: Configured via `VITE_GRAPHITI_SERVER` environment variable (default: `http://localhost:8000`)
 
 The `GraphitiService` singleton provides methods for all API operations:
 
@@ -79,7 +77,7 @@ The application also integrates with xerro-service for agent task management:
 - `agentTasksService.getTask(id)` - Get task details
 - `agentTasksService.getTaskHistory(id, limit?)` - Get execution history
 
-These are **global** (not scoped by groupId) and configured via `VITE_XERRO_SERVICE_URL`.
+These are **global** (not scoped by groupId) and configured via `VITE_XERRO_API_URL`.
 
 ## Design System
 
@@ -245,9 +243,7 @@ import { SecondaryNavItem } from "@/components/navigation/SecondaryNavItem";
 
 **Prerequisites:**
 
-- Graphiti server must be running (default: `http://localhost:8000`, configurable via `VITE_GRAPHITI_SERVER`)
-- See `../graphiti-server/` for server setup and Docker instructions
-- Copy `.env.example` to `.env` and configure environment variables (at minimum, set `VITE_GROUP_ID` and `VITE_GRAPHITI_SERVER`)
+- Copy `.env.example` to `.env` and configure environment variables
 
 ```bash
 # Setup environment
@@ -297,27 +293,16 @@ Uses TypeScript 5.9.3 with project references:
 
 All backend services are configured via environment variables:
 
-- `VITE_GRAPHITI_SERVER` - Graphiti server base URL (default: `http://localhost:8000`)
-  - HTTP API automatically derived from this URL
-  - WebSocket URL automatically derived by replacing `http://` with `ws://` (or `https://` with `wss://`) and appending `/ws`
+- `VITE_XERRO_API_URL` - Xerro API base URL
 - `VITE_LLAMACPP_URL` - LlamaCPP inference server (default: `http://localhost:9004`)
 - `VITE_CHAT_API_URL` - Chat backend service (default: `http://localhost:3001`)
-- `VITE_GROUP_ID` - **DEPRECATED**: Initial graph ID (optional, for backward compatibility)
-  - Graph selection is now managed via UI and stored in localStorage
-  - Falls back to 'default' if not specified and no saved graph exists
 
 **Setup:**
 
 1. Copy `.env.example` to `.env`
-2. Set `VITE_GRAPHITI_SERVER` to your Graphiti server URL (e.g., `http://172.16.0.14:3060`)
-3. Optionally override other service URLs if using non-default configurations
-4. Restart dev server after changing `.env` for changes to take effect
-5. Access settings and theme toggle via the Profile Menu (avatar button at the bottom of the primary nav)
-
-**Proxy Configuration:**
-
-- Development: Vite proxy forwards `/api` to `VITE_GRAPHITI_SERVER` and `/llamacpp` to `VITE_LLAMACPP_URL`
-- Production: Configure proxy targets via environment variables
+2. Set `VITE_XERRO_API_URL` to your xerro-service URL
+3. Restart dev server after changing `.env` for changes to take effect
+4. Access settings and theme toggle via the Profile Menu (avatar button at the bottom of the primary nav)
 
 ## Key Implementation Patterns
 
@@ -432,9 +417,6 @@ The application supports multiple memory graphs (formerly group_ids):
 
 - **Automatic Persistence** - Selected graph stored in localStorage (`graphiti-selected-graph` key)
 - **Multi-Tab Sync** - Graph selection syncs across browser tabs via storage events
-- Backend endpoint: `GET /groups` lists all graphs with entity/episode/fact counts
-- Backend endpoint: `DELETE /group/{group_id}` removes a graph and all its data
-- The Graphiti server auto-creates graphs on first use
 
 ### Agent Tasks
 
@@ -486,7 +468,7 @@ The `formatCronExpression()` utility converts cron expressions to human-readable
 
 - Agent Tasks are **global** (not tied to graph selection)
 - Read-only interface (no create/update/delete)
-- Configured via `VITE_XERRO_SERVICE_URL` environment variable
+- Configured via `VITE_XERRO_API_URL` environment variable
 - Automatic error handling with toast notifications
 
 See `AGENT_TASKS_IMPLEMENTATION.md` for detailed implementation notes.
@@ -494,14 +476,12 @@ See `AGENT_TASKS_IMPLEMENTATION.md` for detailed implementation notes.
 ## Important Notes
 
 - the inspiration for this web site design, UI, UX, architecture and components comes from this project: /Users/dweaver/Projects/davideweaver/section-shaper-single-page. when implementing new features, pages, etc look at that project.
-- The Graphiti API performs **asynchronous processing** for message ingestion - facts/entities may not appear immediately after adding memories
 - **Entity data model**:
   - Entity types stored in `labels` array (e.g., `["Person", "Entity"]`)
   - Legacy `entity_type` field maintained for backward compatibility
   - Additional metadata in `attributes` object
 - **Entity pagination**: Use cursor-based pagination for large entity lists (limit: 1-500 entities per request)
 - Entity edges (relationships) have `valid_at` and `invalid_at` timestamps for temporal reasoning
-- The Graphiti server must be running for the app to function (configure URL via `VITE_GRAPHITI_SERVER`)
 - **Graph Management**: All data operations are scoped to the currently selected graph (multi-tenant design)
   - The current graph selection persists in localStorage across sessions
 - Search results are limited by `max_facts` parameter (default: 10)

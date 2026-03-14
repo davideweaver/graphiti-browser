@@ -16,10 +16,10 @@ class AgentTasksService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = import.meta.env.VITE_XERRO_SERVICE_URL || "";
+    this.baseUrl = import.meta.env.VITE_XERRO_API_URL || "";
     if (!this.baseUrl) {
       console.warn(
-        "VITE_XERRO_SERVICE_URL not configured. Agent Tasks may not work."
+        "VITE_XERRO_API_URL not configured. Agent Tasks may not work."
       );
     }
   }

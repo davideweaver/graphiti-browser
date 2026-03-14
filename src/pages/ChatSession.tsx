@@ -200,7 +200,7 @@ export default function ChatSession() {
   useEffect(() => {
     if (!sessionId) return;
 
-    const XERRO_URL = (import.meta as any).env?.VITE_XERRO_SERVICE_URL || 'http://localhost:9205';
+    const XERRO_URL = (import.meta as any).env?.VITE_XERRO_API_URL || '';
     const controller = new AbortController();
     let mounted = true;
 

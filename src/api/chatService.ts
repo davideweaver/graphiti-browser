@@ -2,7 +2,7 @@ import { toast } from "sonner";
 import { apiFetch } from "@/lib/apiFetch";
 import type { ChatSession, ChatSessionConfig, XerroChatMessage, ChatSessionSearchResult } from "@/types/xerroChat";
 
-const XERRO_SERVICE_URL = import.meta.env.VITE_XERRO_SERVICE_URL || "http://localhost:9205";
+const XERRO_SERVICE_URL = import.meta.env.VITE_XERRO_API_URL || "";
 
 class ChatService {
   private baseUrl: string;

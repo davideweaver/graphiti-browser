@@ -13,7 +13,7 @@ class MemoryBlocksService {
 
   constructor() {
     this.baseUrl =
-      import.meta.env.VITE_XERRO_SERVICE_URL || "http://localhost:9205";
+      import.meta.env.VITE_XERRO_API_URL || "";
   }
 
   private async fetch<T>(

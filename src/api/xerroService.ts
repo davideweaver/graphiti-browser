@@ -12,10 +12,10 @@ class XerroService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = import.meta.env.VITE_XERRO_SERVICE_URL || "http://localhost:9205";
+    this.baseUrl = import.meta.env.VITE_XERRO_API_URL || "";
     if (!this.baseUrl) {
       console.warn(
-        "VITE_XERRO_SERVICE_URL not configured. System monitoring may not work."
+        "VITE_XERRO_API_URL not configured. System monitoring may not work."
       );
     }
   }
