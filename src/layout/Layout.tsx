@@ -21,7 +21,7 @@ import { SystemSecondaryNav } from "@/components/navigation/SystemSecondaryNav";
 import { MemoryBlocksSecondaryNav } from "@/components/navigation/MemoryBlocksSecondaryNav";
 import { MobileNavTrigger } from "@/components/navigation/MobileNavTrigger";
 import { DraggableMobileNav } from "@/components/navigation/DraggableMobileNav";
-import { PrimaryNavFooter } from "@/components/navigation/PrimaryNavFooter";
+import { ProfileMenu } from "@/components/navigation/ProfileMenu";
 import { NotificationBadge } from "@/components/notifications/NotificationBadge";
 import { navigationConfig, getActivePrimary } from "@/lib/navigationConfig";
 import {
@@ -269,7 +269,7 @@ const Layout = () => {
   };
 
   const footer = (
-    <PrimaryNavFooter
+    <ProfileMenu
       onAfterClick={() => setMobileNavOpen(false)}
     />
   );

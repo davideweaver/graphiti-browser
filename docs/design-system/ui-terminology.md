@@ -78,7 +78,7 @@ See [Components](components.md#container) for usage examples.
 ### Navigation
 
 - `PrimaryNav` - Main left sidebar
-- `PrimaryNavFooter` - User menu section of primary nav
+- `ProfileMenu` - Profile avatar button in primary nav footer; opens popover with Settings and theme toggle
 - `SecondaryNav` - Middle column base component
 - `[Section]SecondaryNav` - Section-specific navigation (e.g., `ProjectsSecondaryNav`)
 - `MobileNavTrigger` - Mobile menu button
@@ -95,10 +95,33 @@ See [Data Presentation](data-presentation.md) for card patterns.
 ### Dialogs
 
 - `DestructiveConfirmationDialog` - Reusable confirmation for destructive actions (delete, cancel, clear, etc.)
-- `GraphManagementDialog` - Graph CRUD operations
-- `UserProfileMenu` - User settings dropdown
 
 See [Patterns](patterns.md#destructive-confirmation-pattern) for dialog patterns.
+
+### Profile Menu
+
+The **ProfileMenu** component lives in the primary nav footer and provides access to app settings and theme toggle.
+
+**Location:** `src/components/navigation/ProfileMenu.tsx`
+
+**Trigger:** Avatar button (`h-12 w-12` ghost button with `Avatar` fallback initials)
+
+**Popover:**
+- Width: `w-52`, aligned `start`, side `top`, offset `10`
+- Menu items:
+  - **Settings** — navigates to `/system` page
+  - **Toggle Dark Mode** — switches light/dark via `next-themes`
+
+**Props:**
+- `onAfterClick?: () => void` — called after any menu action (used to close the mobile nav overlay)
+
+**Usage:**
+```tsx
+<PrimaryNav
+  navigationConfig={...}
+  footer={<ProfileMenu onAfterClick={() => setMobileNavOpen(false)} />}
+/>
+```
 
 ## State Naming Conventions
 
@@ -188,9 +211,9 @@ src/components/container/
 src/components/
 ├── ui/              # ShadCN UI library
 ├── container/       # Container components
-├── navigation/      # Navigation components
+├── navigation/      # Navigation components (PrimaryNav, SecondaryNav, ProfileMenu, etc.)
 ├── dialogs/         # Dialog components
-├── sidebar/         # Sidebar-specific components
+├── sidebar/         # (empty)
 ├── search/          # Search-related components
 ├── entities/        # Entity-related components
 └── episodes/        # Episode-related components
@@ -220,6 +243,7 @@ agentTasksService.getTask()
 | Middle column | Secondary Nav | `SecondaryNav` |
 | Right content | Page | `Container` |
 | Mobile menu | Mobile Nav | `MobileNavTrigger`, `MobileNavOverlay` |
+| Profile menu | ProfileMenu | `<ProfileMenu onAfterClick={...} />` |
 | Page wrapper | Container | `<Container title="...">` |
 | Toolbar button | ContainerToolButton | `<ContainerToolButton>` |
 | Boolean state | is[State] | `isLoading`, `isOpen` |

@@ -149,8 +149,8 @@ src/
 │   ├── ui/          # ShadCN UI component library (complete)
 │   ├── container/   # Container, ContainerTable, ContainerToolButton, ContainerToolToggle
 │   ├── dialogs/     # DestructiveConfirmationDialog
-│   ├── navigation/  # PrimaryNav, SecondaryNav, SecondaryNavItem, specific nav implementations
-│   ├── sidebar/     # UserProfileMenu, GraphManagementDialog
+│   ├── navigation/  # PrimaryNav, SecondaryNav, SecondaryNavItem, ProfileMenu, specific nav implementations
+│   ├── sidebar/     # (empty)
 │   ├── search/      # FactCard for search results
 │   ├── entities/    # EntityCard for entity browsing
 │   └── episodes/    # EpisodeCard for episode lists
@@ -312,7 +312,7 @@ All backend services are configured via environment variables:
 2. Set `VITE_GRAPHITI_SERVER` to your Graphiti server URL (e.g., `http://172.16.0.14:3060`)
 3. Optionally override other service URLs if using non-default configurations
 4. Restart dev server after changing `.env` for changes to take effect
-5. On first launch, select or create a graph via the user menu in the sidebar footer
+5. Access settings and theme toggle via the Profile Menu (avatar button at the bottom of the primary nav)
 
 **Proxy Configuration:**
 
@@ -428,41 +428,13 @@ const { data } = useQuery({
 
 ### Graph Management
 
-The application supports managing multiple memory graphs (formerly group_ids) through the UI:
+The application supports multiple memory graphs (formerly group_ids):
 
-**User Interface:**
-
-- **Graph Selector** - Click the user menu in the sidebar footer to switch between graphs
-- **Graph Management Dialog** - Create new graphs or delete existing ones
-- **Automatic Persistence** - Selected graph is stored in localStorage and persists across sessions
-- **Multi-Tab Sync** - Graph selection automatically syncs across browser tabs
-
-**Creating Graphs:**
-
-1. Click the user menu in the sidebar footer
-2. Click "Manage Graphs"
-3. Enter a new graph ID (alphanumeric, dashes, underscores only)
-4. Click "Create" - the graph is created automatically on first use
-
-**Switching Graphs:**
-
-1. Click the user menu in the sidebar footer
-2. Click the graph selector dropdown
-3. Select a graph from the list - the UI updates immediately
-
-**Deleting Graphs:**
-
-1. Switch to a different graph first (cannot delete active graph)
-2. Click "Manage Graphs" in the user menu
-3. Click the trash icon next to the graph to delete
-4. Confirm deletion - all data in that graph is permanently removed
-
-**Technical Details:**
-
-- Graph IDs are stored in localStorage under the `graphiti-selected-graph` key
-- The Graphiti server auto-creates graphs on first use (no separate creation API needed)
+- **Automatic Persistence** - Selected graph stored in localStorage (`graphiti-selected-graph` key)
+- **Multi-Tab Sync** - Graph selection syncs across browser tabs via storage events
 - Backend endpoint: `GET /groups` lists all graphs with entity/episode/fact counts
 - Backend endpoint: `DELETE /group/{group_id}` removes a graph and all its data
+- The Graphiti server auto-creates graphs on first use
 
 ### Agent Tasks
 
@@ -531,6 +503,5 @@ See `AGENT_TASKS_IMPLEMENTATION.md` for detailed implementation notes.
 - Entity edges (relationships) have `valid_at` and `invalid_at` timestamps for temporal reasoning
 - The Graphiti server must be running for the app to function (configure URL via `VITE_GRAPHITI_SERVER`)
 - **Graph Management**: All data operations are scoped to the currently selected graph (multi-tenant design)
-  - Graphs are managed via the user menu in the sidebar footer
   - The current graph selection persists in localStorage across sessions
 - Search results are limited by `max_facts` parameter (default: 10)

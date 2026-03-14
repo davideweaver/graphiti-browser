@@ -79,7 +79,7 @@ export function PrimaryNav({
         </TooltipProvider>
       </div>
 
-      {/* Footer - UserProfileMenu */}
+      {/* Footer - ProfileMenu */}
       {footer && <div className="p-2 flex justify-center">{footer}</div>}
     </nav>
   );
